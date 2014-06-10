@@ -3,10 +3,11 @@ package com.asiainfo.ocdc.streaming
 
 import org.apache.commons.jexl2._
 import scala.Array
-import scala.xml.XML
+import scala.xml.{Node, XML}
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.StreamingContext._
+import org.apache.spark.SparkConf
 
 
 object StreamingApp {
@@ -18,30 +19,25 @@ object StreamingApp {
     }
     val Array(jobConfFile) = args
 
+    val sparkConf = new SparkConf().setAppName("KafkaWordCount")
+    val ssc =  new StreamingContext(sparkConf, Seconds(2))
+
      val xmlFile = XML.load(jobConfFile)
      val source = xmlFile \ "source"
      val clz = Class.forName((source \ "class").text.toString)
-     val method = clz.getDeclaredMethod("createStream")
-     var streamingData = method.invoke(clz.newInstance())
+     val method = clz.getDeclaredMethod("createStream",classOf[Node])
+     var streamingData = method.invoke(clz.getConstructor(classOf[StreamingContext]).newInstance(ssc),source)
 
      val steps = xmlFile \ "step"
      for(step <- steps){
        val clz = Class.forName((step \ "class").text.toString)
-       val input = (step \ "input").text.toString
-       val output = (step \ "output").text.toString
-       val table = (step \ "HBaseTable").text.toString
-       val col = (step \ "HBaseCol").text.toString
-       val key = (step \ "HBaseKey").text.toString
-       val where = (step \ "where").text.toString
-       val method = clz.getDeclaredMethod("onStep", classOf[DStream[Array[String]]])
-       streamingData = method.invoke(clz.getConstructor(classOf[String],classOf[String]
-       ,classOf[String],classOf[String],classOf[String],classOf[String]).newInstance(
-       input,table,key,col,where,output ), streamingData)
+       val method = clz.getDeclaredMethod("onStep",classOf[Node], classOf[DStream[Array[String]]])
+       streamingData = method.invoke(clz.newInstance(), step,streamingData)
      }
    }
  }
 
-trait StreamingStep{
+abstract class StreamingStep{
 
   val engine=new JexlEngine()
 
@@ -51,10 +47,10 @@ trait StreamingStep{
     engine.createExpression(str).evaluate(context).toString.toBoolean
   }
 
-  def onStep(input:DStream[Array[String]]):DStream[Array[String]]
+  def onStep(step:Node,input:DStream[Array[String]]):DStream[Array[String]]
 }
 
-trait StreamingSource{
+abstract class StreamingSource(ssc:StreamingContext){
 
-  def createStream():DStream[Array[String]]
+  def createStream(source:Node):DStream[Array[String]]
 }
