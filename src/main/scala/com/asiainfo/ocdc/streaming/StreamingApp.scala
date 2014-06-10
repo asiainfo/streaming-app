@@ -19,7 +19,7 @@ object StreamingApp {
     }
     val Array(jobConfFile) = args
 
-    val sparkConf = new SparkConf().setAppName("KafkaWordCount")
+    val sparkConf = new SparkConf().setAppName("StreamingApp")
     val ssc =  new StreamingContext(sparkConf, Seconds(2))
 
      val xmlFile = XML.load(jobConfFile)
