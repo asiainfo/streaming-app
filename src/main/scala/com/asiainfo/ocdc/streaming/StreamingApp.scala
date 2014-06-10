@@ -34,6 +34,9 @@ object StreamingApp {
        val method = clz.getDeclaredMethod("onStep",classOf[Node], classOf[DStream[Array[String]]])
        streamingData = method.invoke(clz.newInstance(), step,streamingData)
      }
+    streamingData.print()
+    ssc.start()
+    ssc.awaitTermination()
    }
  }
 
