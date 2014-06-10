@@ -19,16 +19,24 @@ object StreamingApp {
     val Array(jobConfFile) = args
 
      val xmlFile = XML.load(jobConfFile)
-     val source = (xmlFile \ "source")
+     val source = xmlFile \ "source"
      val clz = Class.forName((source \ "class").text.toString)
      val method = clz.getDeclaredMethod("createStream")
      var streamingData = method.invoke(clz.newInstance())
 
-     val steps = (xmlFile \ "step")
+     val steps = xmlFile \ "step"
      for(step <- steps){
        val clz = Class.forName((step \ "class").text.toString)
+       val input = (step \ "input").text.toString
+       val output = (step \ "output").text.toString
+       val table = (step \ "HBaseTable").text.toString
+       val col = (step \ "HBaseCol").text.toString
+       val key = (step \ "HBaseKey").text.toString
+       val where = (step \ "where").text.toString
        val method = clz.getDeclaredMethod("onStep", classOf[DStream[Array[String]]])
-       streamingData = method.invoke(clz.newInstance(), streamingData)
+       streamingData = method.invoke(clz.getConstructor(classOf[String],classOf[String]
+       ,classOf[String],classOf[String],classOf[String],classOf[String]).newInstance(
+       input,table,key,col,where,output ), streamingData)
      }
    }
  }
