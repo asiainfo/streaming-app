@@ -13,10 +13,10 @@ object HbaseTable {
 
     table.getOrElse(tableName,{
       println("----new connection ----")
-      var from = System.currentTimeMillis();
+      val from = System.currentTimeMillis()
       val conf = HBaseConfiguration.create()
-      var tbl = new HTable(conf, tableName)
-      var end = System.currentTimeMillis();
+      val tbl = new HTable(conf, tableName)
+      val end = System.currentTimeMillis()
       println("connection time----"+(end-from))
       table(tableName)= tbl
       tbl

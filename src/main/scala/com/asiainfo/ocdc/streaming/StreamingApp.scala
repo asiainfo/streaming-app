@@ -19,12 +19,12 @@ object StreamingApp {
     val Array(jobConfFile) = args
 
      val xmlFile = XML.load(jobConfFile)
-     val source = (xmlFile \ "source")
+     val source = xmlFile \ "source"
      val clz = Class.forName((source \ "class").text.toString)
      val method = clz.getDeclaredMethod("createStream")
      var streamingData = method.invoke(clz.newInstance())
 
-     val steps = (xmlFile \ "step")
+     val steps = xmlFile \ "step"
      for(step <- steps){
        val clz = Class.forName((step \ "class").text.toString)
        val method = clz.getDeclaredMethod("onStep", classOf[DStream[Array[String]]])
