@@ -16,7 +16,7 @@ class DStreamFilter extends StreamingStep{
     val HBaseTable = (step \ "HBaseTable").text.toString
     val HBaseKey = (step \ "HBaseKey").text.toString.split(delim)
     val output = (step \ "output").text.toString.split(delim)
-    val HBaseValue = (step \ "HBaseValue").text.toString
+    val HBaseCell = (step \ "HBaseCell").text.toString
     val where = (step \ "where").text.toString // table1.city!=CITY_ID
 
     var handle = inStream.map(x=>{
@@ -28,12 +28,12 @@ class DStreamFilter extends StreamingStep{
       }
       val HBaseRow  = getValue(HBaseTable,key)
       if(HBaseRow != null){
-        IMap ++= HBaseValue.split(delim).map(c=>{
+        IMap ++= HBaseCell.split(delim).map(c=>{
           (HBaseTable+"."+c,Bytes.toString(HBaseRow.getValue(Bytes.toBytes("F"), Bytes.toBytes(c))))
         })
       }
       else{
-        IMap ++= HBaseValue.split(delim).map(c=>{
+        IMap ++= HBaseCell.split(delim).map(c=>{
           (HBaseTable+"."+c," ")  })
       }
       IMap
