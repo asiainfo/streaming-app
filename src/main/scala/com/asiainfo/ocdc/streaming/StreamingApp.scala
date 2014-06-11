@@ -54,6 +54,6 @@ abstract class StreamingStep{
 }
 
 abstract class StreamingSource(sc:StreamingContext){
-	val abc = ""
+	val abc = "123"
   def createStream(source:Node):DStream[Array[String]]
 }
