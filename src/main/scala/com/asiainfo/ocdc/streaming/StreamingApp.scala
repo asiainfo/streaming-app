@@ -23,10 +23,10 @@ object StreamingApp {
     val ssc =  new StreamingContext(sparkConf, Seconds(2))
 
      val xmlFile = XML.load(jobConfFile)
-     val source = xmlFile \ "source"
-     val clz = Class.forName((source \ "class").text.toString)
+     val dataSource = xmlFile \ "DataSource"
+     val clz = Class.forName((dataSource \ "class").text.toString)
      val method = clz.getDeclaredMethod("createStream",classOf[Node])
-     var streamingData = method.invoke(clz.getConstructor(classOf[StreamingContext]).newInstance(ssc),source)
+     var streamingData = method.invoke(clz.getConstructor(classOf[StreamingContext]).newInstance(ssc),dataSource)
 
      val steps = xmlFile \ "step"
      for(step <- steps){
@@ -53,7 +53,8 @@ abstract class StreamingStep{
   def onStep(step:Node,input:DStream[Array[String]]):DStream[Array[String]]
 }
 
-abstract class StreamingSource(ssc:StreamingContext){
+abstract class StreamingSource(sc:StreamingContext){
 
+   val abc = ""
   def createStream(source:Node):DStream[Array[String]]
 }
