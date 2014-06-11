@@ -17,4 +17,10 @@
         <where>city_id != DIM_PUB_BTS_INFO.city_id</where>
         <output>imsi,DIM_PUB_BTS_INFO.city_id</output>
     </step>
+    <step out="kafka">
+        <input>imsi,CITY_ID</input>
+        <topic>topicName</topic>
+        <broker>dev001:9092</broker>
+        <KafkaCol>imsi</KafkaCol>
+    </step>
 </configuration>
