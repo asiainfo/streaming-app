@@ -10,8 +10,6 @@ import org.apache.spark.streaming.{Seconds, StreamingContext}
 class KafkaSource(ssc:StreamingContext) extends StreamingSource(ssc){
 
   def createStream(source:Node):DStream[Array[String]]={
-    val sparkConf = new SparkConf().setAppName("KafkaWordCount")
-    val ssc =  new StreamingContext(sparkConf, Seconds(2))
     val zkQuorum = (source \ "zkQuorum").text.toString
     val topic = (source \ "topic").text.toString
     val group = (source \ "group").text.toString
