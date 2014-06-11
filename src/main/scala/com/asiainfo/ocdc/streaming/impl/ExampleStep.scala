@@ -51,5 +51,6 @@ class ExampleStep extends StreamingStep{
       (0 to output.length-1).map(i=>item.getOrElse(output(i),output(i))).toArray
     })
     result
+
   }
 }
