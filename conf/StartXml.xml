@@ -1,15 +1,17 @@
 <configuration>
     <delim>,</delim>
     <step>
+        <class>DStreamFilter</class>
         <Input>event_id,time,lac,cell,in_imei,out-imei,in_imsi,out-imsi</Input>
         <HBaseTable>DW_MARKET_TARGET_DS</HBaseTable>
         <HBaseValue>CITY_ID</HBaseValue>
         <HBaseKey>lac+cell</HBaseKey>
-        <output>imsi,DW_MARKET_TARGET_DS.city_id</output>
+        <output>imsi,DW_MARKET_TARGET_DS.CITY_ID</output>
         <where></where>
 
     </step>
     <step>
+        <class>DStreamFilter</class>
         <Input>imsi,city_id</Input>
         <HBaseTable>DIM_PUB_BTS_INFO</HBaseTable>
         <HBaseKey>imsi</HBaseKey>
