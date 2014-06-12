@@ -19,15 +19,12 @@ class StreamFilter extends StreamingStep{
     val where = (step \ "where").text.toString // table1.city!=CITY_ID
 
     var handle = inStream.map(mapFunc = x => {
-      var IMap = x
       var key = ""
       for (arg <- HBaseKey) {
-        val item = IMap.toMap
-        key += item(arg)
+        val item = x.toMap
+        key += item.getOrElse(arg,"")
       }
-
-      IMap ++= HbaseTool.getValue(HBaseTable, key, "F", HBaseCell)
-      IMap
+      x ++HbaseTool.getValue(HBaseTable, key, "F", HBaseCell)
     })
 
     if(where != null){
