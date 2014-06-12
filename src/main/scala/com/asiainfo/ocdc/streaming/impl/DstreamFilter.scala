@@ -26,10 +26,10 @@ class DStreamFilter extends StreamingStep{
         val item =  IMap.toMap
         key +=item(arg)
       }
-      val HBaseRow  =  HbaseTable.getValue(HBaseTable,key)
+      val HBaseRow  =  HbaseTable.getRow(HBaseTable,key)
       if(HBaseRow != null){
         IMap ++= HBaseCell.split(delim).map(c=>{
-          (HBaseTable+"."+c,Bytes.toString(HBaseRow.getValue(Bytes.toBytes("F"), Bytes.toBytes(c))))
+          (HBaseTable+"."+c,HbaseTable.GetValue(HBaseRow,"F",c))
         })
       }
       else{
