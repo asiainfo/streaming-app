@@ -5,7 +5,7 @@ import org.apache.spark.streaming.dstream.DStream
 import com.asiainfo.ocdc.streaming.tools.HbaseTable
 import org.apache.hadoop.hbase.util.Bytes
 import scala.xml.Node
-import com.asiainfo.ocdc.streaming.tools.HbaseTable._
+import com.asiainfo.ocdc.streaming.tools._
 
 class ExampleStep extends StreamingStep{
 
@@ -27,10 +27,10 @@ class ExampleStep extends StreamingStep{
         val item =  IMap.toMap
         key +=item(arg)
       }
-      val HBaseRow  = getValue(HBaseTable,key)
+      val HBaseRow  =HbaseTable.getRow(HBaseTable,key)
       if(HBaseRow != null){
         IMap ++= HBaseValue.split(delim).map(c=>{
-          (HBaseTable+"."+c,Bytes.toString(HBaseRow.getValue(Bytes.toBytes("F"), Bytes.toBytes(c))))
+          (HBaseTable+"."+c,HbaseTable.GetValue(HBaseRow,"F",c))
         })
       }
       else{
