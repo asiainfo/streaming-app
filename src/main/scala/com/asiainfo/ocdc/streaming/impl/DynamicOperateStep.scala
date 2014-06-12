@@ -21,8 +21,6 @@ class DynamicOperateStep extends StreamingStep{
     val operaters = (step \ "operater")
     val output = (step \ "output").text.toString.split(",")
 
-    val row = HbaseTable.getValue(table,key)
-
     for(operater <- operaters){
       val cells = (operater \ "cells").text.toString.split(",")
       var reduce = (operater \ "reduce")
