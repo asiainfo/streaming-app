@@ -22,7 +22,7 @@ class KafkaSource(ssc:StreamingContext) extends StreamingSource(ssc){
     // 对输入流列名定义
     stream.map(x =>{
       val streamValues = x.split(separator)
-      var result = AnyRef
+      var result : AnyRef = null
       if(stream_columns.size == streamValues.length){
         result = (0 to streamValues.length-1).map(i=>(stream_columns(i),streamValues(i)))
       }else throw Exception("流数据配置列名与数据格式不符！")
