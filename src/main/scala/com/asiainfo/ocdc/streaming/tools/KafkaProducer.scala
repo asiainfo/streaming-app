@@ -2,9 +2,7 @@ package com.asiainfo.ocdc.streaming.tools
 
 import kafka.producer.{KeyedMessage, ProducerConfig, Producer}
 import java.util.Properties
-/**
- * Created by maji3 on 14-6-12.
- */
+
 object KafkaProducer {
   val producer = null
 
