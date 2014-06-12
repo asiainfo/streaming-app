@@ -8,7 +8,6 @@
         <HBaseKey>lac+cell</HBaseKey>
         <output>imsi,DW_MARKET_TARGET_DS.CITY_ID</output>
         <where></where>
-
     </step>
     <step>
         <class>DStreamFilter</class>
@@ -20,10 +19,10 @@
         <output>imsi,DIM_PUB_BTS_INFO.city_id</output>
     </step>
     <step>
-        <class>KafkaSend</class>
-        <input>imsi,CITY_ID</input>
+        <class>KafkaOut</class>
+        <Input>imsi,CITY_ID</Input>
         <topic>topicName</topic>
         <broker>dev001:9092</broker>
-        <KafkaCol>imsi</KafkaCol>
+        <OutCol>imsi</OutCol>
     </step>
 </configuration>
