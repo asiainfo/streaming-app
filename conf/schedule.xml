@@ -1,23 +1,53 @@
 <configuration>
-    <!-- 流数据接入 -->
-    <DataSource>
-        <stream_id>1</stream_id>
+    <!-- 数据源定义 -->
+    <DataSource name="ds1">
         <stream_name>mq2kafka_stream</stream_name>
         <stream_type>kafka</stream_type>
+        <class>com.asiainfo.ocdc.streaming.impl.KafkaSource</class>
         <zkQuorum></zkQuorum>
         <topics>com.ailk.flowmanagement.mcd.flux_action</topics>
         <groupId>group</groupId>
         <consumerNum>2</consumerNum>
-        <stream_columns>business_id,user_account,business_start_time,content_type,keyword,site_id,activity_code</stream_columns>
+        <separator>" "</separator>
+        <stream_columns>business_id,user_account,business_start_time,content_type,keyword,site_id,activity_code,fee</stream_columns>
     </DataSource>
 
-    <step>
-        <Input>imsi,city_id</Input>  dstream
-        <HBaseTable>htable</HBaseTable> hbase
-        <HBaseKey>DStreamName(imsi)</HBaseKey>
-        <HBaseValue>city_id:CITY_ID</HBaseValue>
-        <where>city_id != city_id</where>
-        <output>imsi,city_id</output>
-
+    <!-- 流数据接入 -->
+    <step name="InputStreamStep1" class="com.asiainfo.ocdc.streaming.impl.InputStep">
+        <source ref="ds1">
+            <output>business_id,user_account,activity_code,fee</output>
+        </source>
+        <output>business_id,user_account,activity_code,fee</output>
     </step>
+
+    <!-- 动态处理 -->
+    <step name="DynamicOperate" type="operate" >
+        <input>business_id,user_account,activity_code,fee,index</input>
+        <HBaseTable>htable</HBaseTable>
+        <HBaseFamily>f1</HBaseFamily>
+        <HBaseKey>user_account</HBaseKey>
+
+        <operater>
+            <cells></cells>
+            <reduce>
+                <col>fee</col>
+                <op>fee1+fee2</op>
+            </reduce>
+            <values>htable.fee+fee</values>
+        </operater>
+
+
+        <operater>
+            <cell></cell>
+            <values>htable.fee++</values>
+        </operater>
+
+        <operater>
+            <cell></cell>
+            <values>business_id,user_account,activity_code,fee</values>
+        </operater>
+
+        <output>business_id,user_account,activity_code,fee</output>
+    </step>
+
 </configuration>
