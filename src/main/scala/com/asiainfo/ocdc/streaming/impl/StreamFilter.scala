@@ -26,7 +26,7 @@ class StreamFilter extends StreamingStep{
         key += item(arg)
       }
 
-      IMap ++= HBaseTool.getValue(HBaseTable, key, "F", HBaseCell)
+      IMap ++= HbaseTool.getValue(HBaseTable, key, "F", HBaseCell)
       IMap
     })
 
