@@ -21,7 +21,7 @@ class KafkaOut extends StreamingStep{
       var out = ""
       for(arg <- outcol){
         val item =  InputMap.toMap
-        out += item(input.indexOf(arg)) + delim
+        out += item(arg)+delim
       }
       val kafkaout =out
       val key = kafkaout.split(delim)(0)

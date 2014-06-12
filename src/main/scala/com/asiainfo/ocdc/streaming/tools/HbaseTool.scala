@@ -5,7 +5,7 @@ import org.apache.hadoop.hbase.client.{Put, Result, Get, HTable}
 import org.apache.hadoop.hbase.util.Bytes
 import scala.collection.mutable
 
-object HbaseTable {
+object HbaseTool {
 
   val table = new mutable.HashMap[String,HTable]()
 
@@ -23,20 +23,30 @@ object HbaseTable {
     })
   }
 
-  def getRow(tableName:String,rowKey:String):Result={
+  def getValue(tableName:String,rowKey:String,family:String,qualifiers:Array[String]):Array[(String,String)]={
+    var result:AnyRef = null
     val table_t =getTable(tableName)
     val row1 =  new Get(Bytes.toBytes(rowKey))
-    table_t.get(row1)
+    val HBaseRow = table_t.get(row1)
+    if(HBaseRow != null){
+      result = qualifiers.map(c=>{
+        (tableName+"."+c, Bytes.toString(HBaseRow.getValue(Bytes.toBytes(family), Bytes.toBytes(c))))
+      })
+    }
+    else{
+      result=qualifiers.map(c=>{
+        (tableName+"."+c,"")  })
+    }
+    result.asInstanceOf[Array[(String,String)]]
   }
 
-    def GetValue(row:Result,family:String,qualifier:String):String={
-      Bytes.toString(row.getValue(Bytes.toBytes(family), Bytes.toBytes(qualifier)))
-    }
-
-  def PutValue(tableName:String,rowKey:String, family:String,qualifier:String, value:String) {
+  def putValue(tableName:String,rowKey:String, family:String,qualifierValue:Array[(String,String)]) {
     val table =getTable(tableName)
     val new_row  = new Put(Bytes.toBytes(rowKey))
-    new_row.add(Bytes.toBytes(family), Bytes.toBytes(qualifier), Bytes.toBytes(value))
+    qualifierValue.map(x=>{
+      new_row.add(Bytes.toBytes(family), Bytes.toBytes(x._1), Bytes.toBytes(x._2))
+    })
+
     table.put(new_row)
   }
 

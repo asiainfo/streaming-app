@@ -6,36 +6,27 @@ import org.apache.hadoop.hbase.util.Bytes
 import scala.xml.Node
 import com.asiainfo.ocdc.streaming.tools._
 
-class DStreamFilter extends StreamingStep{
+class StreamFilter extends StreamingStep{
 
   def onStep(step:Node,inStream:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
 
     val delim = ","
     var result = inStream
-    val Input = (step \ "Input").text.toString.split(delim)
     val HBaseTable = (step \ "HBaseTable").text.toString
     val HBaseKey = (step \ "HBaseKey").text.toString.split(delim)
     val output = (step \ "output").text.toString.split(delim)
-    val HBaseCell = (step \ "HBaseCell").text.toString
+    val HBaseCell = (step \ "HBaseCell").text.toString.split(delim)
     val where = (step \ "where").text.toString // table1.city!=CITY_ID
 
-    var handle = inStream.map(x=>{
-      var IMap =x
+    var handle = inStream.map(mapFunc = x => {
+      var IMap = x
       var key = ""
-      for(arg <- HBaseKey){
-        val item =  IMap.toMap
-        key +=item(arg)
+      for (arg <- HBaseKey) {
+        val item = IMap.toMap
+        key += item(arg)
       }
-      val HBaseRow  =  HbaseTable.getRow(HBaseTable,key)
-      if(HBaseRow != null){
-        IMap ++= HBaseCell.split(delim).map(c=>{
-          (HBaseTable+"."+c,HbaseTable.GetValue(HBaseRow,"F",c))
-        })
-      }
-      else{
-        IMap ++= HBaseCell.split(delim).map(c=>{
-          (HBaseTable+"."+c," ")  })
-      }
+
+      IMap ++= HbaseTool.getValue(HBaseTable, key, "F", HBaseCell)
       IMap
     })
 
