@@ -1,7 +1,5 @@
 package com.asiainfo.ocdc.streaming
 
-
-import org.apache.commons.jexl2._
 import scala.Array
 import scala.xml.{Node, XML}
 import org.apache.spark.streaming._
@@ -31,10 +29,10 @@ object StreamingApp {
      val steps = xmlFile \ "step"
      for(step <- steps){
        val clz = Class.forName((step \ "class").text.toString)
-       val method = clz.getDeclaredMethod("onStep",classOf[Node], classOf[DStream[Array[String]]])
+       val method = clz.getDeclaredMethod("onStep",classOf[Node], classOf[DStream[Array[(String,String)]]])
        streamingData = method.invoke(clz.newInstance(), step,streamingData)
      }
-    streamingData.asInstanceOf[DStream[Array[String]]].print
+    streamingData.asInstanceOf[DStream[Array[(String,String)]]].print
     ssc.start()
     ssc.awaitTermination()
    }
@@ -42,18 +40,10 @@ object StreamingApp {
 
 abstract class StreamingStep{
 
-  val engine=new JexlEngine()
-
-  def getResult(str:String,param:Array[(String,String)]):Boolean = {
-    val context = new MapContext()
-    param.foreach(x=>context.set(x._1,x._2))
-    engine.createExpression(str).evaluate(context).toString.toBoolean
-  }
-
-  def onStep(step:Node,input:DStream[Array[String]]):DStream[Array[String]]
+  def onStep(step:Node,input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]
 }
 
 abstract class StreamingSource(sc:StreamingContext){
 
-  def createStream(source:Node):DStream[Array[String]]
+  def createStream(source:Node):DStream[Array[(String,String)]]
 }
