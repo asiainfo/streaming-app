@@ -24,7 +24,8 @@ class HbaseTest  extends FunSuite with BeforeAndAfter{
 
   }
   test("get") {
-    println("getResult: ")
-    getValue("testTable","row1","f1",(1 to 3).map("col"+_).toArray).foreach(i=>println(i))
+    getValue("testTable","row1","f1",(1 to 3).map("col"+_).toArray).foreach(i=>{
+      assert(i._2=="null","HbaseTool get row failed")
+    })
   }
 }
