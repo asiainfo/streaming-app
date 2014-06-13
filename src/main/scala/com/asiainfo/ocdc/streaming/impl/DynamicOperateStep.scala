@@ -48,9 +48,9 @@ class DynamicOperateStep extends StreamingStep {
           val imap1 = (0 until a.length).map(i => (itemList(i) + "1", a(i)._2)).toMap
           val imap2 = (0 to b.length - 1).map(i => (itemList(i) + "2", b(i)._2)).toMap
 
-          // ＴＯＤＯ　下面两行有问题
-          //          val newValue = JexlTool.getExpValue(op, imap1++imap2.toArray)
-          //          imap1.updated(col,newValue)
+          //ＴＯＤＯ　下面两行有问题
+          val newValue = JexlTool.getExpValue(op, (imap1 ++ imap2).toArray)
+          imap1.updated(col,newValue)
           imap1.toArray
         }).map(x => {
           // 流数据的字段名称
