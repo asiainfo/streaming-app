@@ -1,6 +1,7 @@
 package com.asiainfo.ocdc.streaming.tools
 
 import org.apache.hadoop.hbase.HBaseConfiguration
+import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.hbase.client.{Put, Result, Get, HTable}
 import org.apache.hadoop.hbase.util.Bytes
 import scala.collection.mutable
@@ -8,16 +9,17 @@ import scala.collection.mutable
 object HbaseTool {
 
   val table = new mutable.HashMap[String,HTable]()
+  var conf = HBaseConfiguration.create()
+
+  def setConf(c:Configuration)={
+    conf = c
+  }
 
   def getTable(tableName:String):HTable={
 
     table.getOrElse(tableName,{
       println("----new connection ----")
-      val from = System.currentTimeMillis()
-      val conf = HBaseConfiguration.create()
       val tbl = new HTable(conf, tableName)
-      val end = System.currentTimeMillis()
-      println("connection time----"+(end-from))
       table(tableName)= tbl
       tbl
     })
