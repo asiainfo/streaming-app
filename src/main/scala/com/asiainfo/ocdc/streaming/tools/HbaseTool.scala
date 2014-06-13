@@ -37,7 +37,7 @@ object HbaseTool {
     }
     else{
       result=qualifiers.map(c=>{
-        (tableName+"."+c,"")  })
+        (tableName+"."+c,"null")  })
     }
     result.asInstanceOf[Array[(String,String)]]
   }
@@ -46,10 +46,15 @@ object HbaseTool {
     val table =getTable(tableName)
     val new_row  = new Put(Bytes.toBytes(rowKey))
     qualifierValue.map(x=>{
-      new_row.add(Bytes.toBytes(family), Bytes.toBytes(x._1), Bytes.toBytes(x._2))
+      var column = x._1
+      val value = x._2
+      val tt = column.split("\\.")
+      if (tt.length == 2) column=tt(1)
+      if(!(value.isEmpty))
+        new_row.add(Bytes.toBytes(family), Bytes.toBytes(column), Bytes.toBytes(value))
     })
-
     table.put(new_row)
   }
+
 
 }
