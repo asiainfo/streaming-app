@@ -1,26 +1,28 @@
 <configuration>
     <delim>,</delim>
     <step>
+        <class>DStreamFilter</class>
         <Input>event_id,time,lac,cell,in_imei,out-imei,in_imsi,out-imsi</Input>
         <HBaseTable>DW_MARKET_TARGET_DS</HBaseTable>
-        <HBaseValue>CITY_ID</HBaseValue>
+        <HBaseCell>CITY_ID</HBaseCell>
         <HBaseKey>lac+cell</HBaseKey>
-        <output>imsi,DW_MARKET_TARGET_DS.city_id</output>
+        <output>imsi,DW_MARKET_TARGET_DS.CITY_ID</output>
         <where></where>
-
     </step>
     <step>
+        <class>DStreamFilter</class>
         <Input>imsi,city_id</Input>
         <HBaseTable>DIM_PUB_BTS_INFO</HBaseTable>
         <HBaseKey>imsi</HBaseKey>
-        <HBaseValue>CITY_ID</HBaseValue>
+        <HBaseCell>CITY_ID</HBaseCell>
         <where>city_id != DIM_PUB_BTS_INFO.city_id</where>
         <output>imsi,DIM_PUB_BTS_INFO.city_id</output>
     </step>
-    <step out="kafka">
-        <input>imsi,CITY_ID</input>
+    <step>
+        <class>KafkaOut</class>
+        <Input>imsi,CITY_ID</Input>
         <topic>topicName</topic>
         <broker>dev001:9092</broker>
-        <KafkaCol>imsi</KafkaCol>
+        <OutCol>imsi</OutCol>
     </step>
 </configuration>
