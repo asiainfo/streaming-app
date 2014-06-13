@@ -23,7 +23,6 @@
 
 	<!-- 动态处理 -->
 	<step name="DynamicOperate" type="operate">
-		<input>business_id,user_account,activity_code,fee,index</input>
 		<HBaseTable>htable</HBaseTable>
 		<HBaseFamily>f1</HBaseFamily>
 		<HBaseKey>user_account</HBaseKey>
