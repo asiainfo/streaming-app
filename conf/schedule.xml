@@ -36,9 +36,8 @@
 			<values>htable.fee+fee</values>
 		</operater>
 
-
 		<operater>
-			<cell>calltimes</cell>
+			<cells>calltimes</cells>
 			<reduce>
 				<col>index</col>
 				<op>index1+index2</op>
