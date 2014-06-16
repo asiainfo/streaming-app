@@ -1,0 +1,10 @@
+<configuration>
+    <delim>,</delim>
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.KafkaOut</class>
+        <Input>a,b,c</Input>
+        <topic>topicName</topic>
+        <broker>dev001:9092</broker>
+        <OutCol>a,b</OutCol>
+    </step>
+</configuration>
