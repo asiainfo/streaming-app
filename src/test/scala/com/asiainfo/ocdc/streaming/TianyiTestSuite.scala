@@ -6,6 +6,7 @@ import org.apache.hadoop.hbase._
 import org.apache.spark.Logging
 import org.apache.spark.streaming.dstream.DStream
 
+import scala.reflect.ClassTag
 import scala.xml.XML
 
 
@@ -29,6 +30,45 @@ class TianyiTestSuite extends org.apache.spark.streaming.TestSuiteBase with Logg
     System.clearProperty("spark.driver.port")
     System.clearProperty("spark.streaming.clock")
     testUtil.shutdownMiniCluster()
+  }
+
+  override def verifyOutput[V: ClassTag](
+                                 output: Seq[Seq[V]],
+                                 expectedOutput: Seq[Seq[V]],
+                                 useSet: Boolean
+                                 ) {
+    logInfo("--------------------------------")
+    logInfo("output.size = " + output.size)
+    logInfo("output")
+    output.foreach(x => logInfo("[" + x.mkString(",") + "]"))
+    logInfo("expected output.size = " + expectedOutput.size)
+    logInfo("expected output")
+    expectedOutput.foreach(x => logInfo("[" + x.mkString(",") + "]"))
+    logInfo("--------------------------------")
+
+    // Match the output with the expected output
+    assert(output.size === expectedOutput.size, "Number of outputs do not match")
+
+    output.asInstanceOf[Seq[Seq[Array[Tuple2[String,String]]]]](0)(0)(0) match {
+      case (_, _) =>
+        output.asInstanceOf[Seq[Seq[Array[Tuple2[String,String]]]]].foreach {
+          x => x.foreach {
+            y =>
+              for (t <- y) {
+                logInfo("1: "+t._1+" 2: "+t._2)
+              }
+          }
+        }
+    }
+
+    for (i <- 0 until output.size) {
+      if (useSet) {
+        assert(output(i).toSet === expectedOutput(i).toSet)
+      } else {
+        assert(output(i).toList === expectedOutput(i).toList)
+      }
+    }
+    logInfo("Output verified successfully")
   }
 
   testExample()
