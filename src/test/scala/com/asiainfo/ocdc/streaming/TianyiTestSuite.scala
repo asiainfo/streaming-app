@@ -5,7 +5,6 @@ import com.asiainfo.ocdc.streaming.tools.HbaseTool._
 import org.apache.hadoop.hbase._
 import org.apache.spark.Logging
 import org.apache.spark.streaming.dstream.DStream
-import com.asiainfo.ocdc.streaming.TestSuitBase
 
 import scala.reflect.ClassTag
 import scala.xml.XML
