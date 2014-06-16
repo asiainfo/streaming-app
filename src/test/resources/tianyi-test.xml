@@ -1,0 +1,13 @@
+<configuration>
+    <delim>,</delim>
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.DStreamFilter</class>
+        <type>DStreamFilter</type>
+        <Input>a,b</Input>
+        <HBaseTable>t1</HBaseTable>
+        <HBaseCell>c1</HBaseCell>
+        <HBaseKey>a</HBaseKey>
+        <output>a,b,t1.c1</output>
+        <where>b.equals("b")</where>
+    </step>
+</configuration>

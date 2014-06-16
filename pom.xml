@@ -16,6 +16,13 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-streaming_2.10</artifactId>
+            <version>0.9.1</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.hbase</groupId>
             <artifactId>hbase-it</artifactId>
             <version>0.98.1-hadoop2</version>
@@ -103,6 +110,7 @@
                         <configuration>
                             <sources>
                                 <source>src/main/scala</source>
+                                <source>src/main/resources</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -115,6 +123,7 @@
                         <configuration>
                             <sources>
                                 <source>src/test/scala</source>
+                                <source>src/test/resources</source>
                             </sources>
                         </configuration>
                     </execution>
