@@ -25,7 +25,7 @@
         <HBaseTable>htable</HBaseTable>
         <HBaseKey>user_account</HBaseKey>
         <HBaseCells>fee,fee1,fee2</HBaseCells>
-        <expressions>hbase.fee1+fee0,hbase.fee1+fee1,hbase.fee1+fee2</expressions>
+        <expressions>hbase.fee+fee,hbase.fee1+fee1,hbase.fee+hbase.fee2+fee2</expressions>
         <output>business_id,user_account,activity_code,fee</output>
     </step>
 
