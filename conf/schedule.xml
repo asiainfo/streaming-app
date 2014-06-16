@@ -22,31 +22,10 @@
 
     <!-- 动态处理 -->
     <step name="DynamicOperate" type="operate" >
-        <input>business_id,user_account,activity_code,fee,index</input>
         <HBaseTable>htable</HBaseTable>
-        <HBaseFamily>f1</HBaseFamily>
         <HBaseKey>user_account</HBaseKey>
-
-        <operater>
-            <cells></cells>
-            <reduce>
-                <col>fee</col>
-                <op>fee1+fee2</op>
-            </reduce>
-            <values>htable.fee+fee</values>
-        </operater>
-
-
-        <operater>
-            <cell></cell>
-            <values>htable.fee++</values>
-        </operater>
-
-        <operater>
-            <cell></cell>
-            <values>business_id,user_account,activity_code,fee</values>
-        </operater>
-
+        <HBaseCells>fee</HBaseCells>
+        <expressions>fee1+fee2</expressions>
         <output>business_id,user_account,activity_code,fee</output>
     </step>
 
