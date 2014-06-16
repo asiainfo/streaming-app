@@ -25,8 +25,8 @@ class DynamicOperateStepSuite extends org.apache.spark.streaming.TestSuiteBase w
       )
 
       val expectedOutput = Seq(
-        Seq(Array(("a", "a"),("b", "b"),("t1.c1", "c1"))),
-        Seq(Array(("a", "a"),("b", "b"),("t1.c1", "c1")))
+        Seq(Array(("a", "a"),("b", "b"),("DTable.c1", "c1"))),
+        Seq(Array(("a", "a"),("b", "b"),("DTable.c1", "c1")))
       )
 
       testUtil.createTable("DTable","f1")
