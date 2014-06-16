@@ -10,6 +10,12 @@ trait TestSuitBase extends org.apache.spark.streaming.TestSuiteBase with Logging
 
   val testUtil = MiniHbase.testUtil
 
+
+  override def afterFunction{
+    HbaseTool.table.toArray.foreach(x=>testUtil.deleteTable(x._1))
+    HbaseTool.table.clear()
+  }
+
   override def verifyOutput[V: ClassTag](
                                           output: Seq[Seq[V]],
                                           expectedOutput: Seq[Seq[V]],
