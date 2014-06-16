@@ -24,8 +24,8 @@
     <step name="DynamicOperate" type="operate" >
         <HBaseTable>htable</HBaseTable>
         <HBaseKey>user_account</HBaseKey>
-        <HBaseCells>fee</HBaseCells>
-        <expressions>fee1+fee2</expressions>
+        <HBaseCells>fee,fee1,fee2</HBaseCells>
+        <expressions>hbase.fee1+fee0,hbase.fee1+fee1,hbase.fee1+fee2</expressions>
         <output>business_id,user_account,activity_code,fee</output>
     </step>
 
