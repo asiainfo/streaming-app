@@ -4,7 +4,7 @@ import kafka.producer.{KeyedMessage, ProducerConfig, Producer}
 import java.util.Properties
 
 object KafkaProducer {
-  val producer = null
+  val producer:Producer[String, String] = null
 
   def getProducer(brokers:String):Producer[String, String]={
 
