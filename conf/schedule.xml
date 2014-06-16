@@ -26,27 +26,8 @@
         <HBaseTable>htable</HBaseTable>
         <HBaseFamily>f1</HBaseFamily>
         <HBaseKey>user_account</HBaseKey>
-
-        <operater>
-            <cells></cells>
-            <reduce>
-                <col>fee</col>
-                <op>fee1+fee2</op>
-            </reduce>
-            <values>htable.fee+fee</values>
-        </operater>
-
-
-        <operater>
-            <cell></cell>
-            <values>htable.fee++</values>
-        </operater>
-
-        <operater>
-            <cell></cell>
-            <values>business_id,user_account,activity_code,fee</values>
-        </operater>
-
+		<HBaseCells>fee,total</HBaseCells>
+		<expressions>hbase.fee+fell,hbase.fee+total</expressions>
         <output>business_id,user_account,activity_code,fee</output>
     </step>
 
