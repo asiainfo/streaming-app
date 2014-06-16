@@ -24,14 +24,22 @@ class KafkaOut extends StreamingStep{
         out += item(arg)+delim
       }
       val kafkaout =out
-      val key = kafkaout.split(delim)(0)
-      val producer = KafkaProducer.getProducer(brokers)
-      var message =List[KeyedMessage[String, String]]()
-      message = new KeyedMessage[String, String](topic,key,kafkaout)::message
-      producer.send(message: _*)
-      x
+
+      //send kafka message, comment this function when doing unit test
+      //kafkaSend(kafkaout,brokers,topic,delim)
+
+      var outstream = Array(("outstream",kafkaout))
+      outstream
     })
     result
+  }
+
+  def kafkaSend(kafkaout:String,brokers:String,topic:String,delim:String):Unit={
+    val key = kafkaout.split(delim)(0)
+    val producer = KafkaProducer.getProducer(brokers)
+    var message =List[KeyedMessage[String, String]]()
+    message = new KeyedMessage[String, String](topic,key,kafkaout)::message
+    producer.send(message: _*)
   }
 }
 
