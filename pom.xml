@@ -6,7 +6,7 @@
 
     <groupId>spark-dev</groupId>
     <artifactId>spark-dev</artifactId>
-    <version>V01B01C00-SNAPSHOT</version>
+    <version>V00B01C00-SNAPSHOT</version>
     <packaging>jar</packaging>
     <dependencies>
         <dependency>
