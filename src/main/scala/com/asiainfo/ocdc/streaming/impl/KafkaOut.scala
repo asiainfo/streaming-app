@@ -26,7 +26,7 @@ class KafkaOut extends StreamingStep{
       val kafkaout =out
 
       //send kafka message, comment this function when doing unit test
-      kafkaSend(kafkaout,brokers,topic,delim)
+      //kafkaSend(kafkaout,brokers,topic,delim)
 
       var outstream = Array(("outstream",kafkaout))
       outstream
