@@ -161,6 +161,13 @@
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
                 <version>1.0</version>
+                <configuration>
+                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                    <junitxml>.</junitxml>
+                    <filereports>${project.build.directory}/SparkTestSuite.txt</filereports>
+                    <argLine>-Xmx3g -XX:MaxPermSize=256m -XX:ReservedCodeCacheSize=512m</argLine>
+                    <stderr />
+                </configuration>
                 <executions>
                     <execution>
                         <id>test</id>
