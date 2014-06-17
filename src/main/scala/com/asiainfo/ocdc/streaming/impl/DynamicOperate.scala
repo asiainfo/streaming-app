@@ -22,6 +22,9 @@ class DynamicOperate  extends StreamingStep {
     val operaters = (step \ "expressions").text.toString.trim.split(",")
     val output = (step \ "output").text.toString.trim.split(",")
 
+    //xml check
+    if (!validityCheck(step: Node)) return dstream 
+    
     dstream.map(recode => {
       var imap = recode.toMap
       (imap(key), recode)
@@ -54,5 +57,34 @@ class DynamicOperate  extends StreamingStep {
       (0 to output.length - 1).map(i => (output(i), item.getOrElse(output(i), output(i)))).toArray
     })
     return result
+  }
+  
+  /**
+   * 数据有效性检查
+   */
+  def validityCheck(step: Node):Boolean={
+    var checkresult =true
+    val table = (step \ "HBaseTable").text.toString.trim
+    val key = (step \ "HBaseKey").text.toString.trim
+    val family = "F"
+    val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
+    val operaters = (step \ "expressions").text.toString.trim.split(",")
+    val output = (step \ "output").text.toString.trim.split(",")
+    
+    //check expressions和HBaseCells的个数
+    if (hBaseCells.size != operaters.size){checkresult = false; Console.err.println("<expressions>中的个数和<HBaseCells>中的个数不一致！请确认")}
+    
+    //check expressions中所写的hbase表名是否正确 (大小写)
+    var opindex =0 
+    while (checkresult && opindex<operaters.size) {
+      
+       if(operaters(opindex).toUpperCase.trim.matches(table.toUpperCase+".")){
+          if (!operaters(opindex).matches(table+".")){
+            checkresult = false
+            Console.err.println("<expressions>中所记述的表名大小写不正确，请改为［正解的表名.字段名］")
+          }}
+      opindex +=1
+    }
+      checkresult
   }
 }
