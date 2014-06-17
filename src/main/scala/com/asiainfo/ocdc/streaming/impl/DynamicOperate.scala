@@ -23,8 +23,8 @@ class DynamicOperate  extends StreamingStep {
     val output = (step \ "output").text.toString.trim.split(",")
 
     //xml check
-    if (!validityCheck(step: Node)) return dstream 
-    
+    if (!validityCheck(step: Node)) return dstream
+
     dstream.map(recode => {
       var imap = recode.toMap
       (imap(key), recode)
@@ -37,26 +37,19 @@ class DynamicOperate  extends StreamingStep {
       // 累计结果用[key:cell,value:对应表达式的累计值]
       var mapSet = Map[String, String]()
       // 初始化cell中的各值
-      cellexp.foreach(f=>(mapSet += (f._1 -> "0")))
-      
+      cellexp.foreach(f => (mapSet += (f._1 -> "0")))
+
       (keyrcode._2).foreach(f => {
         var experValue = f.toMap ++ cellvalue
         cellexp.foreach(f => {
           val tmpdata = JexlTool.getExpValue(f._2, experValue.toArray)
-           mapSet += (f._1 -> (JexlTool.getExpValue("last+next", Array.apply(("last",mapSet(f._1)), ("next",tmpdata)))))
+          mapSet += (f._1 -> (JexlTool.getExpValue("last+next", Array.apply(("last", mapSet(f._1)), ("next", tmpdata)))))
         })
       })
       // 表达式对应的结果值更新到hbase
       HbaseTool.putValue(table, keyrcode._1, family, mapSet.toArray)
-    })
-
-    // 结果输出
-    val result = dstream.map(x => {
-      //如果input output相同的字段完全相同，说明不需要规整数据，不做map
-      val item = x.toMap
-      (0 to output.length - 1).map(i => (output(i), item.getOrElse(output(i), output(i)))).toArray
-    })
-    return result
+      keyrcode
+    }).flatMap(_._2)
   }
   
   /**
