@@ -1,20 +1,16 @@
 
 <configure>
 
-<step  id="1">
-    <input>imsi,lac,cell</input>
-    <exportoutput >460020060188214,2 </exportoutput >
-    <HBaseTable>t1</HBaseTable>
-    <HBaseCell>city_id</HBaseCell>
-    <HBaseKey>lac+cell</HBaseKey>
-    <output>imsi,t1.city_id</output>
-    <where>t1.city_id!=null</where>
-</step>
+    <step  id="1">
+        <HBaseTable>t1</HBaseTable>
+        <HBaseCell>city_id</HBaseCell>
+        <HBaseKey>lac,cell</HBaseKey>
+        <output>imsi,t1.city_id</output>
+        <where>t1.city_id!=null</where>
+    </step>
 
 
     <step  id="2">
-        <input>imsi,t1.city_id</input>
-        <exportoutput >460020060188214,2 </exportoutput >
         <HBaseTable>t2</HBaseTable>
         <HBaseCell>city_id</HBaseCell>
         <HBaseKey>imsi</HBaseKey>
@@ -23,13 +19,19 @@
     </step>
 
     <step  id="3">
-        <input>imsi,t1.city_id</input>
-        <exportoutput >460020060188214,2 </exportoutput >
         <HBaseTable>t3</HBaseTable>
         <HBaseCell>product_no,product_id</HBaseCell>
         <HBaseKey>imsi</HBaseKey>
         <output>imsi,t3.product_no,t3.product_id</output>
-        <where>t3.product_no!=null&&t3.product_id!=null</where>
+        <where>t3.product_no!=null</where>
+    </step>
+
+    <step  id="4">
+        <HBaseTable>t4</HBaseTable>
+        <HBaseCell></HBaseCell>
+        <HBaseKey>imsi</HBaseKey>
+        <output>imsi,t3.product_no,t3.product_id</output>
+        <where>t3.product_no!=null</where>
     </step>
 
 
