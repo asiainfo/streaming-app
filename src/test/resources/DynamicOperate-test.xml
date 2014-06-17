@@ -1,0 +1,10 @@
+<configuration>
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.DynamicOperate</class>
+        <HBaseTable>htable</HBaseTable>
+        <HBaseKey>TELNo</HBaseKey>
+        <HBaseCells>NTcount,Fee</HBaseCells>
+        <expressions>htable.NTcount+netcount,htable.Fee+fee</expressions>
+        <output>TELNo,name,sex,netcount,fee</output>
+    </step>
+</configuration>

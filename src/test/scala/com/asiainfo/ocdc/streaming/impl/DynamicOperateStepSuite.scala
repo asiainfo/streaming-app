@@ -14,31 +14,47 @@ import org.apache.spark.streaming.dstream.DStream
  */
 class DynamicOperateStepSuite extends TestSuitBase with Logging {
 
-  test("DynamicOperateStep test example") {
-      logInfo("DynamicOperateStep test example started ")
+  test("DynamicOperate test example") {
+    logInfo("DynamicOperateStep test example started ")
 
-    val xmlFile = XML.load("src/test/resources/tianyi-test.xml")
+    val xmlFile = XML.load("src/test/resources/DynamicOperate-test.xml")
     val step = xmlFile \ "step"
+    val family = "F"
+     val table = "htable"
+
+    testUtil.createTable(table, family)
+    putValue(table, "18600640175", family, Array.apply(("NTcount", "100"), ("Fee", "1000")))
+    putValue(table, "18600640176", family, Array.apply(("NTcount", "100"), ("Fee", "1000")))
+    putValue(table, "18600640177", family, Array.apply(("NTcount", "100"), ("Fee", "1000")))
 
     val input = Seq(
-      Seq(Array(("a", "a"),("b", "b"))),
-      Seq(Array(("a", "a"),("b", "b")))
-    )
+      Seq(Array(("TELNo", "18600640175"), ("name", "surq"), ("sex", "man"), ("netcount", "20"), ("fee", "10"))),
+      Seq(Array(("TELNo", "18600640176"), ("name", "asia"), ("sex", "man"), ("netcount", "33"), ("fee", "11"))),
+      Seq(Array(("TELNo", "18600640177"), ("name", "asia1"), ("sex", "man"), ("netcount", "31"), ("fee", "1"))),
+      Seq(Array(("TELNo", "18600640175"), ("name", "surq"), ("sex", "man"), ("netcount", "30"), ("fee", "20"))),
+      Seq(Array(("TELNo", "18600640175"), ("name", "surq"), ("sex", "man"), ("netcount", "40"), ("fee", "31"))))
 
-    val expectedOutput = Seq(
-      Seq(Array(("a", "a"),("b", "b"),("t1.c1", "c1"))),
-      Seq(Array(("a", "a"),("b", "b"),("t1.c1", "c1")))
-    )
 
-    testUtil.createTable("t1","F")
-    val rowValue = (1 to 3).map(i=>("c"+i,"c"+i)).toArray
-    putValue("t1","a","F",rowValue)
+    val expectedOutput = Seq(Seq(Array.apply(("NTcount","190"),("Fee","1061"))), Seq(Array.apply(("NTcount","133"),("Fee","1011"))), Seq(Array.apply(("NTcount","131"),("Fee","1001"))))
+    val filter = new DynamicOperate();
+    val operation = (s: DStream[Array[(String, String)]]) => filter.onStep(step(0), s)
+    
+    testOperation(input, operation, input, true)
+    
+    val result75 = getValue("htable", "18600640175", family, Array.apply("NTcount", "Fee"))
+    val result76 = getValue("htable", "18600640176", family, Array.apply("NTcount", "Fee"))
+    val result77 = getValue("htable", "18600640177", family, Array.apply("NTcount", "Fee"))
+    val resultset = Seq(Seq(result75), Seq(result76), Seq(result77))
+    
+      resultset.foreach(f=>{
+        f.foreach(x=>{
+          x.foreach(k=>println("=====result============"+ k._1+":"+k._2))
+        })
+      })
+      
+    verifyOutput(resultset,expectedOutput, true)
 
-    val filter = new StreamFilter();
-    val operation = (s:DStream[Array[ (String, String) ] ]) => filter.onStep(step(0), s)
-
-    testOperation(input, operation, expectedOutput, true)
-      logInfo("DynamicOperateStep test example finished ")
+    logInfo("DynamicOperate test example finished ")
   }
 
 }
