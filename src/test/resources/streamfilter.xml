@@ -1,4 +1,3 @@
-
 <configure>
 
     <step  id="1">
@@ -28,10 +27,10 @@
 
     <step  id="4">
         <HBaseTable>t4</HBaseTable>
-        <HBaseCell></HBaseCell>
+        <HBaseCell>c1,c2</HBaseCell>
         <HBaseKey>imsi</HBaseKey>
         <output>imsi,t3.product_no,t3.product_id</output>
-        <where>t3.product_no!=null</where>
+        <where>t4.c1!=null&t4.c2!="1"</where>
     </step>
 
 

@@ -56,5 +56,5 @@ object HbaseTool {
     table.put(new_row)
   }
 
-
+  val family = "F"
 }

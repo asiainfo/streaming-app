@@ -91,4 +91,33 @@ class StreamFilterStepSuite extends TestSuitBase with Logging {
     testOperation(input, operation, expectedOutput, true)
     logInfo("StreamFilter test example3 finished ")
   }
+
+  test(" streamFilter test example4") {
+    logInfo("StreamFilter test example4 started ")
+
+    val xmlFile = XML.load("src/test/resources/streamfilter.xml")
+    val step = xmlFile \ "step"
+
+    val input = Seq(
+      Seq(Array(("imsi", "460020060188214"),("t3.product_no","215801535555"),("t3.product_id","p1|p2"))),
+      Seq(Array(("imsi", "460020060188222"),("t3.product_no","215801535555"),("t3.product_id","p1|p2")))
+    )
+
+
+    val expectedOutput = Seq(
+      Seq(Array(("imsi", "460020060188214"),("t3.product_no","215801535555"),("t3.product_id","p1|p2")))
+    )
+
+    testUtil.createTable("t4","F")
+    val rowValue=Array(("c1","215801535555"),("c2","p1|p2"))
+    putValue("t4","460020060188214","F",rowValue)
+
+    val rowValue1=Array(("c1","null"),("c2","21"))
+    putValue("t4","460020060188222","F",rowValue)
+    val filter = new StreamFilter();
+    val operation = (s:DStream[Array[ (String, String) ] ]) => filter.onStep(step(3), s)
+
+    testOperation(input, operation, expectedOutput, true)
+    logInfo("StreamFilter test example3 finished ")
+  }
 }

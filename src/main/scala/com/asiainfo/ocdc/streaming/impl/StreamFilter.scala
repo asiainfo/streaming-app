@@ -24,7 +24,7 @@ class StreamFilter extends StreamingStep{
         val item = x.toMap
         key += item.getOrElse(arg,"")
       }
-      x ++HbaseTool.getValue(HBaseTable, key, "F", HBaseCell)
+      x ++HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCell)
     })
 
     if(where != null){
