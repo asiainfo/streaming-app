@@ -20,7 +20,7 @@ class DynamicOperateStepSuite extends TestSuitBase with Logging {
     val xmlFile = XML.load("src/test/resources/DynamicOperate-test.xml")
     val step = xmlFile \ "step"
     val family = "F"
-     val table = "htable"
+    val table = (step \ "HBaseTable").text.toString.trim
 
     testUtil.createTable(table, family)
     putValue(table, "18600640175", family, Array.apply(("NTcount", "100"), ("Fee", "1000")))
@@ -41,9 +41,9 @@ class DynamicOperateStepSuite extends TestSuitBase with Logging {
     
     testOperation(input, operation, input, true)
     
-    val result75 = getValue("htable", "18600640175", family, Array.apply("NTcount", "Fee"))
-    val result76 = getValue("htable", "18600640176", family, Array.apply("NTcount", "Fee"))
-    val result77 = getValue("htable", "18600640177", family, Array.apply("NTcount", "Fee"))
+    val result75 = getValue(table, "18600640175", family, Array.apply("NTcount", "Fee"))
+    val result76 = getValue(table, "18600640176", family, Array.apply("NTcount", "Fee"))
+    val result77 = getValue(table, "18600640177", family, Array.apply("NTcount", "Fee"))
     val resultset = Seq(Seq(result75), Seq(result76), Seq(result77))
     
       resultset.foreach(f=>{
