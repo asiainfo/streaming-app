@@ -22,7 +22,7 @@ object StreamingApp {
 
      val xmlFile = XML.load(jobConfFile)
      val dataSource = xmlFile \ "DataSource"
-     val clz = Class.forName((dataSource \ "class").text.toString)
+     val clz = Class.forName((dataSource(0) \ "class").text.toString)
      val method = clz.getDeclaredMethod("createStream",classOf[Node])
      var streamingData = method.invoke(clz.getConstructor(classOf[StreamingContext]).newInstance(ssc),dataSource)
 
@@ -32,7 +32,7 @@ object StreamingApp {
        val method = clz.getDeclaredMethod("onStep",classOf[Node], classOf[DStream[Array[(String,String)]]])
        streamingData = method.invoke(clz.newInstance(), step,streamingData)
      }
-    streamingData.asInstanceOf[DStream[Array[(String,String)]]].print
+    streamingData.asInstanceOf[DStream[Array[(String,String)]]].print()
     ssc.start()
     ssc.awaitTermination()
    }
