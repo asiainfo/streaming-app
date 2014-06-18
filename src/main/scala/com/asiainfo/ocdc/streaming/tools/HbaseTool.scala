@@ -30,7 +30,7 @@ object HbaseTool {
     val table_t =getTable(tableName)
     val row1 =  new Get(Bytes.toBytes(rowKey))
     val HBaseRow = table_t.get(row1)
-    if(HBaseRow != null){
+    if(HBaseRow != null && !HBaseRow.isEmpty){
       result = qualifiers.map(c=>{
         (tableName+"."+c, Bytes.toString(HBaseRow.getValue(Bytes.toBytes(family), Bytes.toBytes(c))))
       })
