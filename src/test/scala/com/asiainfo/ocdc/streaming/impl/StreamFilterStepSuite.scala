@@ -109,7 +109,7 @@ class StreamFilterStepSuite extends TestSuitBase with Logging {
     )
 
     testUtil.createTable("t4","F")
-    val rowValue=Array(("c1","215801535555"),("c2","p1|p2"))
+    val rowValue=Array(("c1","215801535555"),("c2","p2"))
     putValue("t4","460020060188214","F",rowValue)
 
     val rowValue1=Array(("c1","null"),("c2","21"))
