@@ -1,0 +1,1 @@
+export SPARK_JAVA_OPTS="$SPARK_JAVA_OPTS -Dspark.master=local[2]"
