@@ -48,22 +48,27 @@ else
   # Else use spark-assembly jar from either RELEASE or assembly directory
   if [ -e "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*.jar ]; then
     export ASSEMBLY_JAR=`ls "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*.jar`
+     CLASSPATH="$CLASSPATH:$ASSEMBLY_JAR"
   fi
-  CLASSPATH="$CLASSPATH:$ASSEMBLY_JAR"
 fi
 
 EXAMPLES_DIR="$FWDIR"/examples
 SPARK_EXAMPLES_JAR=""
 if [ -e "$EXAMPLES_DIR"/target/scala-$SCALA_VERSION/*assembly*[0-9Tg].jar ]; then
   export SPARK_EXAMPLES_JAR=`ls "$EXAMPLES_DIR"/target/scala-$SCALA_VERSION/*assembly*[0-9Tg].jar`
+  CLASSPATH="$CLASSPATH:$SPARK_EXAMPLES_JAR"
 fi
- CLASSPATH="$CLASSPATH:$SPARK_EXAMPLES_JAR"
 
  SPARK_DEV_JAR=""
  if [ -e "$FWDIR"/target/spark-dev*.jar ]; then
    export SPARK_DEV_JAR=`ls "$FWDIR"/target/spark-dev*.jar`
+   CLASSPATH="$CLASSPATH:$SPARK_DEV_JAR"
  fi
-  CLASSPATH="$CLASSPATH:$SPARK_DEV_JAR"
+ if [[ -z $SPARK_DEV_JAR ]]; then
+   echo "Failed to find Spark dev jar in $FWDIR/target" >&2
+   echo "You need to build Spark dev with mvn package before running this program" >&2
+   exit 1
+ fi
 
 CLASSPATH="$CLASSPATH:$SPARK_JAR:$SPARK_YARN_APP_JAR"
 
