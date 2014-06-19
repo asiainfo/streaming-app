@@ -69,7 +69,7 @@ fi
    echo "You need to build Spark dev with mvn package before running this program" >&2
    exit 1
  fi
- 
+
 CLASSPATH="$CLASSPATH:$SPARK_JAR:$SPARK_YARN_APP_JAR"
 
 # Add test classes if we're running from SBT or Maven with SPARK_TESTING set to 1
