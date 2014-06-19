@@ -1,0 +1,38 @@
+<configuration>
+
+    <dataSource name="ds1">
+        <class>com.asiainfo.ocdc.streaming.impl.KafkaSource</class>
+        <zkQuorum></zkQuorum>
+        <topics>cmbb3</topics>
+        <groupId>test-consumer-group</groupId>
+        <consumerNum>3</consumerNum>
+        <separator>" "</separator>
+        <stream_columns>a,b,c,d,e,f,count,fee</stream_columns>
+    </dataSource>
+
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
+        <HBaseTable>t1</HBaseTable>
+        <HBaseCell>cell</HBaseCell>
+        <HBaseKey>lac,cell</HBaseKey>
+        <output>b,c,t1.cell,count,fee</output>
+        <where>t1.cell!=null</where>
+    </step>
+
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.DynamicOperate</class>
+        <HBaseTable>t2</HBaseTable>
+        <HBaseKey>b</HBaseKey>
+        <HBaseCells>Count,Fee</HBaseCells>
+        <expressions>t2.Count+count,t2.Fee+fee</expressions>
+        <output>b,c,t1.cell,count,fee</output>
+    </step>
+
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.KafkaOut</class>
+        <topic>topicName</topic>
+        <broker>dev001:9092</broker>
+        <OutCol>b,c</OutCol>
+    </step>
+
+</configuration>
