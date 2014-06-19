@@ -77,6 +77,8 @@ fi
  fi
   CLASSPATH="$CLASSPATH:$SPARK_DEV_JAR"
 
+CLASSPATH="$CLASSPATH:$SPARK_JAR:$SPARK_YARN_APP_JAR"
+
 # Add test classes if we're running from SBT or Maven with SPARK_TESTING set to 1
 if [[ $SPARK_TESTING == 1 ]]; then
   CLASSPATH="$CLASSPATH:$FWDIR/core/target/scala-$SCALA_VERSION/test-classes"
