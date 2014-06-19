@@ -59,21 +59,11 @@ SPARK_EXAMPLES_JAR=""
 if [ -e "$EXAMPLES_DIR"/target/scala-$SCALA_VERSION/*assembly*[0-9Tg].jar ]; then
   export SPARK_EXAMPLES_JAR=`ls "$EXAMPLES_DIR"/target/scala-$SCALA_VERSION/*assembly*[0-9Tg].jar`
 fi
-if [[ -z $SPARK_EXAMPLES_JAR ]]; then
-  echo "Failed to find Spark examples assembly in $FWDIR/examples/target" >&2
-  echo "You need to build Spark with sbt/sbt assembly before running this program" >&2
-  exit 1
-fi
  CLASSPATH="$CLASSPATH:$SPARK_EXAMPLES_JAR"
 
  SPARK_DEV_JAR=""
  if [ -e "$FWDIR"/target/spark-dev*.jar ]; then
    export SPARK_DEV_JAR=`ls "$FWDIR"/target/spark-dev*.jar`
- fi
- if [[ -z $SPARK_DEV_JAR ]]; then
-   echo "Failed to find Spark dev jar in $FWDIR/target" >&2
-   echo "You need to build Spark dev with mvn package before running this program" >&2
-   exit 1
  fi
   CLASSPATH="$CLASSPATH:$SPARK_DEV_JAR"
 
