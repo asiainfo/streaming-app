@@ -46,10 +46,8 @@ if [ -f "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*-dep
   CLASSPATH="$CLASSPATH:$DEPS_ASSEMBLY_JAR"
 else
   # Else use spark-assembly jar from either RELEASE or assembly directory
-  if [ -f "$FWDIR/RELEASE" ]; then
-    ASSEMBLY_JAR=`ls "$FWDIR"/jars/spark-assembly*.jar`
-  else
-    ASSEMBLY_JAR=`ls "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*.jar`
+  if [ -e "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*.jar ]; then
+    export ASSEMBLY_JAR=`ls "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*.jar`
   fi
   CLASSPATH="$CLASSPATH:$ASSEMBLY_JAR"
 fi
