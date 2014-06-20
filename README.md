@@ -10,6 +10,7 @@ Configuration
   
   conf/Sample.xml
   <pre>
+  .........
      <dataSource name="ds1">
         <class>com.asiainfo.ocdc.streaming.impl.KafkaSource</class>
         <zkQuorum></zkQuorum>
@@ -44,10 +45,14 @@ Configuration
         <broker>dev001:9092</broker>
         <OutCol>b,c</OutCol>
     </step>
-    
-    
+    ......
   </pre>
   
+  Building Spark
+  =====
+  </pre>
+  mvn package
+  </pre>
 Start spark streaming
 =====
 ./bin/start-streaming-app.sh  conf/Sample.xml
