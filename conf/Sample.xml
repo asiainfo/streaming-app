@@ -21,6 +21,7 @@
 
     <step>
         <class>com.asiainfo.ocdc.streaming.impl.DynamicOperate</class>
+        <numTasks>8</numTasks>
         <HBaseTable>t2</HBaseTable>
         <HBaseKey>b</HBaseKey>
         <HBaseCells>Count,Fee</HBaseCells>
