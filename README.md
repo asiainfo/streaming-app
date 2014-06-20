@@ -47,10 +47,9 @@ Configuration
     </step>
     ......
   </pre>
-  
-  Building Spark
-  =====
-  </pre>
+Building Spark
+=====
+  <pre>
   mvn package
   </pre>
 Start spark streaming
