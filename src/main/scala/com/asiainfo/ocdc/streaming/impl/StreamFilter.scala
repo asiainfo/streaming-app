@@ -16,7 +16,7 @@ class StreamFilter extends StreamingStep{
     val HBaseKey = (step \ "HBaseKey").text.toString.split(delim)
     val output = (step \ "output").text.toString.split(delim)
     val HBaseCell = (step \ "HBaseCell").text.toString.split(delim)
-    val where = (step \ "where").text.toString // table1.city!=CITY_ID
+    var where = (step \ "where").text.toString // table1.city!=CITY_ID
 
     var handle = inStream.map(mapFunc = x => {
       var key = ""
@@ -29,6 +29,7 @@ class StreamFilter extends StreamingStep{
 
     if(where != null){
       handle = handle.filter(x=>{
+        where = x.toMap.getOrElse(where,where)
         (JexlTool.getExpValue(where, x.toArray)).toBoolean
       })
     }
