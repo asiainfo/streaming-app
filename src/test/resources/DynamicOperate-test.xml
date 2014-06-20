@@ -1,6 +1,7 @@
 <configuration>
     <step  setNum="0">
         <class>com.asiainfo.ocdc.streaming.impl.DynamicOperate</class>
+        <numTasks>8<numTasks>
         <HBaseTable>htable</HBaseTable>
         <HBaseKey>TELNo</HBaseKey>
         <HBaseCells>NTcount,Fee</HBaseCells>
@@ -11,6 +12,7 @@
     
  <step  setNum="1">
         <class>com.asiainfo.ocdc.streaming.impl.DynamicOperate</class>
+        <numTasks>8<numTasks>
         <HBaseTable>htable</HBaseTable>
         <HBaseKey>TELNo</HBaseKey>
         <HBaseCells>NTcount,Fee</HBaseCells>
@@ -21,6 +23,7 @@
     
     <step  setNum="2">
         <class>com.asiainfo.ocdc.streaming.impl.DynamicOperate</class>
+        <numTasks>8<numTasks>
         <HBaseTable>htable</HBaseTable>
         <HBaseKey>TELNo</HBaseKey>
         <HBaseCells>NTcount,Fee</HBaseCells>

@@ -15,8 +15,9 @@ class DynamicOperate  extends StreamingStep {
 
   override def onStep(step: Node, dstream: DStream[Array[(String, String)]]): DStream[Array[(String, String)]] = {
 
+	val key = (step \ "HBaseKey").text.toString.trim
     val table = (step \ "HBaseTable").text.toString.trim
-    val key = (step \ "HBaseKey").text.toString.trim
+    val numTasks = (step \ "numTasks").text.toString.trim
     val family = "F"
     val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
     val operaters = (step \ "expressions").text.toString.trim.split(",")
@@ -28,7 +29,7 @@ class DynamicOperate  extends StreamingStep {
    val tempSream = dstream.map(recode => {
       var imap = recode.toMap
       (imap(key), recode)
-    }).groupByKey.map(keyrcode => {
+    }).groupByKey(numTasks.toInt).map(keyrcode => {
       //　从hbase中取出要累加的初始数据
       val getHbaseValue = HbaseTool.getValue(table, keyrcode._1, family, hBaseCells)
       // 如果hbase中无基础数据时，把null转换为“0”
@@ -69,6 +70,7 @@ class DynamicOperate  extends StreamingStep {
    */
   def validityCheck(step: Node):Boolean={
     var checkresult =true
+    val numTasks = (step \ "numTasks").text.toString.trim
     val table = (step \ "HBaseTable").text.toString.trim
     val key = (step \ "HBaseKey").text.toString.trim
     val family = "F"
@@ -76,6 +78,7 @@ class DynamicOperate  extends StreamingStep {
     val operaters = (step \ "expressions").text.toString.trim.split(",")
     val output = (step \ "output").text.toString.trim.split(",")
     
+    if (!numTasks.matches("[0-9]+"))Console.err.println("请正确填写任务数<1~n>!")
     //check expressions和HBaseCells的个数
     if (hBaseCells.size != operaters.size){checkresult = false; Console.err.println("<expressions>中的个数和<HBaseCells>中的个数不一致！请确认")}
     
