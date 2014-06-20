@@ -15,14 +15,16 @@ class DynamicOperate  extends StreamingStep {
 
   override def onStep(step: Node, dstream: DStream[Array[(String, String)]]): DStream[Array[(String, String)]] = {
 
+	var numTasks = (step \ "numTasks").text.toString.trim
 	val key = (step \ "HBaseKey").text.toString.trim
     val table = (step \ "HBaseTable").text.toString.trim
-    val numTasks = (step \ "numTasks").text.toString.trim
     val family = "F"
     val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
     val operaters = (step \ "expressions").text.toString.trim.split(",")
     val output = (step \ "output").text.toString.trim.split(",")
 
+    // numTasks 默认为8个并行任务进行分组
+     if (numTasks== null || numTasks.isEmpty) numTasks="8"
     //xml check
     if (!validityCheck(step: Node)) return dstream
 
@@ -70,14 +72,14 @@ class DynamicOperate  extends StreamingStep {
    */
   def validityCheck(step: Node):Boolean={
     var checkresult =true
-    val numTasks = (step \ "numTasks").text.toString.trim
+    var numTasks = (step \ "numTasks").text.toString.trim
     val table = (step \ "HBaseTable").text.toString.trim
     val key = (step \ "HBaseKey").text.toString.trim
     val family = "F"
     val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
     val operaters = (step \ "expressions").text.toString.trim.split(",")
     val output = (step \ "output").text.toString.trim.split(",")
-    
+    if (numTasks== null || numTasks.isEmpty) numTasks="8"
     if (!numTasks.matches("[0-9]+"))Console.err.println("请正确填写任务数<1~n>!")
     //check expressions和HBaseCells的个数
     if (hBaseCells.size != operaters.size){checkresult = false; Console.err.println("<expressions>中的个数和<HBaseCells>中的个数不一致！请确认")}
