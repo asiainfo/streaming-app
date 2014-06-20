@@ -1,0 +1,46 @@
+<configuration>
+
+    <dataSource name="input">
+        <class>com.asiainfo.ocdc.streaming.impl.KafkaSource</class>
+        <zkQuorum></zkQuorum>
+        <topics>com.ailk.flowmanagement.mcd.flux_action</topics>
+        <groupId>test-consumer-group</groupId>
+        <consumerNum>3</consumerNum>
+        <separator>" "</separator>
+        <stream_columns>business_id,user_account,business_start_time,content_type,keyword,site_id,activity_code</stream_columns>
+    </dataSource>
+
+    <step name="uniq">
+        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
+        <HBaseTable>OperatedUsers</HBaseTable>
+        <HBaseCell>user_account</HBaseCell>
+        <HBaseKey>user_account</HBaseKey>
+        <where>OperatedUsers.user_account!=null</where>
+        <output>business_id,user_account,business_start_time,content_type,keyword,site_id,activity_code</output>
+    </step>
+
+    <step name="addFields">
+        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
+        <HBaseTable>dm_user_labil_data</HBaseTable>
+        <HBaseCell>brand_id,bill_fee</HBaseCell>
+        <HBaseKey>user_account</HBaseKey>
+        <output>business_id,user_account,activity_code,dm_user_labil_data.brand_id,dm_user_labil_data.bill_fee</output>
+    </step>
+
+    <step name="filteByRoles">
+        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
+        <HBaseTable>checkRoles</HBaseTable>
+        <HBaseCell>condition</HBaseCell>
+        <HBaseKey>business_id</HBaseKey>
+        <where>checkRoles.condition</where>
+        <output>business_id,user_account,activity_code</output>
+    </step>
+
+    <step name="output">
+        <class>com.asiainfo.ocdc.streaming.impl.KafkaOut</class>
+        <topic>check</topic>
+        <broker>dev001:9092</broker>
+        <OutCol>user_account</OutCol>
+    </step>
+
+</configuration>
