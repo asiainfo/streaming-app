@@ -6,6 +6,7 @@ import org.apache.spark.streaming._
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.StreamingContext._
 import org.apache.spark.SparkConf
+import org.apache.spark.streaming.kafka.KafkaUtils
 
 
 object StreamingApp {
@@ -24,6 +25,8 @@ object StreamingApp {
      val dataSource = xmlFile \ "dataSource"
      val clz = Class.forName((dataSource \ "class").text.toString)
      val method = clz.getDeclaredMethod("createStream",classOf[Node])
+     val topicpMap = "abcdef".split(",").map((_,1)).toMap
+     KafkaUtils.createStream(ssc, "", "group", topicpMap)
      var streamingData = method.invoke(clz.getConstructor(classOf[StreamingContext]).newInstance(ssc),dataSource(0))
 
      val steps = xmlFile \ "step"

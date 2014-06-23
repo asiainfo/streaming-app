@@ -6,7 +6,7 @@ import scala.xml.Node
 import com.asiainfo.ocdc.streaming.StreamingStep
 import com.asiainfo.ocdc.streaming.tools.KafkaProducer
 
-class KafkaOut extends StreamingStep{
+class KafkaOut extends StreamingStep with Serializable{
 
   def onStep(step:Node,inStream:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
     val delim = ","
