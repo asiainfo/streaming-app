@@ -32,7 +32,7 @@ object StreamingApp {
      val steps = xmlFile \ "step"
      for(step <- steps){
        val clz = Class.forName((step \ "class").text.toString)
-       val method = clz.getDeclaredMethod("onStep",classOf[Node], classOf[DStream[Array[(String,String)]]])
+       val method = clz.getDeclaredMethod("runStep",classOf[Node], classOf[DStream[Array[(String,String)]]])
        streamingData = method.invoke(clz.newInstance(), step,streamingData)
      }
     streamingData.asInstanceOf[DStream[Array[(String,String)]]].print()
@@ -42,8 +42,18 @@ object StreamingApp {
  }
 
 abstract class StreamingStep{
+  def runStep(step:Node,input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
+      println("===================="+this.getClass.getSimpleName+" is running ! =====================")
+      val stepResult = this.onStep(step,input)
+      println("===================="+this.getClass.getSimpleName+" results is : =====================")
+      stepResult.map(x => {
+        x.map(_._2).foreach(println(_))
+      })
+      stepResult
+  }
 
   def onStep(step:Node,input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]
+
 }
 
 abstract class StreamingSource(sc:StreamingContext){
