@@ -20,17 +20,18 @@ class KafkaSource(ssc:StreamingContext) extends StreamingSource(ssc){
     val stream = (1 to consumerNum).map(_=>KafkaUtils.createStream(ssc, zkQuorum, group, topicpMap)).reduce(_.union(_)).map(_._2)
 
     // 对输入流列名定义
-    stream.map(x =>{
+    val streamResult = stream.map(x =>{
       val streamValues = x.split(separator)
       var result : AnyRef = null
       if(stream_columns.size == streamValues.length){
         result = (0 to streamValues.length-1).map(i=>(stream_columns(i),streamValues(i)))
       }else throw new Exception("流数据配置列名与数据格式不符！")
-
-      val r = result.asInstanceOf[Array[(String,String)]]
-      println("KAFKA流数据：")
-      r.map(_._2).foreach(println(_))
       result.asInstanceOf[Array[(String,String)]]
     })
+
+    println("==========================KAFKA流数据： ============================")
+    streamResult.asInstanceOf[Array[(String,String)]].map(_._2).foreach(println(_))
+
+    streamResult
   }
 }
