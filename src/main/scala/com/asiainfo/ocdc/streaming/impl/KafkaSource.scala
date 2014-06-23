@@ -30,7 +30,9 @@ class KafkaSource(ssc:StreamingContext) extends StreamingSource(ssc){
     })
 
     println("==========================KAFKA流数据： ============================")
-    streamResult.asInstanceOf[Array[(String,String)]].map(_._2).foreach(println(_))
+    streamResult.map(x=>{
+      x.foreach(y=>{print(y._2)})
+    })
 
     streamResult
   }
