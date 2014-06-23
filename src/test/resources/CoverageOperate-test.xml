@@ -1,0 +1,11 @@
+<configuration>
+    <step id="1">
+        <class>com.asiainfo.ocdc.streaming.impl.CoverageOperate</class>
+        <HBaseTable>demo</HBaseTable>
+        <HBaseKey>imsi</HBaseKey>
+        <HBaseCells>NTcount,Fee,Name</HBaseCells>
+        <expressions>demo.NTcount+netcount,fee,name</expressions>
+        <output>imsi,name,sex,netcount,fee</output>
+        <describe>desc</describe>
+    </step>
+</configuration>
