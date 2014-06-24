@@ -18,7 +18,7 @@ class DynamicOperate  extends StreamingStep {
 	var numTasks = (step \ "numTasks").text.toString.trim
 	val key = (step \ "HBaseKey").text.toString.trim
     val table = (step \ "HBaseTable").text.toString.trim
-    val family = "F"
+    
       // TODO discussion: about xml's node <HBaseCells>  or <HBaseCell>
     val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
     val operaters = (step \ "expressions").text.toString.trim.split(",")
@@ -34,10 +34,10 @@ class DynamicOperate  extends StreamingStep {
       (imap(key), recode)
     }).groupByKey(numTasks.toInt).map(keyrcode => {
       //　从hbase中取出要累加的初始数据
-      val getHbaseValue = HbaseTool.getValue(table, keyrcode._1, family, hBaseCells)
+      val getHbaseValue = HbaseTool.getValue(table, keyrcode._1, HbaseTool.family, hBaseCells)
       // 如果hbase中无基础数据时，把null转换为“0”
       var cellvalue = Map[String, String]()
-      getHbaseValue.foreach(f=>{if ((f._2).toLowerCase()=="null")cellvalue +=(f._1 -> "0") else  cellvalue +=(f._1 -> f._2)})
+      getHbaseValue.foreach(f=>{if ((f._2).toLowerCase().isEmpty || (f._2).toLowerCase()=="null")cellvalue +=(f._1 -> "0") else  cellvalue +=(f._1 -> f._2)})
       
       // 要更新的operaters与hbase.cell一一对应
       val cellexp = hBaseCells.zip(operaters)
@@ -55,7 +55,7 @@ class DynamicOperate  extends StreamingStep {
         })
       })
       // 表达式对应的结果值更新到hbase
-      HbaseTool.putValue(table, keyrcode._1, family, mapSet.toArray)
+      HbaseTool.putValue(table, keyrcode._1, HbaseTool.family, mapSet.toArray)
       keyrcode
     }).flatMap(_._2)
     
