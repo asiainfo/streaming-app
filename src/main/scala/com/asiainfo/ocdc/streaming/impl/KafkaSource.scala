@@ -9,7 +9,6 @@ import org.apache.spark.streaming.StreamingContext
 class KafkaSource(ssc:StreamingContext) extends StreamingSource(ssc){
 
   def createStream(source:Node):DStream[Array[(String,String)]]={
-    println("=================构建KAFKA输入流！==========================")
     val zkQuorum = (source \ "zkQuorum").text.toString
     val topics = (source \ "topics").text.toString
     val group = (source \ "groupId").text.toString
@@ -27,10 +26,7 @@ class KafkaSource(ssc:StreamingContext) extends StreamingSource(ssc){
         result = (0 to streamValues.length-1).map(i=>(stream_columns(i),streamValues(i)))
       }else throw new Exception("流数据配置列名与数据格式不符！")
 
-      println("=================KAFKA输出数据： ==========================")
-      result.asInstanceOf[Array[(String,String)]].foreach(x=>{print(x._2)})
-
-      result.asInstanceOf[Array[(String,String)]]
+      result.asInstanceOf[Vector[(String,String)]].toArray
     })
   }
 }
