@@ -23,6 +23,10 @@ class StreamFilter extends StreamingStep{
         val item = x.toMap
         key += item.getOrElse(arg,"")
       }
+
+      println("=============hbase 查询结果================" )
+      HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCell).foreach(x=>{println(x._1+"###"+x._2)})
+
       x ++HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCell)
     })
 
