@@ -19,6 +19,7 @@ class DynamicOperate  extends StreamingStep {
 	val key = (step \ "HBaseKey").text.toString.trim
     val table = (step \ "HBaseTable").text.toString.trim
     val family = "F"
+      // TODO discussion: about xml's node <HBaseCells>  or <HBaseCell>
     val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
     val operaters = (step \ "expressions").text.toString.trim.split(",")
     val output = (step \ "output").text.toString.trim.split(",")
