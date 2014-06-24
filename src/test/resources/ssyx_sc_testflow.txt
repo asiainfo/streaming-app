@@ -1,0 +1,39 @@
+一. 数据准备
+1. kafka 输入数据
+  （1）创建topic
+  bin/kafka-topics.sh --create --zookeeper dn4:2181,dn9:2181,dn10:2181,dn11:2181，dn12:2181
+  --replication-factor 3 --partitions 15 --topic com.ailk.flowmanagement.mcd.flux_action
+   (2) 测试数据 ssyx_kafkaMessage.txt
+
+  （3）导入hdfs做为kafka producer 读取数据源
+  hadoop fs -put
+
+2. 用户标签表
+  （1）创建用户标签表
+  （2）用户标签表数据
+  （3）bkload 导入=
+
+3. 过滤规则表
+  （1）创建过滤规则表
+  （2）过滤规则表数据
+  （3）bkload 导入
+
+4. 已处理用户表
+  （1）创建已处理用户表
+
+5. 营销目标用户表
+  （1）创建营销目标用户表
+
+6. kafka 输出检查数据
+  （1）创建topic
+  bin/kafka-topics.sh --create --zookeeper dn4:2181,dn9:2181,dn10:2181,dn11:2181，dn12:2181
+  --replication-factor 3 --partitions 15 --topic com.ailk.flowmanagement.mcd.flux_action
+
+
+二. 应用执行
+1. 运行spark_streaming
+./bin/start-streaming-app.sh conf/ssyx_sc.xml
+
+2. 启动kafka producer 生产信息流
+
+3. 输出结果检查
