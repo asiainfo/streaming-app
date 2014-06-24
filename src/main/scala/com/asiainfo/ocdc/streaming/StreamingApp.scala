@@ -32,7 +32,7 @@ object StreamingApp {
      val steps = xmlFile \ "step"
      for(step <- steps){
        val clz = Class.forName((step \ "class").text.toString)
-       val method = clz.getMethod()("runStep",classOf[Node], classOf[DStream[Array[(String,String)]]])
+       val method = clz.getMethod("runStep",classOf[Node], classOf[DStream[Array[(String,String)]]])
        streamingData = method.invoke(clz.newInstance(), step,streamingData)
      }
     streamingData.asInstanceOf[DStream[Array[(String,String)]]].print()
