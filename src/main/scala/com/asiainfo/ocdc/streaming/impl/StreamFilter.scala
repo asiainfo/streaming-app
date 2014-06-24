@@ -9,7 +9,6 @@ import com.asiainfo.ocdc.streaming.tools._
 class StreamFilter extends StreamingStep{
 
   def onStep(step:Node,inStream:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
-
     val delim = ","
     var result = inStream
     val HBaseTable = (step \ "HBaseTable").text.toString
@@ -36,7 +35,11 @@ class StreamFilter extends StreamingStep{
     result  = handle.map(x=>{
       //如果input output相同的字段完全相同，说明不需要规整数据，不做map
       val item = x.toMap
-      (0 to output.length-1).map(i=>{(output(i),item.getOrElse(output(i),output(i)))}).toArray
+      (0 to output.length-1).map(i=>{
+        println("================StreamFilter 输出值: =====================" )
+        print(output(i) + "####" + item.getOrElse(output(i),output(i)))
+        (output(i),item.getOrElse(output(i),output(i)))
+      }).toArray
     })
     result
 

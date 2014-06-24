@@ -23,7 +23,12 @@ class KafkaSource(ssc:StreamingContext) extends StreamingSource(ssc){
       val streamValues = x.split(separator)
       var result : AnyRef = null
       if(stream_columns.size == streamValues.length){
-        result = (0 to streamValues.length-1).map(i=>(stream_columns(i),streamValues(i)))
+        println("====================== KafkaSource 输出数据 ======================= " )
+        result = (0 to streamValues.length-1).map(i=>{
+          print(stream_columns(i)+"####"+streamValues(i))
+          (stream_columns(i),streamValues(i))
+        })
+
       }else throw new Exception("流数据配置列名与数据格式不符！")
 
       result.asInstanceOf[Vector[(String,String)]].toArray
