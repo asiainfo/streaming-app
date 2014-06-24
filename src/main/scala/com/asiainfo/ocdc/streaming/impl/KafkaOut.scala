@@ -26,7 +26,7 @@ class KafkaOut extends StreamingStep with Serializable{
       val kafkaout =out
 
       //send kafka message, comment this function when doing unit test
-      //kafkaSend(kafkaout,brokers,topic,delim)
+      kafkaSend(kafkaout,brokers,topic,delim)
 
       var outstream = Array(("outstream",kafkaout))
       outstream
@@ -35,6 +35,11 @@ class KafkaOut extends StreamingStep with Serializable{
   }
 
   def kafkaSend(kafkaout:String,brokers:String,topic:String,delim:String):Unit={
+    println("======================Kafka输出信息========================")
+    println("kafkaout==>"+kafkaout)
+    println("brokers==>"+brokers)
+    println("topic==>"+topic)
+    println("delim==>"+delim)
     val key = kafkaout.split(delim)(0)
     val producer = KafkaProducer.getProducer(brokers)
     var message =List[KeyedMessage[String, String]]()
