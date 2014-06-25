@@ -14,7 +14,13 @@ Configuration
      <dataSource name="ds1">
         <class>com.asiainfo.ocdc.streaming.impl.KafkaSource</class>
         <zkQuorum></zkQuorum>
+        <description>Specifies the ZooKeeper connection string in the form hostname:port,
+        where hostname and port are the host and port for a node in your ZooKeeper cluster.
+        To allow connecting through other ZooKeeper nodes when that host is down
+        you can also specify multiple hosts in the form 
+        hostname1:port1,hostname2:port2,hostname3:port3</description>
         <topics>cmbb3</topics>
+        <description>topic Producername</description>
         <groupId>test-consumer-group</groupId>
         <consumerNum>3</consumerNum>
         <separator>" "</separator>
@@ -42,7 +48,10 @@ Configuration
     <step>
         <class>com.asiainfo.ocdc.streaming.impl.KafkaOut</class>
         <topic>topicName</topic>
+        <description>topic ConsumerName</description>
         <broker>dev001:9092</broker>
+        <description>The port the socket server listens on,
+    hostname1:port1,hostname2:port2,hostname3:port3</description>
         <OutCol>b,c</OutCol>
     </step>
     ......
