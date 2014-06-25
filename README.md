@@ -9,6 +9,7 @@ Configuration
   </pre>
   
   conf/Sample.xml
+  
   <pre>
   .........
      <dataSource name="ds1">
@@ -23,7 +24,7 @@ Configuration
         <description>topic Producername</description>
         <groupId>test-consumer-group</groupId>
         <consumerNum>3</consumerNum>
-        <separator>" "</separator>
+        <separator> </separator>
         <stream_columns>a,b,c,d,e,f,count,fee</stream_columns>
     </dataSource>
 
