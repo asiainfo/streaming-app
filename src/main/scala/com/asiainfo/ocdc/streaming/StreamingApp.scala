@@ -16,18 +16,17 @@ object StreamingApp {
       System.err.println("Usage: <jobXMLPath>")
       System.exit(1)
     }
-    val Array(jobConfFile) = args
+    val Array(appName,stream_space,jobConfFile) = args
 
-    val sparkConf = new SparkConf().setAppName("StreamingApp")
-    val ssc =  new StreamingContext(sparkConf, Seconds(2))
+    val xmlFile = XML.load(jobConfFile)
+    val dataSource = xmlFile \ "dataSource"
+    val clz = Class.forName((dataSource \ "class").text.toString)
+    val method = clz.getDeclaredMethod("createStream",classOf[Node])
 
-     val xmlFile = XML.load(jobConfFile)
-     val dataSource = xmlFile \ "dataSource"
-     val clz = Class.forName((dataSource \ "class").text.toString)
-     val method = clz.getDeclaredMethod("createStream",classOf[Node])
-     val topicpMap = "abcdef".split(",").map((_,1)).toMap
-     KafkaUtils.createStream(ssc, "", "group", topicpMap)
-     var streamingData = method.invoke(clz.getConstructor(classOf[StreamingContext]).newInstance(ssc),dataSource(0))
+    val sparkConf = new SparkConf().setAppName(appName)
+    val ssc =  new StreamingContext(sparkConf, Seconds(stream_space.toInt))
+
+    var streamingData = method.invoke(clz.getConstructor(classOf[StreamingContext]).newInstance(ssc),dataSource(0))
 
      val steps = xmlFile \ "step"
      for(step <- steps){
