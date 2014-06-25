@@ -7,7 +7,7 @@ import org.apache.hadoop.hbase.util.Bytes
 import scala.xml.Node
 import com.asiainfo.ocdc.streaming.tools._
 
-class CoverageOperate extends StreamingStep with Logging {
+class SaveOperate extends StreamingStep with Logging {
 
   def onStep(step: Node, inStream: DStream[Array[(String, String)]]): DStream[Array[(String, String)]] = {
 
