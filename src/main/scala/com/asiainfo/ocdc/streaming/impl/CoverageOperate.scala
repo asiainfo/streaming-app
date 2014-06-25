@@ -18,16 +18,30 @@ class CoverageOperate extends StreamingStep with Logging {
 		val output = (step \ "output").text.toString.trim.split(",")
 		
 		val handle = inStream.map(record => {
-		var recordMap = record.toMap
-		
-		val expeValue = for { index <- 0 until expressions.size } yield (JexlTool.getExpValue(expressions(index), recordMap.toArray))
-		
-		val cellexp = hBaseCells.zip(expeValue)
-		HbaseTool.putValue(table, recordMap(key), HbaseTool.family, cellexp)
-		
-		record
-    })
+			var recordMap = record.toMap
+			
+			//retrieve old data from hbase table
+			val getHbaseValue = HbaseTool.getValue(table, recordMap(key), HbaseTool.family, hBaseCells)
+			
+			//replace null with 0
+			var cellValue = Map[String, String]()
+		    getHbaseValue.foreach(f => { 
+		      if ((f._2).toLowerCase().isEmpty || (f._2).toLowerCase() == "null") {
+		        cellValue += (f._1 -> "0") 
+		      } else {
+		        cellValue += (f._1 -> f._2)
+		      }
+		    })
+		    
+		    //compute expressions
+		    val expressionValue = for { index <- 0 until expressions.size } yield (JexlTool.getExpValue(expressions(index), (recordMap ++ cellValue).toArray))
+	
+		    val cellexp = hBaseCells.zip(expressionValue)
+		    
+		    //rewrite new data to hbase
+			HbaseTool.putValue(table, recordMap(key), HbaseTool.family, cellexp)
+			record
+		})
     handle
   }
-
 }
