@@ -27,7 +27,7 @@ class DynamicOperate  extends StreamingStep {
     // numTasks 默认为8个并行任务进行分组
      if (numTasks== null || numTasks.isEmpty) numTasks="8"
     //xml check
-    if (!validityCheck(step: Node)) return dstream
+//    if (!validityCheck(step: Node)) return dstream
 
    val tempSream = dstream.map(recode => {
       println("===================== DynamicOperate 输入流数据 =======================")
