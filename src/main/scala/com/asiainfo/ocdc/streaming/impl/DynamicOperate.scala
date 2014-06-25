@@ -30,7 +30,9 @@ class DynamicOperate  extends StreamingStep {
     if (!validityCheck(step: Node)) return dstream
 
    val tempSream = dstream.map(recode => {
-      var imap = recode.toMap
+      println("===================== DynamicOperate 输入流数据 =======================")
+     var imap = recode.toMap
+      println("===================== RowKey "+key+" = "+imap(key)+" =======================")
       (imap(key), recode)
     }).groupByKey(numTasks.toInt).map(keyrcode => {
       //　从hbase中取出要累加的初始数据
@@ -63,6 +65,9 @@ class DynamicOperate  extends StreamingStep {
     val result = tempSream.map(x => {
       //如果input output相同的字段完全相同，说明不需要规整数据，不做map
       val item = x.toMap
+      println("===================== DynamicOperate 输出流数据 =======================")
+      (0 to output.length - 1).foreach(i=>{println(output(i) +"###"+item.getOrElse(output(i), output(i)))})
+
       (0 to output.length - 1).map(i => (output(i), item.getOrElse(output(i), output(i)))).toArray
     })
     result
