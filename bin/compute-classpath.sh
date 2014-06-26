@@ -33,36 +33,6 @@ fi
 # Build up classpath
 CLASSPATH="$SPARK_CLASSPATH:$FWDIR/conf"
 
-# First check if we have a dependencies jar. If so, include binary classes with the deps jar
-if [ -f "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*-deps.jar ]; then
-  CLASSPATH="$CLASSPATH:$FWDIR/core/target/scala-$SCALA_VERSION/classes"
-  CLASSPATH="$CLASSPATH:$FWDIR/repl/target/scala-$SCALA_VERSION/classes"
-  CLASSPATH="$CLASSPATH:$FWDIR/mllib/target/scala-$SCALA_VERSION/classes"
-  CLASSPATH="$CLASSPATH:$FWDIR/bagel/target/scala-$SCALA_VERSION/classes"
-  CLASSPATH="$CLASSPATH:$FWDIR/graphx/target/scala-$SCALA_VERSION/classes"
-  CLASSPATH="$CLASSPATH:$FWDIR/streaming/target/scala-$SCALA_VERSION/classes"
-
-  DEPS_ASSEMBLY_JAR=`ls "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*-deps.jar`
-  CLASSPATH="$CLASSPATH:$DEPS_ASSEMBLY_JAR"
-else
-  # Else use spark-assembly jar from either RELEASE or assembly directory
-  if [ -e "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*.jar ]; then
-    export ASSEMBLY_JAR=`ls "$FWDIR"/assembly/target/scala-$SCALA_VERSION/spark-assembly*hadoop*.jar`
-     CLASSPATH="$CLASSPATH:$ASSEMBLY_JAR"
-  fi
-fi
-
- SPARK_DEV_JAR=""
- if [ -e "$FWDIR"/target/spark-dev*jar-with-dependencies.jar ]; then
-   export SPARK_DEV_JAR=`ls "$FWDIR"/target/spark-dev*jar-with-dependencies.jar`
-   CLASSPATH="$CLASSPATH:$SPARK_DEV_JAR"
- fi
- if [[ -z $SPARK_DEV_JAR ]]; then
-   echo "Failed to find Spark dev jar-with-dependencies.jar in $FWDIR/target" >&2
-   echo "You need to build Spark dev with mvn package before running this program" >&2
-   exit 1
- fi
-
 CLASSPATH="$CLASSPATH:$SPARK_JAR:$SPARK_YARN_APP_JAR"
 
 # Add test classes if we're running from SBT or Maven with SPARK_TESTING set to 1
