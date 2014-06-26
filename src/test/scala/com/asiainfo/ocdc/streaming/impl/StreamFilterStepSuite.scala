@@ -14,7 +14,7 @@ class StreamFilterStepSuite extends TestSuitBase with Logging {
   test("Streamfilter test example1") {
     logInfo("StreamFilter test example1 started ")
 
-    val xmlFile = XML.load("src/test/resources/streamfilter.xml")
+    val xmlFile = XML.load("src/test/resources/streamfilter-test.xml")
     val step = xmlFile \ "step"
 
     val input = Seq(
@@ -41,7 +41,7 @@ class StreamFilterStepSuite extends TestSuitBase with Logging {
   test(" streamFilter test example2") {
     logInfo("StreamFilter test example2 started ")
 
-    val xmlFile = XML.load("src/test/resources/streamfilter.xml")
+    val xmlFile = XML.load("src/test/resources/streamfilter-test.xml")
     val step = xmlFile \ "step"
 
     val input = Seq(
@@ -69,7 +69,7 @@ class StreamFilterStepSuite extends TestSuitBase with Logging {
   test(" streamFilter test example3") {
     logInfo("StreamFilter test example3 started ")
 
-    val xmlFile = XML.load("src/test/resources/streamfilter.xml")
+    val xmlFile = XML.load("src/test/resources/streamfilter-test.xml")
     val step = xmlFile \ "step"
 
     val input = Seq(
@@ -95,7 +95,7 @@ class StreamFilterStepSuite extends TestSuitBase with Logging {
   test(" streamFilter test example4") {
     logInfo("StreamFilter test example4 started ")
 
-    val xmlFile = XML.load("src/test/resources/streamfilter.xml")
+    val xmlFile = XML.load("src/test/resources/streamfilter-test.xml")
     val step = xmlFile \ "step"
 
     val input = Seq(

@@ -2,6 +2,15 @@ Asiainfo Spark_dev
 =====
 
 
+Spark_dev  requires:
+
+    Scala 2.10.3
+    AMPLab's Hbase 0.98.1
+    Spark 0.9.1
+    
+
+
+
 Configuration
 =====
   conf/spark-env.sh
@@ -14,6 +23,8 @@ Configuration
   
   
   conf/Sample.xml
+  
+  Sample.xml is used for processing flow, used for filtering rules, data judgment conditions, judging and dynamic accumulation factor
   
   <pre>
   ................
@@ -84,6 +95,6 @@ Parameter 4, The configuration file
 Running Tests
 =====
 Test documentation, reference spark_dev project wiki
-
+https://github.com/asiainfo-linkage/spark_dev.wiki.git
 
   

@@ -6,7 +6,7 @@
         <topics>com.ailk.flowmanagement.mcd.flux_action</topics>
         <groupId>test-consumer-group</groupId>
         <consumerNum>3</consumerNum>
-        <separator>" "</separator>
+        <separator> </separator>
         <stream_columns>business_id,user_account,business_start_time,content_type,keyword,site_id,activity_code</stream_columns>
     </dataSource>
 
@@ -29,7 +29,7 @@
 
     <step name="filteByRoles">
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
-        <HBaseTable>checkRoles</HBaseTable>
+        <HBaseTable>dim_sparkstreaming_target_define</HBaseTable>
         <HBaseCell>condition</HBaseCell>
         <HBaseKey>business_id</HBaseKey>
         <where>checkRoles.condition</where>
