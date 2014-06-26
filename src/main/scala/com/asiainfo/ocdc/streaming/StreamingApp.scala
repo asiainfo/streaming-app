@@ -7,11 +7,11 @@ import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.SparkConf
 
 
-object StreamingApp {
+object StreamingApp extends LogHelper{
   def main(args: Array[String]) {
 
-    if (args.length < 1) {
-      System.err.println("Usage: <jobXMLPath>")
+    if (args.length < 3 ) {
+      System.err.println("Usage: <AppName> <Stream_Space> <jobXMLPath>")
       System.exit(1)
     }
     val Array(appName,stream_space,jobConfFile) = args
@@ -38,7 +38,7 @@ object StreamingApp {
    }
  }
 
-abstract class StreamingStep(){
+abstract class StreamingStep() extends LogHelper{
 
   /**
    * Step 运行主方法
@@ -47,6 +47,9 @@ abstract class StreamingStep(){
    * @return
    */
   def run(step:Node,input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
+
+    logInfo("====================="+ this.getClass.getSimpleName +" beginning runing ! =======================")
+
     // 预检查
     check(step)
 
@@ -55,6 +58,8 @@ abstract class StreamingStep(){
 
     // 后续处理操作
     afterStep()
+
+    logInfo("====================="+ this.getClass.getSimpleName +" initialized finished ! =======================")
 
     stepStream
   }
@@ -69,7 +74,7 @@ abstract class StreamingStep(){
   def afterStep(){}
 }
 
-abstract class StreamingSource(sc:StreamingContext){
+abstract class StreamingSource(sc:StreamingContext) extends LogHelper{
 
   def createStream(source:Node):DStream[Array[(String,String)]]
 
