@@ -84,6 +84,6 @@ Parameter 4, The configuration file
 Running Tests
 =====
 Test documentation, reference spark_dev project wiki
-
+https://github.com/asiainfo-linkage/spark_dev.wiki.git
 
   
