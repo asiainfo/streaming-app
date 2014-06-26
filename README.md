@@ -76,11 +76,8 @@ The command format is as follows,To start the streaming app application
 ./bin/start-streaming-app.sh streaming-app-name 2  conf/Sample.xml
 
 Parameter 1, execute the script file
-
 Parameter 2, When should the different configuration XML file, the corresponding streamingappname 
-
 Parameter 3, flow interval refresh time(seconds)
-
 Parameter 4, The configuration file
 
 
