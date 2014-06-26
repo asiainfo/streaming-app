@@ -57,11 +57,7 @@ abstract class StreamingStep() extends LogHelper{
     val stepStream = onStep(step,input)
 
     // 后续处理操作
-    afterStep()
-
-    logInfo("====================="+ this.getClass.getSimpleName +" initialized finished ! =======================")
-
-    stepStream
+    afterStep(input)
   }
 
   def check(step:Node){
@@ -71,7 +67,9 @@ abstract class StreamingStep() extends LogHelper{
 
   def onStep(step:Node,input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]
 
-  def afterStep(){}
+  def afterStep(input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
+    input
+  }
 }
 
 abstract class StreamingSource(sc:StreamingContext) extends LogHelper{
