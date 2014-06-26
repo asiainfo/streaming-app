@@ -1,3 +1,15 @@
+Asiainfo Spark_dev
+=====
+
+
+Spark_dev  requires:
+
+    Scala 2.10.3
+    AMPLab's Hbase 0.98.1
+    Spark 0.9.1
+    
+
+
 
 Configuration
 =====
@@ -8,10 +20,15 @@ Configuration
   export SPARK_JAR=/home/ocdc/spark_0.9.1_streaming/assembly/target/scala-2.10/spark-assembly-0.9.1-hadoop2.3.0-cdh5.0.0.jar
   </pre>
   
+  
+  
   conf/Sample.xml
   
+  Sample.xml is used for processing flow, used for filtering rules, data judgment conditions, judging and dynamic accumulation factor
+  
   <pre>
-  .........
+  ................
+  
      <dataSource name="ds1">
         <class>com.asiainfo.ocdc.streaming.impl.KafkaSource</class>
         <zkQuorum></zkQuorum>
@@ -21,7 +38,7 @@ Configuration
         you can also specify multiple hosts in the form 
         hostname1:port1,hostname2:port2,hostname3:port3</description>
         <topics>cmbb3</topics>
-        <description>topic Producername</description>
+        <description>topicProducername</description>
         <groupId>test-consumer-group</groupId>
         <consumerNum>3</consumerNum>
         <separator> </separator>
@@ -52,7 +69,7 @@ Configuration
         <description>topic ConsumerName</description>
         <broker>dev001:9092</broker>
         <description>The port the socket server listens on,
-    hostname1:port1,hostname2:port2,hostname3:port3</description>
+        hostname1:port1,hostname2:port2,hostname3:port3</description>
         <OutCol>b,c</OutCol>
     </step>
     ......
@@ -62,10 +79,22 @@ Building Spark
   <pre>
   mvn package
   </pre>
+  
 Start spark streaming
 =====
-./bin/start-streaming-app.sh  conf/Sample.xml
+The command format is as follows,To start the streaming app application
+
+./bin/start-streaming-app.sh streaming-app-name 2  conf/Sample.xml
+
+Parameter 1, execute the script file                                                                                      
+Parameter 2, When should the different configuration XML file, the corresponding streamingappname                         
+Parameter 3, flow interval refresh time(seconds)                                                                          
+Parameter 4, The configuration file
 
 
+Running Tests
+=====
+Test documentation, reference spark_dev project wiki
+https://github.com/asiainfo-linkage/spark_dev.wiki.git
 
   
