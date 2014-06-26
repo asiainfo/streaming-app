@@ -24,6 +24,8 @@ Configuration
   
   conf/Sample.xml
   
+  Sample.xml is used for processing flow, used for filtering rules, data judgment conditions, judging and dynamic accumulation factor
+  
   <pre>
   ................
   
