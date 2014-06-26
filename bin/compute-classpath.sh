@@ -52,20 +52,13 @@ else
   fi
 fi
 
-EXAMPLES_DIR="$FWDIR"/examples
-SPARK_EXAMPLES_JAR=""
-if [ -e "$EXAMPLES_DIR"/target/scala-$SCALA_VERSION/*assembly*[0-9Tg].jar ]; then
-  export SPARK_EXAMPLES_JAR=`ls "$EXAMPLES_DIR"/target/scala-$SCALA_VERSION/*assembly*[0-9Tg].jar`
-  CLASSPATH="$CLASSPATH:$SPARK_EXAMPLES_JAR"
-fi
-
  SPARK_DEV_JAR=""
- if [ -e "$FWDIR"/target/spark-dev*.jar ]; then
-   export SPARK_DEV_JAR=`ls "$FWDIR"/target/spark-dev*.jar`
+ if [ -e "$FWDIR"/target/spark-dev*jar-with-dependencies.jar ]; then
+   export SPARK_DEV_JAR=`ls "$FWDIR"/target/spark-dev*jar-with-dependencies.jar`
    CLASSPATH="$CLASSPATH:$SPARK_DEV_JAR"
  fi
  if [[ -z $SPARK_DEV_JAR ]]; then
-   echo "Failed to find Spark dev jar in $FWDIR/target" >&2
+   echo "Failed to find Spark dev jar-with-dependencies.jar in $FWDIR/target" >&2
    echo "You need to build Spark dev with mvn package before running this program" >&2
    exit 1
  fi
