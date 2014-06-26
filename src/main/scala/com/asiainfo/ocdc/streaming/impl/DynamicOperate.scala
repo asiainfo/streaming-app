@@ -15,11 +15,11 @@ class DynamicOperate  extends StreamingStep {
 
   override def onStep(step: Node, dstream: DStream[Array[(String, String)]]): DStream[Array[(String, String)]] = {
 
+    val debug_flg =true
 	var numTasks = (step \ "numTasks").text.toString.trim
 	val key = (step \ "HBaseKey").text.toString.trim
     val table = (step \ "HBaseTable").text.toString.trim
     
-      // TODO discussion: about xml's node <HBaseCells>  or <HBaseCell>
     val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
     val operaters = (step \ "expressions").text.toString.trim.split(",")
     val output = (step \ "output").text.toString.trim.split(",")
@@ -30,20 +30,23 @@ class DynamicOperate  extends StreamingStep {
 //    if (!validityCheck(step: Node)) return dstream
 
    val tempSream = dstream.map(recode => {
-      println("===================== DynamicOperate 输入流数据 =======================")
+     printDebugLog(debug_flg,"DynamicOperate Dstream is startting...")
      var imap = recode.toMap
-      println("===================== RowKey "+key+" = "+imap(key)+" =======================")
       (imap(key), recode)
     }).groupByKey(numTasks.toInt).map(keyrcode => {
+       printDebugLog(debug_flg,"[rowkey="+keyrcode._1+"] is executing...")
       //　从hbase中取出要累加的初始数据
       val getHbaseValue = HbaseTool.getValue(table, keyrcode._1, HbaseTool.family, hBaseCells)
+       printDebugLog(debug_flg,"getHbaseValue's size:="+getHbaseValue.size)
+       
       // 如果hbase中无基础数据时，把null转换为“0”
       var cellvalue = Map[String, String]()
-      getHbaseValue.foreach(f=>{if ((f._2).toLowerCase().isEmpty || (f._2).toLowerCase()=="null")cellvalue +=(f._1 -> "0") else  cellvalue +=(f._1 -> f._2)})
-      
+      getHbaseValue.foreach(f=>{if (f._2 == null || (f._2).trim.isEmpty || (f._2).toLowerCase()=="null")cellvalue +=(f._1 -> "0") else  cellvalue +=(f._1 -> f._2)})
+      cellvalue.foreach(f=> printDebugLog(debug_flg,"getHbaseValue's:"+f._1+":"+f._2))
       // 要更新的operaters与hbase.cell一一对应
       val cellexp = hBaseCells.zip(operaters)
-
+      cellexp.foreach(f=>printDebugLog(debug_flg,"cellexp:"+f._1+":"+f._2))
+     
       // 累计结果用[key:cell,value:对应表达式的累计值]
       var mapSet = Map[String, String]()
       // 初始化cell中的各值
@@ -71,6 +74,13 @@ class DynamicOperate  extends StreamingStep {
       (0 to output.length - 1).map(i => (output(i), item.getOrElse(output(i), output(i)))).toArray
     })
     result
+  }
+  
+  /**
+   * print debug logs
+   */
+  def printDebugLog(flg:Boolean, log:String) ={
+    if (flg) println("[DEBUGLOG] DynamicOperate-----:"+log)
   }
   
   /**

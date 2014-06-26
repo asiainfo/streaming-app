@@ -13,9 +13,15 @@ class SaveOperate extends StreamingStep with Logging {
 
 		val table = (step \ "HBaseTable").text.toString.trim
 		val key = (step \ "HBaseKey").text.toString.trim
-		val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
-		val expressions = (step \ "expressions").text.toString.trim.split(",")
-		val output = (step \ "output").text.toString.trim.split(",")
+		val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",").map(c=>{
+		  c.trim()
+		})
+		val expressions = (step \ "expressions").text.toString.trim.split(",").map(e=>{
+		  e.trim()
+		})
+		val output = (step \ "output").text.toString.trim.split(",").map(o=>{
+		  o.trim()
+		})
 		
 		val handle = inStream.map(record => {
 			var recordMap = record.toMap
@@ -26,7 +32,7 @@ class SaveOperate extends StreamingStep with Logging {
 			//replace null with 0
 			var cellValue = Map[String, String]()
 		    getHbaseValue.foreach(f => { 
-		      if ((f._2).toLowerCase().isEmpty || (f._2).toLowerCase() == "null") {
+		      if ( (f._2) == null || (f._2).toLowerCase().isEmpty || (f._2).toLowerCase() == "null") {
 		        cellValue += (f._1 -> "0") 
 		      } else {
 		        cellValue += (f._1 -> f._2)
