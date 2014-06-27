@@ -16,7 +16,7 @@ import com.asiainfo.ocdc.streaming.tools.JexlTool
  * 4、只有当operationType＝sum时，operationKeys才会生效<br>
  * 5、只有当operationType＝count时，输出字段为groupByKeys和自动生成的字段"［count］"<br>
  */
-class Polymerization extends StreamingStep {
+class AggregateStep extends StreamingStep with Serializable {
   override def onStep(step: Node, dstream: DStream[Array[(String, String)]]): DStream[Array[(String, String)]] = {
     val debug_flg = true
 
@@ -102,7 +102,7 @@ class Polymerization extends StreamingStep {
     }
     // 把印xml check结果，并返回结果
     if (error_index != 0) {
-      ermsgMap.foreach(f => Console.err.println(f._2))
+      ermsgMap.foreach(f => Console.err.println("[error-AggregateStep]:"+f._2))
       (null, null, null, null)
     } else (numTasks, operationType, timListItem(groupByKeys), timListItem(operationKeys))
   }
@@ -120,5 +120,4 @@ class Polymerization extends StreamingStep {
   def printDebugLog(flg: Boolean, log: String) = {
     if (flg) println("[DEBUGLOG] DynamicOperate-----:" + log)
   }
-
 }

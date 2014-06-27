@@ -139,7 +139,7 @@ class DynamicOperate  extends StreamingStep with Serializable {
     
     // 把印xml check结果，并返回结果
     if (error_index != 0) {
-      ermsgMap.foreach(f => Console.err.println(f._2))
+      ermsgMap.foreach(f => Console.err.println("[error-DynamicOperate]:"+f._2))
       (null, null, null, null, null, null)
     } else (numTasks, table, key, timListItem(hBaseCells),timListItem(operaters),timListItem(output))
   }
