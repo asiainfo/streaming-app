@@ -4,10 +4,10 @@ import scala.Array
 import scala.xml.{Node, XML}
 import org.apache.spark.streaming._
 import org.apache.spark.streaming.dstream.DStream
-import org.apache.spark.SparkConf
+import org.apache.spark.{Logging, SparkConf}
 
 
-object StreamingApp extends LogHelper{
+object StreamingApp extends Logging{
   def main(args: Array[String]) {
 
     if (args.length < 3 ) {
@@ -41,7 +41,7 @@ object StreamingApp extends LogHelper{
    }
  }
 
-abstract class StreamingStep() extends LogHelper{
+abstract class StreamingStep() extends Logging{
 
   /**
    * Step 运行主方法
@@ -67,7 +67,7 @@ abstract class StreamingStep() extends LogHelper{
 
 }
 
-abstract class StreamingSource(sc:StreamingContext) extends LogHelper{
+abstract class StreamingSource(sc:StreamingContext) extends Logging{
 
   def createStream(source:Node):DStream[Array[(String,String)]]
 
