@@ -16,6 +16,8 @@ object JexlTool {
 
   def getExpValue(expression:String,param:Array[(String,String)]):String={
     val context = new MapContext()
+    context.set("Integer",Class.forName("java.lang.Integer"))
+    context.set("String",Class.forName("java.lang.String"))
     param.foreach(x=>context.set(x._1,x._2))
     getExpression(expression).evaluate(context).toString
   }
