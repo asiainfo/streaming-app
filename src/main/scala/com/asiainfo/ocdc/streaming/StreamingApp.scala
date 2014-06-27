@@ -17,21 +17,31 @@ object StreamingApp extends LogHelper{
     val Array(appName,stream_space,jobConfFile) = args
 
     val xmlFile = XML.load(jobConfFile)
-    val dataSource = xmlFile \ "dataSource"
-    val clz = Class.forName((dataSource \ "class").text.toString)
-    val method = clz.getDeclaredMethod("createStream",classOf[Node])
+
+    // XML 配置文件格式检查
+    val steps = xmlFile \ "step"
+    for(step <- steps){
+      val clz = Class.forName((step \ "class").text.toString)
+      val method = clz.getMethod("check",classOf[Node])
+      method.invoke(clz.newInstance(), step)
+    }
 
     val sparkConf = new SparkConf().setAppName(appName)
     val ssc =  new StreamingContext(sparkConf, Seconds(stream_space.toInt))
 
+    // 数据流引入
+    val dataSource = xmlFile \ "dataSource"
+    val clz = Class.forName((dataSource \ "class").text.toString)
+    val method = clz.getDeclaredMethod("createStream",classOf[Node])
     var streamingData = method.invoke(clz.getConstructor(classOf[StreamingContext]).newInstance(ssc),dataSource(0))
 
-     val steps = xmlFile \ "step"
-     for(step <- steps){
+    // 流数据Step运行
+    for(step <- steps){
        val clz = Class.forName((step \ "class").text.toString)
-       val method = clz.getDeclaredMethod("run",classOf[Node], classOf[DStream[Array[(String,String)]]])
+       val method = clz.getMethod("run",classOf[Node], classOf[DStream[Array[(String,String)]]])
        streamingData = method.invoke(clz.newInstance(), step,streamingData)
-     }
+    }
+
     streamingData.asInstanceOf[DStream[Array[(String,String)]]].print()
     ssc.start()
     ssc.awaitTermination()
@@ -49,9 +59,6 @@ abstract class StreamingStep() extends LogHelper{
   def run(step:Node,input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
 
     logInfo("====================="+ this.getClass.getSimpleName +" beginning runing ! =======================")
-
-    // 预检查
-    check(step)
 
     // 流处理主操作
     val stepStream = onStep(step,input)
