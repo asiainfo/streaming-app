@@ -16,18 +16,11 @@ class DynamicOperate  extends StreamingStep with Serializable {
   override def onStep(step: Node, dstream: DStream[Array[(String, String)]]): DStream[Array[(String, String)]] = {
 
     val debug_flg =true
-	var numTasks = (step \ "numTasks").text.toString.trim
-	val key = (step \ "HBaseKey").text.toString.trim
-    val table = (step \ "HBaseTable").text.toString.trim
-    
-    val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
-    val operaters = (step \ "expressions").text.toString.trim.split(",")
-    val output = (step \ "output").text.toString.trim.split(",")
 
-    // numTasks 默认为8个并行任务进行分组
-     if (numTasks== null || numTasks.isEmpty) numTasks="8"
-    //xml check
-//    if (!validityCheck(step: Node)) return dstream
+    val (numTasks,key,table,hBaseCells,operaters,output) = validityCheck(step)
+    
+    //未通过check
+    if (numTasks == null && key == null && table == null && hBaseCells == null&& operaters == null && output == null) return null
 
    val tempSream = dstream.map(recode => {
      printDebugLog(debug_flg,"DynamicOperate Dstream is startting...")
@@ -68,7 +61,7 @@ class DynamicOperate  extends StreamingStep with Serializable {
     val result = tempSream.map(x => {
       //如果input output相同的字段完全相同，说明不需要规整数据，不做map
       val item = x.toMap
-      println("===================== DynamicOperate 输出流数据 =======================")
+      printDebugLog(debug_flg,"Dstream data is outputting...")
       (0 to output.length - 1).foreach(i=>{println(output(i) +"###"+item.getOrElse(output(i), output(i)))})
 
       (0 to output.length - 1).map(i => (output(i), item.getOrElse(output(i), output(i)))).toArray
@@ -86,31 +79,75 @@ class DynamicOperate  extends StreamingStep with Serializable {
   /**
    * 数据有效性检查
    */
-  def validityCheck(step: Node):Boolean={
-    var checkresult =true
+  def validityCheck(step: Node)={
+
     var numTasks = (step \ "numTasks").text.toString.trim
     val table = (step \ "HBaseTable").text.toString.trim
     val key = (step \ "HBaseKey").text.toString.trim
-    val family = "F"
-    val hBaseCells = (step \ "HBaseCells").text.toString.trim.split(",")
-    val operaters = (step \ "expressions").text.toString.trim.split(",")
-    val output = (step \ "output").text.toString.trim.split(",")
+    val hBaseCellsText =(step \ "HBaseCells").text.toString.trim
+    val operatersText = (step \ "expressions").text.toString.trim
+    val outputText = (step \ "output").text.toString.trim
+    
+    val hBaseCells = hBaseCellsText.split(",")
+    val operaters = operatersText.split(",")
+    val output =outputText.split(",")
     if (numTasks== null || numTasks.isEmpty) numTasks="8"
-    if (!numTasks.matches("[0-9]+"))Console.err.println("请正确填写任务数<1~n>!")
-    //check expressions和HBaseCells的个数
-    if (hBaseCells.size != operaters.size){checkresult = false; Console.err.println("<expressions>中的个数和<HBaseCells>中的个数不一致！请确认")}
+    
+    var error_index = 0
+    var ermsgMap = Map[Int, String]()
+    
+    // taskNum's check
+    // numTasks 默认为8个并行任务进行分组
+    if (numTasks.isEmpty) numTasks = "8"
+    if (!numTasks.matches("[0-9]+")) {
+      ermsgMap += (error_index -> "<numTasks>'s type is number. Please keep the value is 1~n!")
+      error_index += 1
+    }
+    
+    // 必需输入项check 
+    if (table.isEmpty) {
+      ermsgMap += (error_index -> "must be inputed nodes <HBaseTable>'s value. and make soure the node's name is <HBaseTable>.")
+      error_index += 1
+    }
+    if (key.isEmpty) {
+      ermsgMap += (error_index -> "must be inputed nodes <HBaseKey>'s value. and make soure the node's name is <HBaseKey>.")
+      error_index += 1
+    }
+    if (hBaseCellsText.isEmpty) {
+      ermsgMap += (error_index -> "must be inputed nodes <HBaseCells>'s value. and make soure the node's name is <HBaseCells>.")
+      error_index += 1
+    }
+    if (operatersText.isEmpty) {
+      ermsgMap += (error_index -> "must be inputed nodes <expressions>'s value. and make soure the node's name is <expressions>.")
+      error_index += 1
+    }
+    if (outputText.isEmpty) {
+      ermsgMap += (error_index -> "must be inputed nodes <output>'s value. and make soure the node's name is <output>.")
+      error_index += 1
+    }
     
     //check expressions中所写的hbase表名是否正确 (大小写)
-    var opindex =0 
-    while (checkresult && opindex<operaters.size) {
+    var opindex =0
+    while (!operatersText.isEmpty && opindex<operaters.size) {
       
        if(operaters(opindex).toUpperCase.trim.matches(table.toUpperCase+".")){
           if (!operaters(opindex).matches(table+".")){
-            checkresult = false
-            Console.err.println("<expressions>中所记述的表名大小写不正确，请改为［正解的表名.字段名］")
+             ermsgMap += (error_index -> ("in expression ["+operaters(opindex)+"] of <expressions>, hbase table's name case is not consistent."))
           }}
       opindex +=1
     }
-      checkresult
+    
+    // 把印xml check结果，并返回结果
+    if (error_index != 0) {
+      ermsgMap.foreach(f => Console.err.println(f._2))
+      (null, null, null, null, null, null)
+    } else (numTasks, table, key, timListItem(hBaseCells),timListItem(operaters),timListItem(output))
+  }
+
+  /**
+   * 去除List各项目的前后空格
+   */
+  def timListItem(array: Array[String]): Array[String] = {
+	  (for { index <- 0 until array.size } yield (array(index).trim)).toArray
   }
 }
