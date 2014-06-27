@@ -35,4 +35,13 @@
         <output>imsi,name,sex,netcount,fee</output>
         <describe>desc</describe>
     </step>
+    <step id="4">
+        <class>com.asiainfo.ocdc.streaming.impl.SaveOperate</class>
+        <HBaseTable>demo </HBaseTable>
+        <HBaseKey> imsi</HBaseKey>
+        <HBaseCells>Fee</HBaseCells>
+        <expressions>demo.NTcount+netcount</expressions>
+        <output>imsi,name,sex,netcount,fee</output>
+        <describe>desc</describe>
+    </step>
 </configuration>

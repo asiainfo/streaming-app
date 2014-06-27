@@ -18,6 +18,7 @@ class SaveOperateStepSuite extends TestSuitBase with Logging {
   test2_1(1, "test2_1: test update value based on exited value into hbase with initial data using stepid=1")
   test3(2, "test3: test update value based on stream value into hbase with initial data using stepid=2")
   test4(3, "test4: test update value based on stream value into hbase with initial data using stepid=3")
+  check(4, "check: test check using stepid=4")
   
   logInfo("SaveOperateStepSuite test finished ")
   
@@ -266,6 +267,26 @@ class SaveOperateStepSuite extends TestSuitBase with Logging {
 
       verifyOutput(resultset, expectedHbase, true)
       logInfo("SaveOperateStepSuite-" + caseName + " test example completion!")
+    }
+  }
+  
+  /**
+   * check: test check using stepid=4 in xml
+   */
+  def check(stepNum: Int, caseName: String) {
+
+    test(caseName) {
+      logInfo("SaveOperateStepSuite-" + caseName + " test example start... ")
+
+      val xmlFile = XML.load("src/test/resources/SaveOperate-test.xml")
+
+      val steps = xmlFile \ "step"
+      val step = steps(stepNum)
+      
+      new SaveOperate().check(step)
+      
+      logInfo("SaveOperateStepSuite-" + caseName + " test example completion!")
+      
     }
   }
 }
