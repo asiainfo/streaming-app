@@ -20,8 +20,6 @@ object JexlTool {
     context.set("String",Class.forName("java.lang.String"))
     param.foreach(x=>context.set(x._1,x._2))
     println("===expression===" + expression)
-    println("=== getExpression(expression)===" +  getExpression(expression))
-    println("=== getExpression(expression).evaluate(context)===" +  getExpression(expression).evaluate(context))
     getExpression(expression).evaluate(context).toString
   }
 }
