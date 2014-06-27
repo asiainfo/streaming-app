@@ -35,7 +35,17 @@
         <where>checkRoles.condition</where>
         <output>business_id,user_account,activity_code</output>
     </step>
-
+	
+	<step name="savetoHbase">
+        <class>com.asiainfo.ocdc.streaming.impl.SaveOperate</class>
+        <HBaseTable>OperatedUsers</HBaseTable>
+        <HBaseKey>user_account</HBaseKey>
+        <HBaseCells>user_account</HBaseCells>
+        <expressions>user_account</expressions>
+        <output>business_id,user_account,activity_code</output>
+        <describe>desc</describe>
+    </step>
+    
     <step name="output">
         <class>com.asiainfo.ocdc.streaming.impl.KafkaOut</class>
         <topic>check</topic>
