@@ -31,6 +31,7 @@ class StreamFilter extends StreamingStep{
     })
 
     if(where != null){
+      println("===where===" + where)
       handle = handle.filter(x=>{
         where = x.toMap.getOrElse(where,where)
         val b = (JexlTool.getExpValue(where, x.toArray)).toBoolean
