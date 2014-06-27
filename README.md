@@ -2,18 +2,29 @@ Asiainfo Spark_dev
 =====
 
 
+Spark_dev  requires:
+
+    Scala 2.10.3
+    AMPLab's Hbase 0.98.1
+    Spark 0.9.1
+    
+
+
+
 Configuration
 =====
   conf/spark-env.sh
   <pre>
   export HADOOP_CONF_DIR=/home/ocdc/hadoop-2.3.0-cdh5.0.0-och3.1.0/etc/hadoop
-  export SPARK_YARN_APP_JAR=/home/ocdc/spark_0.9.1_streaming/examples/target/scala-2.10/spark-examples-assembly-0.9.1.jar
+  export SPARK_YARN_APP_JAR=/home/ocdc/spark_dev/target/spark-dev-V00B01C00-SNAPSHOT-jar-with-dependencies.jar
   export SPARK_JAR=/home/ocdc/spark_0.9.1_streaming/assembly/target/scala-2.10/spark-assembly-0.9.1-hadoop2.3.0-cdh5.0.0.jar
   </pre>
   
   
   
   conf/Sample.xml
+  
+  Sample.xml is used for processing flow, used for filtering rules, data judgment conditions, judging and dynamic accumulation factor
   
   <pre>
   ................
@@ -84,6 +95,6 @@ Parameter 4, The configuration file
 Running Tests
 =====
 Test documentation, reference spark_dev project wiki
-
+https://github.com/asiainfo-linkage/spark_dev.wiki.git
 
   

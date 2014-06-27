@@ -5,7 +5,7 @@ export HADOOP_CONF_DIR=
 
 #spark assembly jar
 export SPARK_JAR=
-#spark example jar
+#spark_dev jar-with-dependencies.jar
 export SPARK_YARN_APP_JAR=
 
 export SPARK_WORKER_INSTANCES=2
