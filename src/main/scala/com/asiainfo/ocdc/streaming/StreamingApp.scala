@@ -28,6 +28,7 @@ object StreamingApp extends LogHelper{
     var streamingData = method.invoke(clz.getConstructor(classOf[StreamingContext]).newInstance(ssc),dataSource(0))
 
     // 流数据Step运行
+    val steps = xmlFile \ "step"
     for(step <- steps){
        val clz = Class.forName((step \ "class").text.toString)
        val method = clz.getMethod("run",classOf[Node], classOf[DStream[Array[(String,String)]]])
