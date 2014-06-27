@@ -16,7 +16,7 @@ import com.asiainfo.ocdc.streaming.tools.JexlTool
  * 4、只有当operationType＝sum时，operationKeys才会生效<br>
  * 5、只有当operationType＝count时，输出字段为groupByKeys和自动生成的字段"［count］"<br>
  */
-class polymerization extends StreamingStep {
+class Polymerization extends StreamingStep {
   override def onStep(step: Node, dstream: DStream[Array[(String, String)]]): DStream[Array[(String, String)]] = {
     val debug_flg = true
 
