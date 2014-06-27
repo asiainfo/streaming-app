@@ -18,14 +18,6 @@ object StreamingApp extends LogHelper{
 
     val xmlFile = XML.load(jobConfFile)
 
-    // XML 配置文件格式检查
-    val steps = xmlFile \ "step"
-    for(step <- steps){
-      val clz = Class.forName((step \ "class").text.toString)
-      val method = clz.getMethod("check",classOf[Node])
-      method.invoke(clz.newInstance(), step)
-    }
-
     val sparkConf = new SparkConf().setAppName(appName)
     val ssc =  new StreamingContext(sparkConf, Seconds(stream_space.toInt))
 
@@ -57,14 +49,12 @@ abstract class StreamingStep() extends LogHelper{
    * @return
    */
   def run(step:Node,input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
-
-    logInfo("====================="+ this.getClass.getSimpleName +" beginning runing ! =======================")
+    // Step xml 检查
+    check(step)
 
     // 流处理主操作
-    val stepStream = onStep(step,input)
+    onStep(step,input)
 
-    // 后续处理操作
-    afterStep(input)
   }
 
   def check(step:Node){
@@ -74,9 +64,6 @@ abstract class StreamingStep() extends LogHelper{
 
   def onStep(step:Node,input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]
 
-  def afterStep(input:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
-    input
-  }
 }
 
 abstract class StreamingSource(sc:StreamingContext) extends LogHelper{
