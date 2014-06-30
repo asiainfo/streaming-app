@@ -18,7 +18,7 @@ class AggregateStepSuite extends TestSuitBase with Logging {
   logInfo("AggregateStepSuite test example started ")
 //  step0(0, "--distinct test--")
 //  step1(1, "--sum test--")
-  step2(2, "--count test--")
+//  step2(2, "--count test--")
   
   logInfo("AggregateStepSuite test example finished ")
 
