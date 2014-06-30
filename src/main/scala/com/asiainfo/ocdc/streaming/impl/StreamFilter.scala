@@ -14,7 +14,7 @@ class StreamFilter extends StreamingStep{
     val HBaseTable = (step \ "HBaseTable").text.toString
     val HBaseKey = (step \ "HBaseKey").text.toString.split(delim)
     val output = (step \ "output").text.toString.split(delim)
-    val HBaseCell = (step \ "HBaseCell").text.toString.split(delim)
+    val HBaseCells = (step \ "HBaseCells").text.toString.split(delim)
     var where = (step \ "where").text.toString // table1.city!=CITY_ID
 
     var handle = inStream.map(mapFunc = x => {
@@ -25,9 +25,9 @@ class StreamFilter extends StreamingStep{
       }
 
       println("=============hbase 查询结果================" )
-      HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCell).foreach(x=>{println(x._1+"###"+x._2)})
+      HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCells).foreach(x=>{println(x._1+"###"+x._2)})
 
-      x ++HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCell)
+      x ++HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCells)
     })
 
     if(where != null){
@@ -49,6 +49,47 @@ class StreamFilter extends StreamingStep{
       }).toArray
     })
     result
+  }
 
+
+  override def check(step:Node){
+    val delim = ","
+    //判断字符串是否未设置
+    val checks = Array("HBaseTable","HBaseKey","output","HBaseCells")
+    checks.foreach(x=>( eleIsEmpty(step,x)))
+
+    val stepnode = step.text.toString
+    if(stepnode.indexOf(" ")== 1) {
+      System.err.println("字符串间不能包含空格")
+    }
+    // 判断表明是否大写
+    val HBaseCells = (step \ "HBaseCells").text.toString
+    if(!isUpper(HBaseCells)) return
+
+    val output = (step \ "output").text.toString.split(delim)
+    output.foreach(x=>{
+      if(x.indexOf(".")==1){
+        val tmp = x.split(".")
+        if(!isUpper(tmp(0))) return
+      }
+    })
+  }
+
+  def isUpper(iString:String):Boolean={
+    var result = true
+    iString.foreach(x=>{
+      if(x>='a' && x<='z'){
+        result = false
+         System.err.println("表明应该是大写")
+      }
+    })
+    result
+  }
+
+  def eleIsEmpty(step:Node,element:String){
+    val iString=(step \ element).text.toString.trim
+    if(iString.isEmpty || iString ==null){
+      throw new Exception(this.getClass.getSimpleName + "<"+element + ">" + "标签不能为空")
+     }
   }
 }
