@@ -41,7 +41,10 @@ class AggregateStepSuite extends TestSuitBase with Logging {
         Seq(Array(("TELNo", "18600640175"), ("name", "surq"), ("sex", "man"), ("netcount", "30"), ("fee", "20"))),
         Seq(Array(("TELNo", "18600640175"), ("name", "surq"), ("sex", "man"), ("netcount", "40"), ("fee", "31"))))
 
-      val expectedOutput = Seq(Seq(Array.apply(("TELNo", "18600640175"), ("name", "surq"))), Seq(Array.apply(("TELNo", "18600640176"), ("name", "surq"))), Seq(Array.apply(("TELNo", "18600640177"), ("name", "asia1"))))
+      val expectedOutput = Seq(
+          Seq(Array.apply(("TELNo", "18600640175"), ("name", "surq"))),
+          Seq(Array.apply(("TELNo", "18600640176"), ("name", "surq"))),
+          Seq(Array.apply(("TELNo", "18600640177"), ("name", "asia1"))))
 
       val filter = new AggregateStep();
       val operation = (s: DStream[Array[(String, String)]]) => filter.onStep(step, s)
@@ -109,6 +112,7 @@ class AggregateStepSuite extends TestSuitBase with Logging {
           Seq(Array.apply(("TELNo", "18600640175"), ("name", "surq"), ("[count]", "3"))), 
           Seq(Array.apply(("TELNo", "18600640176"), ("name", "asia"), ("[count]", "2"))), 
           Seq(Array.apply(("TELNo", "18600640177"), ("name", "asia1"), ("[count]", "1"))))
+          
       val filter = new AggregateStep();
       val operation = (s: DStream[Array[(String, String)]]) => filter.onStep(step, s)
 
