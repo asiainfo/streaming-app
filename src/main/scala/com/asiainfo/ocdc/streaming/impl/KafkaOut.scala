@@ -49,7 +49,8 @@ class KafkaOut extends StreamingStep with Serializable{
   override def check(step:Node){
     val fields = Array("topic","broker","OutCol")
     fields.foreach(x=>(IsEmpty(step,x)))
-    if(!fields(1).contains(":")) {
+    val broker= (step \ "broker").text.toString
+    if(!broker.contains(":")) {
       throw new Exception(this.getClass.getSimpleName + "broker format should be <hostname1:port1,hostname2:port2>")
     }
 
