@@ -36,8 +36,8 @@ class DynamicOperateStepSuite extends TestSuitBase with Logging {
       val step = steps(stepNum)
       val family = "F"
       val table = (step \ "HBaseTable").text.toString.trim
-
-      testUtil.createTable(table, family)
+println ("============table==="+table)
+      val ss =testUtil.createTable(table, family)
       putValue(table, "18600640175", family, Array.apply(("NTcount", "100"), ("Fee", "1000")))
       putValue(table, "18600640176", family, Array.apply(("NTcount", "100"), ("Fee", "1000")))
       putValue(table, "18600640177", family, Array.apply(("NTcount", "100"), ("Fee", "1000")))

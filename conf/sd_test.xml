@@ -1,0 +1,68 @@
+<configuration>
+
+    <dataSource name="ds1">
+        <class>com.asiainfo.ocdc.streaming.impl.KafkaSource</class>
+        <zkQuorum>oc47:2183,oc48:2183,oc49:2183</zkQuorum>
+        <topics>shandong_in</topics>
+        <groupId>test-consumer-group</groupId>
+        <consumerNum>3</consumerNum>
+        <separator> </separator>
+        <stream_columns>imsi,lac,cell</stream_columns>
+    </dataSource>
+
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
+        <HBaseTable>DW_DSTREAMING</HBaseTable>
+        <HBaseCells>PRODUCT_ID</HBaseCells>
+        <HBaseKey>imsi</HBaseKey>
+        <output>imsi,lac,cell</output>
+        <where>DW_DSTREAMING.PRODUCT_ID=="null"</where>
+    </step>
+
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
+        <HBaseTable>DIM_PUB_BTS_INFO3</HBaseTable>
+        <HBaseCells>CITY_ID</HBaseCells>
+        <HBaseKey>lac,cell</HBaseKey>
+        <output>imsi,DIM_PUB_BTS_INFO3.CITY_ID</output>
+        <where>DIM_PUB_BTS_INFO3.CITY_ID != null</where>
+    </step>
+
+	
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
+        <HBaseTable>DW_MARKET_TARGET_DS1</HBaseTable>
+        <HBaseCells>CITY_ID,PRODUCT_NO,PRODUCT_ID</HBaseCells>
+        <HBaseKey>imsi</HBaseKey>
+        <output>imsi,DW_MARKET_TARGET_DS1.PRODUCT_NO,DW_MARKET_TARGET_DS1.PRODUCT_ID</output>
+        <where>DW_MARKET_TARGET_DS1.CITY_ID != DIM_PUB_BTS_INFO3.CITY_ID</where>
+    </step>
+
+
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
+        <HBaseTable>DW_MARKET_EXC</HBaseTable>
+        <HBaseCells>PROVINCE_ID</HBaseCells>
+        <HBaseKey>DW_MARKET_TARGET_DS1.PRODUCT_ID</HBaseKey>
+        <output>imsi,DW_MARKET_TARGET_DS1.PRODUCT_NO,DW_MARKET_TARGET_DS1.PRODUCT_ID</output>
+        <where>DW_MARKET_EXC.PROVINCE_ID==1</where>
+    </step>
+
+    <step id="4">
+    	<class>com.asiainfo.ocdc.streaming.impl.SaveOperate</class>
+    	<HBaseTable>DW_DSTREAMING</HBaseTable>
+    	<HBaseKey>imsi</HBaseKey>
+    	<HBaseCells>PRODUCT_ID</HBaseCells>
+    	<expressions>DW_MARKET_TARGET_DS1.PRODUCT_ID</expressions>
+    	<output>imsi,DW_MARKET_TARGET_DS1.PRODUCT_NO,DW_MARKET_TARGET_DS1.PRODUCT_ID</output>
+    	<describe>desc</describe>
+    </step>
+
+    <step>
+        <class>com.asiainfo.ocdc.streaming.impl.KafkaOut</class>
+        <topic>shandong_out</topic>
+        <broker>oc47:9101,oc48:9102,oc49:9103</broker>
+        <OutCol>imsi,DW_MARKET_TARGET_DS1.PRODUCT_NO,DW_MARKET_TARGET_DS1.PRODUCT_ID</OutCol>
+    </step>
+
+</configuration>
