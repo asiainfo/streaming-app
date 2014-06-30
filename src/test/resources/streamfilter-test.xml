@@ -3,7 +3,7 @@
     <step  id="1">
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
         <HBaseTable>t1</HBaseTable>
-        <HBaseCell>city_id</HBaseCell>
+        <HBaseCellss>city_id</HBaseCellss>
         <HBaseKey>lac,cell</HBaseKey>
         <output>imsi,t1.city_id</output>
         <where>t1.city_id!=null</where>
@@ -13,7 +13,7 @@
     <step  id="2">
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
         <HBaseTable>t2</HBaseTable>
-        <HBaseCell>city_id</HBaseCell>
+        <HBaseCells>city_id</HBaseCells>
         <HBaseKey>imsi</HBaseKey>
         <output>imsi,t1.city_id</output>
         <where>t1.city_id!=t2.city_id</where>
@@ -22,7 +22,7 @@
     <step  id="3">
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
         <HBaseTable>t3</HBaseTable>
-        <HBaseCell>product_no,product_id</HBaseCell>
+        <HBaseCells>product_no,product_id</HBaseCells>
         <HBaseKey>imsi</HBaseKey>
         <output>imsi,t3.product_no,t3.product_id</output>
         <where>t3.product_no!=null</where>
@@ -30,11 +30,10 @@
 
     <step  id="4">
         <HBaseTable>t4</HBaseTable>
-        <HBaseCell>c1,c2</HBaseCell>
+        <HBaseCells>c1,c2</HBaseCells>
         <HBaseKey>imsi</HBaseKey>
         <output>imsi,t3.product_no,t3.product_id</output>
         <where>t4.c1!=null&amp;&amp;t4.c2!=null</where>
     </step>
-
 
 </configure>
