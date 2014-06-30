@@ -24,7 +24,7 @@
         <numTasks>8</numTasks>
         <HBaseTable>t2</HBaseTable>
         <HBaseKey>b</HBaseKey>
-        <HBaseCellss>Count,Fee</HBaseCellss>
+        <HBaseCells>Count,Fee</HBaseCells>
         <expressions>t2.Count+count,t2.Fee+fee</expressions>
         <output>b,c,t1.cell,count,fee</output>
     </step>
