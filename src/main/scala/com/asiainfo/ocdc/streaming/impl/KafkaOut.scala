@@ -11,7 +11,6 @@ class KafkaOut extends StreamingStep with Serializable{
   def onStep(step:Node,inStream:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
     val delim = ","
     var result = inStream
-    val input = (step \ "Input").text.toString.split(delim)
     val topic = (step \ "topic").text.toString
     val brokers = (step \ "broker").text.toString
     val outcol = (step \ "OutCol").text.toString.split(delim)
@@ -35,7 +34,7 @@ class KafkaOut extends StreamingStep with Serializable{
   }
 
   def kafkaSend(kafkaout:String,brokers:String,topic:String,delim:String):Unit={
-    println("======================Kafka输出信息========================")
+    println("======================Kafka output info========================")
     println("kafkaout==>"+kafkaout)
     println("brokers==>"+brokers)
     println("topic==>"+topic)
@@ -45,6 +44,22 @@ class KafkaOut extends StreamingStep with Serializable{
     var message =List[KeyedMessage[String, String]]()
     message = new KeyedMessage[String, String](topic,key,kafkaout)::message
     producer.send(message: _*)
+  }
+
+  override def check(step:Node){
+    val fields = Array("topic","broker","OutCol")
+    fields.foreach(x=>(IsEmpty(step,x)))
+    if(!fields(1).contains(":")) {
+      throw new Exception(this.getClass.getSimpleName + "broker format should be <hostname1:port1,hostname2:port2>")
+    }
+
+  }
+
+  def IsEmpty(step:Node,element:String){
+    val iString=(step \ element).text.toString.trim
+    if(iString.isEmpty || iString ==null){
+      throw new Exception(this.getClass.getSimpleName + "<"+element + ">" + "tag content should not be null")
+    }
   }
 }
 
