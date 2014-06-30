@@ -52,7 +52,7 @@
     	<class>com.asiainfo.ocdc.streaming.impl.SaveOperate</class>
     	<HBaseTable>DW_DSTREAMING</HBaseTable>
     	<HBaseKey>imsi</HBaseKey>
-    	<HBaseCellss>PRODUCT_ID</HBaseCellss>
+    	<HBaseCells>PRODUCT_ID</HBaseCells>
     	<expressions>DW_MARKET_TARGET_DS1.PRODUCT_ID</expressions>
     	<output>imsi,DW_MARKET_TARGET_DS1.PRODUCT_NO,DW_MARKET_TARGET_DS1.PRODUCT_ID</output>
     	<describe>desc</describe>
