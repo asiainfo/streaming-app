@@ -13,7 +13,7 @@
     <step>
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
         <HBaseTable>DW_DSTREAMING</HBaseTable>
-        <HBaseCell>PRODUCT_ID</HBaseCell>
+        <HBaseCells>PRODUCT_ID</HBaseCells>
         <HBaseKey>imsi</HBaseKey>
         <output>imsi,lac,cell</output>
         <where>DW_DSTREAMING.PRODUCT_ID=="null"</where>
@@ -22,7 +22,7 @@
     <step>
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
         <HBaseTable>DIM_PUB_BTS_INFO3</HBaseTable>
-        <HBaseCell>CITY_ID</HBaseCell>
+        <HBaseCells>CITY_ID</HBaseCells>
         <HBaseKey>lac,cell</HBaseKey>
         <output>imsi,DIM_PUB_BTS_INFO3.CITY_ID</output>
         <where>DIM_PUB_BTS_INFO3.CITY_ID != null</where>
@@ -32,7 +32,7 @@
     <step>
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
         <HBaseTable>DW_MARKET_TARGET_DS1</HBaseTable>
-        <HBaseCell>CITY_ID,PRODUCT_NO,PRODUCT_ID</HBaseCell>
+        <HBaseCells>CITY_ID,PRODUCT_NO,PRODUCT_ID</HBaseCells>
         <HBaseKey>imsi</HBaseKey>
         <output>imsi,DW_MARKET_TARGET_DS1.PRODUCT_NO,DW_MARKET_TARGET_DS1.PRODUCT_ID</output>
         <where>DW_MARKET_TARGET_DS1.CITY_ID != DIM_PUB_BTS_INFO3.CITY_ID</where>
@@ -42,7 +42,7 @@
     <step>
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
         <HBaseTable>DW_MARKET_EXC</HBaseTable>
-        <HBaseCell>PROVINCE_ID</HBaseCell>
+        <HBaseCells>PROVINCE_ID</HBaseCells>
         <HBaseKey>DW_MARKET_TARGET_DS1.PRODUCT_ID</HBaseKey>
         <output>imsi,DW_MARKET_TARGET_DS1.PRODUCT_NO,DW_MARKET_TARGET_DS1.PRODUCT_ID</output>
         <where>DW_MARKET_EXC.PROVINCE_ID==1</where>
@@ -52,7 +52,7 @@
     	<class>com.asiainfo.ocdc.streaming.impl.SaveOperate</class>
     	<HBaseTable>DW_DSTREAMING</HBaseTable>
     	<HBaseKey>imsi</HBaseKey>
-    	<HBaseCells>PRODUCT_ID</HBaseCells>
+    	<HBaseCellss>PRODUCT_ID</HBaseCellss>
     	<expressions>DW_MARKET_TARGET_DS1.PRODUCT_ID</expressions>
     	<output>imsi,DW_MARKET_TARGET_DS1.PRODUCT_NO,DW_MARKET_TARGET_DS1.PRODUCT_ID</output>
     	<describe>desc</describe>
