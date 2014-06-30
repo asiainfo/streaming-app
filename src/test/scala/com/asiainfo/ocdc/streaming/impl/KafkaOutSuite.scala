@@ -5,7 +5,7 @@ import scala.xml.XML
 import org.apache.spark.streaming.dstream.DStream
 import com.asiainfo.ocdc.streaming.TestSuitBase
 
-
+/*
 class KafkaOutSuite extends TestSuitBase with Logging {
 
   test("KakfaOut test example") {
@@ -31,4 +31,4 @@ class KafkaOutSuite extends TestSuitBase with Logging {
     logInfo("KakfaOut test example finished ")
   }
 
-}
+}*/
