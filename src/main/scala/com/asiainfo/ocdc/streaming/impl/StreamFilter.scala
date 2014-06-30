@@ -12,10 +12,10 @@ class StreamFilter extends StreamingStep{
     val delim = ","
     var result = inStream
     val HBaseTable = (step \ "HBaseTable").text.toString.trim
-    val HBaseKey = (step \ "HBaseKey").text.toString.split(delim)
-    val output = (step \ "output").text.toString.split(delim)
-    val HBaseCells = (step \ "HBaseCells").text.toString.split(delim)
-    var where = (step \ "where").text.toString // table1.city!=CITY_ID
+    val HBaseKey = (step \ "HBaseKey").text.toString.trim.split(delim)
+    val output = (step \ "output").text.toString.trim.split(delim)
+    val HBaseCells = (step \ "HBaseCells").text.toString.trim.split(delim)
+    var where = (step \ "where").text.trim.toString // table1.city!=CITY_ID
 
     var handle = inStream.map(mapFunc = x => {
       var key = ""
