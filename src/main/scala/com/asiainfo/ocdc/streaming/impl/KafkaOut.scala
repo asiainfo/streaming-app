@@ -34,11 +34,6 @@ class KafkaOut extends StreamingStep with Serializable{
   }
 
   def kafkaSend(kafkaout:String,brokers:String,topic:String,delim:String):Unit={
-    println("======================Kafka output info========================")
-    println("kafkaout==>"+kafkaout)
-    println("brokers==>"+brokers)
-    println("topic==>"+topic)
-    println("delim==>"+delim)
     val key = kafkaout.split(delim)(0)
     val producer = KafkaProducer.getProducer(brokers)
     var message =List[KeyedMessage[String, String]]()
