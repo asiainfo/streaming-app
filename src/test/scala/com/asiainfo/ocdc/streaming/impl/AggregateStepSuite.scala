@@ -30,7 +30,7 @@ class AggregateStepSuite extends TestSuitBase with Logging {
 
       logInfo("AggregateStepSuite-" + caseNmae + " test example start... ")
 
-      val xmlFile = XML.load("src/test/resources/polymerization-test.xml")
+      val xmlFile = XML.load("src/test/resources/Aggregate-test.xml")
       val steps = xmlFile \ "step"
       val step = steps(stepNum)
 
@@ -64,7 +64,7 @@ class AggregateStepSuite extends TestSuitBase with Logging {
 
       logInfo("AggregateStepSuiteStep-" + caseNmae + " test example start... ")
 
-      val xmlFile = XML.load("src/test/resources/polymerization-test.xml")
+      val xmlFile = XML.load("src/test/resources/Aggregate-test.xml")
       val step = (xmlFile \ "step")(stepNum)
 
       val input = Seq(
@@ -97,7 +97,7 @@ class AggregateStepSuite extends TestSuitBase with Logging {
 
       logInfo("AggregateStepSuite-" + caseNmae + " test example start... ")
 
-      val xmlFile = XML.load("src/test/resources/polymerization-test.xml")
+      val xmlFile = XML.load("src/test/resources/Aggregate-test.xml")
       val step = (xmlFile \ "step")(stepNum)
 
       val input = Seq(
