@@ -42,7 +42,6 @@ class SaveOperate extends StreamingStep with Logging {
 		  c.trim()
 		})
 	    }
-	    println(this.getClass.getSimpleName + " 指定Step标签中 HBaseCells ="+cells+", len="+cells.isEmpty+", len2="+cells.length)
 	    
 	    if(exprs==null||exprs.isEmpty){
 	      throw new Exception(this.getClass.getSimpleName + " 指定Step标签中 expressions 取值为空，请检查!")
