@@ -11,7 +11,7 @@ class StreamFilter extends StreamingStep{
   def onStep(step:Node,inStream:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
     val delim = ","
     var result = inStream
-    val HBaseTable = (step \ "HBaseTable").text.toString
+    val HBaseTable = (step \ "HBaseTable").text.toString.trim
     val HBaseKey = (step \ "HBaseKey").text.toString.split(delim)
     val output = (step \ "output").text.toString.split(delim)
     val HBaseCells = (step \ "HBaseCells").text.toString.split(delim)
@@ -54,33 +54,33 @@ class StreamFilter extends StreamingStep{
 
   override def check(step:Node){
     val delim = ","
-    //判断字符串是否未设置
+    //判断字符串是否未设置,是否包含非法空格
     val checks = Array("HBaseTable","HBaseKey","output","HBaseCells")
-    checks.foreach(x=>( eleIsEmpty(step,x)))
+    checks.foreach(x=>(eleIsEmpty(step,x)))
 
-    val stepnode = step.text.toString
-    if(stepnode.indexOf(" ")== 1) {
-      System.err.println("字符串间不能包含空格")
-    }
     // 判断表明是否大写
-    val HBaseCells = (step \ "HBaseCells").text.toString
-    if(!isUpper(HBaseCells)) return
+    val checkUpper = Array( "HBaseCells","HBaseTable")
+    checkUpper.foreach(x=>{
+      val tmp = (step \ x).text.toString.trim
+      isUpper(tmp)
+    })
 
-    val output = (step \ "output").text.toString.split(delim)
+    val output = (step \ "output").text.toString.trim.split(delim)
     output.foreach(x=>{
       if(x.indexOf(".")==1){
         val tmp = x.split(".")
-        if(!isUpper(tmp(0))) return
+        isUpper(tmp(0))
       }
     })
   }
+
 
   def isUpper(iString:String):Boolean={
     var result = true
     iString.foreach(x=>{
       if(x>='a' && x<='z'){
         result = false
-         System.err.println("表明应该是大写")
+        throw new Exception(this.getClass.getSimpleName +iString + "HBase表及列明应该大写")
       }
     })
     result
@@ -91,5 +91,8 @@ class StreamFilter extends StreamingStep{
     if(iString.isEmpty || iString ==null){
       throw new Exception(this.getClass.getSimpleName + "<"+element + ">" + "标签不能为空")
      }
+    if(iString.indexOf(" ")== 1) {
+      throw new Exception(this.getClass.getSimpleName + "<"+element + ">" + "字符串间不能包含空格")
+    }
   }
 }

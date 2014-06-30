@@ -32,11 +32,12 @@ class AggregateStep extends StreamingStep with Serializable {
       ((for { key <- 0 until groupByKeys.size } yield (imap(groupByKeys(key)))).mkString(keyUniteSeparator), recode)
     }).groupByKey(numTasks.toInt).map(keyrcode => {
 
+      printDebugLog(debug_flg, "--------=keyrcode===key:----------" + keyrcode._1)
       val outGroupByKeys = (keyrcode._1).split(keyUniteSeparator)
       // groupbykey　key-value 拼接
       val outGroupByKeyArray = groupByKeys.zip(outGroupByKeys)
-      operationType.toLowerCase() match {
 
+      operationType.toLowerCase() match {
         case "distinct" => outGroupByKeyArray
         case "sum" => {
           // 装载积集结果的map
@@ -54,10 +55,7 @@ class AggregateStep extends StreamingStep with Serializable {
           val outputArray = (outGroupByKeyArray.toList) ::: sumList
           outputArray.toArray
         }
-        case "count" => {
-          val outputList = ("[count]", keyrcode._2.size.toString) :: outGroupByKeyArray.toList
-          outputList.toArray
-        }
+        case "count" =>(("[count]", (keyrcode._2.size).toString) :: outGroupByKeyArray.toList).toArray
       }
     })
   }
@@ -102,7 +100,7 @@ class AggregateStep extends StreamingStep with Serializable {
     }
     // 把印xml check结果，并返回结果
     if (error_index != 0) {
-      ermsgMap.foreach(f => Console.err.println("[error-AggregateStep]:"+f._2))
+      ermsgMap.foreach(f => Console.err.println("[error-AggregateStep]:" + f._2))
       (null, null, null, null)
     } else (numTasks, operationType, timListItem(groupByKeys), timListItem(operationKeys))
   }

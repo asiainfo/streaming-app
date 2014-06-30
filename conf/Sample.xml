@@ -13,7 +13,7 @@
     <step>
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
         <HBaseTable>t1</HBaseTable>
-        <HBaseCell>cell</HBaseCell>
+        <HBaseCells>cell</HBaseCells>
         <HBaseKey>lac,cell</HBaseKey>
         <output>b,c,t1.cell,count,fee</output>
         <where>t1.cell!=null</where>
