@@ -22,7 +22,7 @@ class KafkaOut extends StreamingStep with Serializable{
         val item =  InputMap.toMap
         out += item(arg)+delim
       }
-      val kafkaout =out
+      val kafkaout =out.substring(0,out.length-1)
 
       //send kafka message, comment this function when doing unit test
       kafkaSend(kafkaout,brokers,topic,delim)

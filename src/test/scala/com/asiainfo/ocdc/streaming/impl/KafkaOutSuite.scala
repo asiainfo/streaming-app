@@ -20,8 +20,8 @@ class KafkaOutSuite extends TestSuitBase with Logging {
     )
 
     val expectedOutput = Seq(
-      Seq(Array(("outstream", "1,2,"))),
-      Seq(Array(("outstream", "1,2,")))
+      Seq(Array(("outstream", "1,2"))),
+      Seq(Array(("outstream", "1,2")))
     )
 
     val tester = new KafkaOut()
