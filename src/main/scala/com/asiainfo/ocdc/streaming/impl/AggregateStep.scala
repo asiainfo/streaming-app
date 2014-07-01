@@ -37,7 +37,7 @@ class AggregateStep extends StreamingStep with Serializable {
       // groupbykey　key-value 拼接
       val outGroupByKeyArray = groupByKeys.zip(outGroupByKeys)
 
-      operationType.toLowerCase() match {
+      operationType match {
         case "distinct" => outGroupByKeyArray
         case "sum" => {
           // 装载积集结果的map
@@ -66,7 +66,7 @@ class AggregateStep extends StreamingStep with Serializable {
    */
   def xmlanalysis(step: Node) = {
     var numTasks = (step \ "numTasks").text.toString.trim
-    val operationType = (step \ "operationType").text.toString.trim
+    val operationType = (step \ "operationType").text.toString.trim.toLowerCase()
     val groupByKeysText = (step \ "groupByKeys").text.toString.trim
     val operationKeysText = (step \ "operationKeys").text.toString.trim
 
@@ -92,7 +92,14 @@ class AggregateStep extends StreamingStep with Serializable {
       ermsgMap += (error_index -> "must be inputed nodes <groupByKeys>'s value. and make soure the node's name is <groupByKeys>.")
       error_index += 1
     }
-    if ((operationType.toLowerCase()) == "sum") {
+    
+    //check operationType输入的正确性
+    if (!(operationType =="distinct" || operationType =="sum"|| operationType =="count")) {
+      ermsgMap += (error_index -> "please make sure the value of <operationType> is any one of the list [distinct，sum，count].")
+      error_index += 1
+    }
+    
+    if (operationType == "sum") {
       if (operationKeysText.isEmpty) {
         ermsgMap += (error_index -> "must be inputed nodes <operationKeys>'s value. and make soure the node's name is <operationKeys>.")
         error_index += 1
