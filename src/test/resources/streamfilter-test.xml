@@ -3,7 +3,7 @@
     <step  id="1">
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
         <HBaseTable>t1</HBaseTable>
-        <HBaseCellss>city_id</HBaseCellss>
+        <HBaseCells>city_id</HBaseCells>
         <HBaseKey>lac,cell</HBaseKey>
         <output>imsi,t1.city_id</output>
         <where>t1.city_id!=null</where>
