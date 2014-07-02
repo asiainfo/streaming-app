@@ -8,7 +8,7 @@ import org.apache.spark.streaming.dstream.DStream
 import scala._
 
 /**
- * Created by liuhao8 on 14-6-16.
+ * Created by wangxj8 on 14-6-16.
  */
 class StreamFilterStepSuite extends TestSuitBase with Logging {
   test("Streamfilter test example1") {
