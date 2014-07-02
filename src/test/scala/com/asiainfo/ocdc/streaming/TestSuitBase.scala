@@ -61,8 +61,8 @@ trait TestSuitBase extends org.apache.spark.streaming.TestSuiteBase with Logging
     val lv1Size = expectedOutput.size
     val lv2Size = expectedOutput(0).size
     var isFound = false
-    for (i <- 0 until lv1Size) {
-      for (j <- 0 until lv2Size) {
+    for (i <- 0 until lv1Size-1) {
+      for (j <- 0 until lv2Size-1) {
         val outputArr = output.asInstanceOf[Seq[Seq[Array[Tuple2[String,String]]]]](i)(j)
         val expectArr = expectedOutput.asInstanceOf[Seq[Seq[Array[Tuple2[String,String]]]]](i)(j)
         for (e <- expectArr) {
