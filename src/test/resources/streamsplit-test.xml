@@ -2,7 +2,7 @@
 
     <step  id="1">
         <class>com.asiainfo.ocdc.streaming.impl.StreamSplit</class>
-        <Split>\\|</Split>>
+        <Split>\|</Split>>
         <output>imsi,product_id,cell</output>
         <StreamFiled>product_id</StreamFiled>
     </step>
