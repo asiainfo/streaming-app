@@ -12,7 +12,7 @@ import scala._
  */
 class StreamSplitStepSuite extends TestSuitBase with Logging {
   test("StreamSplit test example1") {
-    logInfo("StreamFilter test example1 started ")
+    logInfo("StreamSplit test example1 started ")
 
     val xmlFile = XML.load("src/test/resources/streamsplit-test.xml")
     val step = xmlFile \ "step"
@@ -30,10 +30,8 @@ class StreamSplitStepSuite extends TestSuitBase with Logging {
       Seq(Array(("imsi", "460020060188222"),("producr_id", "p4"),("cell","0000")))
     )
 
-
-    val filter = new StreamSpilt();
+    val filter = new StreamSplit();
     val operation = (s:DStream[Array[ (String, String) ] ]) =>filter.onStep(step(0), s)
-
 
     testOperation(input, operation, expectedOutput, true)
     logInfo("StreamFilter test example1 finished ")

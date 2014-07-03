@@ -5,7 +5,7 @@ import org.apache.spark.streaming.dstream.DStream
 import scala.xml.Node
 import com.asiainfo.ocdc.streaming.tools._
 
-class StreamSpilt extends StreamingStep{
+class StreamSplit extends StreamingStep{
 
   def onStep(step:Node,inStream:DStream[Array[(String,String)]]):DStream[Array[(String,String)]]={
     val delim = ","
