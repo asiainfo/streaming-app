@@ -11,6 +11,7 @@ import com.asiainfo.ocdc.streaming.tools.JexlTool
  * @author surq
  *
  */
+@SerialVersionUID(4247841515l)
 class DynamicOperate extends StreamingStep with Serializable {
 
   override def onStep(step: Node, dstream: DStream[Array[(String, String)]]): DStream[Array[(String, String)]] = {

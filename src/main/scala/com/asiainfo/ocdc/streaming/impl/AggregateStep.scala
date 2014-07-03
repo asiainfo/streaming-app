@@ -16,6 +16,7 @@ import com.asiainfo.ocdc.streaming.tools.JexlTool
  * 4、只有当operationType＝sum时，operationKeys才会生效<br>
  * 5、只有当operationType＝count时，输出字段为groupByKeys和自动生成的字段"［count］"<br>
  */
+@SerialVersionUID(42454515l)
 class AggregateStep extends StreamingStep with Serializable {
   override def onStep(step: Node, dstream: DStream[Array[(String, String)]]): DStream[Array[(String, String)]] = {
     val debug_flg = true
@@ -46,9 +47,7 @@ class AggregateStep extends StreamingStep with Serializable {
           operationKeys.foreach(f => (sumMap += (f -> "0")))
           (keyrcode._2).foreach(f => {
             var keyValueMap = f.toMap
-            operationKeys.foreach(f => {
-              sumMap += (f -> (JexlTool.getExpValue("last+next", Array.apply(("last", sumMap(f)), ("next", keyValueMap(f))))))
-            })
+            operationKeys.foreach(f => sumMap += (f -> (JexlTool.getExpValue("last+next", Array.apply(("last", sumMap(f)), ("next", keyValueMap(f)))))))
           })
           val sumList = sumMap.toList
           // 输出拼接
