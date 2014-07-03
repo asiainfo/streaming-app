@@ -2,54 +2,64 @@
 
     <dataSource name="input">
         <class>com.asiainfo.ocdc.streaming.impl.KafkaSource</class>
-        <zkQuorum></zkQuorum>
-        <topics>com.ailk.flowmanagement.mcd.flux_action</topics>
+        <zkQuorum>oc47:2183,oc48:2183,oc49:2183</zkQuorum>
+        <topics>tt</topics>
         <groupId>test-consumer-group</groupId>
         <consumerNum>3</consumerNum>
         <separator> </separator>
-        <stream_columns>business_id,user_account,business_start_time,content_type,keyword,site_id,activity_code</stream_columns>
+        <stream_columns>user_account,business_id</stream_columns>
     </dataSource>
 
     <step name="uniq">
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
-        <HBaseTable>OperatedUsers</HBaseTable>
-        <HBaseCell>user_account</HBaseCell>
+        <HBaseTable>OPERATEDUSERS</HBaseTable>
+        <HBaseCells>USER_ACCOUNT</HBaseCells>
         <HBaseKey>user_account</HBaseKey>
-        <where>OperatedUsers.user_account!=null</where>
-        <output>business_id,user_account,business_start_time,content_type,keyword,site_id,activity_code</output>
+        <where>OPERATEDUSERS.USER_ACCOUNT=='null'</where>
+        <output>user_account,business_id</output>
     </step>
 
     <step name="addFields">
         <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
-        <HBaseTable>dm_user_labil_data</HBaseTable>
-        <HBaseCell>brand_id,bill_fee</HBaseCell>
+        <HBaseTable>DM_USER_LABIL_DATA</HBaseTable>
+        <HBaseCells>BRAND_ID,BILL_FEE,ARPU_LEV_ID,BRAND_ID</HBaseCells>
         <HBaseKey>user_account</HBaseKey>
-        <output>business_id,user_account,activity_code,dm_user_labil_data.brand_id,dm_user_labil_data.bill_fee</output>
+        <output>user_account,business_id,DM_USER_LABIL_DATA.ARPU_LEV_ID,DM_USER_LABIL_DATA.BRAND_ID</output>
+		<where>DM_USER_LABIL_DATA.BRAND_ID!='null' || DM_USER_LABIL_DATA.BILL_FEE!='null' || DM_USER_LABIL_DATA.ARPU_LEV_ID!='null' || DM_USER_LABIL_DATA.BRAND_ID!='null'</where>
+	</step>
+	
+	<step name="filteByRoles">
+        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
+        <HBaseTable>CHECKROLES</HBaseTable>
+        <HBaseCells>CONDITION</HBaseCells>
+        <HBaseKey>business_id</HBaseKey>
+        <where>CHECKROLES.CONDITION</where>
+        <output>user_account,business_id</output>
     </step>
 
-    <step name="filteByRoles">
-        <class>com.asiainfo.ocdc.streaming.impl.StreamFilter</class>
-        <HBaseTable>dim_sparkstreaming_target_define</HBaseTable>
-        <HBaseCell>condition</HBaseCell>
-        <HBaseKey>business_id</HBaseKey>
-        <where>checkRoles.condition</where>
-        <output>business_id,user_account,activity_code</output>
-    </step>
-	
-	<step name="savetoHbase">
+    <step name="saveToHbase">
         <class>com.asiainfo.ocdc.streaming.impl.SaveOperate</class>
-        <HBaseTable>OperatedUsers</HBaseTable>
+        <HBaseTable>OPERATEDUSERS</HBaseTable>
         <HBaseKey>user_account</HBaseKey>
-        <HBaseCells>user_account</HBaseCells>
+        <HBaseCells>USER_ACCOUNT</HBaseCells>
         <expressions>user_account</expressions>
-        <output>business_id,user_account,activity_code</output>
-        <describe>desc</describe>
+        <output>user_account</output>
+        <describe>
+                        功能：本 step 能够将数据流中的数据写到Hbase表中，可以指定写Hbase表的哪些列，配置列的计算表达式
+            step的配置规则说明：
+            1） class ：配置该step 的处理 class名
+            2） HbaseTable ：指定HbaseTable名
+            3） HbaseKey ：指定HbaseTable的rowkey名
+            4） HbaseCells ：配置 指定写Hbase表的哪些列，逗号分隔， <HBaseCells>cf1,cf2</HBaseCells>
+            5） expressions ：配置 列的计算表达式，逗号分隔，expressions和 HbaseCells 位置一一对应 ,如 <HBaseCells>expr1,expr2</HBaseCells>
+            6) ouput ：指定数据流在完成本step处理后输出时包含哪些字段
+        </describe>
     </step>
     
     <step name="output">
         <class>com.asiainfo.ocdc.streaming.impl.KafkaOut</class>
-        <topic>check</topic>
-        <broker>dev001:9092</broker>
+        <topic>ttt</topic>
+        <broker>oc47:9101,oc48:9102,oc49:9103</broker>
         <OutCol>user_account</OutCol>
     </step>
 

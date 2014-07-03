@@ -27,10 +27,11 @@ class StreamFilter extends StreamingStep{
       println("=============hbase 查询结果================" )
       HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCells).foreach(x=>{println(x._1+"###"+x._2)})
 
-      x ++HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCells)
+      val tmp = x ++HbaseTool.getValue(HBaseTable, key, HbaseTool.family, HBaseCells)
+      tmp
     })
 
-    if(where != null){
+    if(where != null  && where != ""){
       println("===where===" + where)
       handle = handle.filter(x=>{
         where = x.toMap.getOrElse(where,where)
