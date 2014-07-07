@@ -75,7 +75,7 @@ Configuration
     </step>
     ......
   </pre>
-Building Spark
+Building Spark_dev
 =====
   <pre>
   mvn package
