@@ -6,7 +6,8 @@ Spark_dev  requires:
 
     Scala 2.10.3
     AMPLab's Hbase 0.98.1
-    Spark 0.9.1
+    Spark 0.9.
+    kafka_2.10-0.8.1
     
 
 
@@ -17,7 +18,8 @@ Configuration
   <pre>
   export HADOOP_CONF_DIR=/home/ocdc/hadoop-2.3.0-cdh5.0.0-och3.1.0/etc/hadoop
   export SPARK_YARN_APP_JAR=/home/ocdc/spark_dev/target/spark-dev-V00B01C00-SNAPSHOT-jar-with-dependencies.jar
-  export SPARK_JAR=/home/ocdc/spark_0.9.1_streaming/assembly/target/scala-2.10/spark-assembly-0.9.1-hadoop2.3.0-cdh5.0.0.jar
+  export SPARK_JAR=/home/ocdc/spark-assembly-0.9.1-hadoop2.3.0-cdh5.0.0.jar
+  
   </pre>
   
   
