@@ -6,7 +6,6 @@ Spark_dev  requires:
 
     Scala 2.10.3
     AMPLab's Hbase 0.98.1
-    Spark 0.9.
     kafka_2.10-0.8.1
     
 
