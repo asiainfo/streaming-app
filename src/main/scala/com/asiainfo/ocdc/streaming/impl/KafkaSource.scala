@@ -16,7 +16,7 @@ class KafkaSource(ssc:StreamingContext) extends StreamingSource(ssc){
     val separator = (source \ "separator").text.toString
     val stream_columns = (source \ "stream_columns").text.toString.split(",")
     val topicpMap = topics.split(",").map((_,1)).toMap
-    val stream = (1 to consumerNum).map(_=>KafkaUtils.createStream(ssc, zkQuorum, group, topicpMap)).reduce(_.union(_)).map(_._2)
+    val stream = (1 to consumerNum).map(_=>KafkaUtils.createStream(ssc, zkQuorum, group, topicpMap).asInstanceOf[DStream[(String, String)]]).reduce(_.union(_)).map(_._2)
 
     // 对输入流列名定义
     stream.map(x =>{
