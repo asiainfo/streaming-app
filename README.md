@@ -1,8 +1,8 @@
-Asiainfo Spark_dev
+Asiainfo streaming-app
 =====
 
 
-Spark_dev  requires:
+streaming-app  requires:
 
     Scala 2.10.3
     AMPLab's Hbase 0.98.1
@@ -75,7 +75,7 @@ Configuration
     </step>
     ......
   </pre>
-Building Spark_dev
+Building streaming-app
 =====
   <pre>
   mvn package
@@ -85,17 +85,15 @@ Start spark streaming
 =====
 The command format is as follows,To start the streaming app application
 
-./bin/start-streaming-app.sh streaming-app-name 2  conf/Sample.xml
+./bin/start-streaming-app.sh <streaming-app-name> <2>  <conf/Sample.xml>
 
-Parameter 1, execute the script file                                                                                      
-Parameter 2, When should the different configuration XML file, the corresponding streamingappname                         
-Parameter 3, flow interval refresh time(seconds)                                                                          
-Parameter 4, The configuration file
+Parameter 1, When should the different configuration XML file, the corresponding streamingappname                         
+Parameter 2, flow interval refresh time(seconds)                                                                          
+Parameter 3, The configuration file
 
 
 Running Tests
 =====
 Test documentation, reference spark_dev project wiki
-https://github.com/asiainfo-linkage/spark_dev.wiki.git
-
+https://github.com/asiainfo/streaming-app/wiki
   
