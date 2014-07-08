@@ -89,7 +89,7 @@ The command format is as follows,To start the streaming app application
   </pre>
 Parameter 1, When should the different configuration XML file, the corresponding streamingappname                         
 Parameter 2, flow interval refresh time(seconds)                                                                          
-Parameter 3, The configuration file (as:)
+Parameter 3, The configuration file (as:conf/Sample.xml)
 
 
 Running Tests
