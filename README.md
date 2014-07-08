@@ -85,7 +85,7 @@ Start spark streaming
 =====
 The command format is as follows,To start the streaming app application
   <pre>
-  ./bin/start-streaming-app.sh  <streaming-app-name> <time>  <file>
+  ./bin/start-streaming-app.sh  &lt;streaming-app-name&gt; &lt;time&gt;  &lt;file&gt;
   </pre>
 Parameter 1, When should the different configuration XML file, the corresponding streamingappname                         
 Parameter 2, flow interval refresh time(seconds)                                                                          
