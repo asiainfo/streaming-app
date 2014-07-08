@@ -84,12 +84,12 @@ Building streaming-app
 Start spark streaming
 =====
 The command format is as follows,To start the streaming app application
-
-./bin/start-streaming-app.sh < streaming-app-name > < 2 >  < conf/Sample.xml >
-
+  <pre>
+  ./bin/start-streaming-app.sh  <streaming-app-name> <time>  <file>
+  </pre>
 Parameter 1, When should the different configuration XML file, the corresponding streamingappname                         
 Parameter 2, flow interval refresh time(seconds)                                                                          
-Parameter 3, The configuration file
+Parameter 3, The configuration file (as:)
 
 
 Running Tests
