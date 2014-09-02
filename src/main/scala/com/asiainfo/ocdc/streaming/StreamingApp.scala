@@ -6,6 +6,12 @@ import org.apache.spark.streaming._
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.{Logging, SparkConf}
 
+import scala.collection.mutable.HashMap
+import scala.collection.mutable.Map
+import org.apache.hadoop.fs.{Path, FileSystem}
+import org.apache.hadoop.conf.Configuration
+import java.io.{InputStreamReader, BufferedReader}
+
 
 object StreamingApp extends Logging{
   def main(args: Array[String]) {
@@ -21,6 +27,8 @@ object StreamingApp extends Logging{
     val sparkConf = new SparkConf().setAppName(appName)
     val ssc =  new StreamingContext(sparkConf, Seconds(stream_space.toInt))
 
+    val broadcastValue= ssc.sparkContext.broadcast(createbroadcast(xmlFile))
+
     // 数据流引入
     val dataSource = xmlFile \ "dataSource"
     val clz = Class.forName((dataSource \ "class").text.toString)
@@ -30,18 +38,56 @@ object StreamingApp extends Logging{
     // 流数据Step运行
     val steps = xmlFile \ "step"
     for(step <- steps){
-       val clz = Class.forName((step \ "class").text.toString)
-       val method = clz.getMethod("run",classOf[Node], classOf[DStream[Array[(String,String)]]])
-       streamingData = method.invoke(clz.newInstance(), step,streamingData)
+      val clz = Class.forName((step \ "class").text.toString)
+      val method = clz.getMethod("run",classOf[Node], classOf[DStream[Array[(String,String)]]])
+      streamingData = method.invoke(clz.getConstructor(classOf[HashMap[String, HashMap[String, Array[(String,String)]]]])newInstance(broadcastValue), step,streamingData)
     }
 
     streamingData.asInstanceOf[DStream[Array[(String,String)]]].print()
     ssc.start()
     ssc.awaitTermination()
-   }
- }
+  }
 
-abstract class StreamingStep() extends Logging{
+  def createbroadcast(xmlFile:Node):HashMap[String, HashMap[String, Array[(String,String)]]]={
+    val result =  HashMap[String, HashMap[String, Array[(String,String)]]]()
+    val delim = ","
+
+    val steps = xmlFile \ "broadcasts"
+    for(step <- steps){
+      val lineSplit = (step \ "lineSplit").text.toString.trim
+      val hdfsDir = (step \ "hdfsdir").text.toString.trim
+      val output = (step \ "output").text.toString.trim.split(delim)
+      val Key = (step \ "Key").text.toString.trim.split(delim)
+      val tableName = (step \ "tableName").text.toString.trim
+
+      val hdfs = FileSystem.get( new Configuration())
+      val in = hdfs.open(new Path(hdfsDir))
+      val bis = new BufferedReader(new InputStreamReader(in,"GBK"))
+      var temp = ""
+
+      var out = HashMap[String, Array[(String,String)]]()
+      while ((temp=bis.readLine() )!= null){
+        //按行分割，行内分列 暂时有问题
+        temp.map(line=>{
+          val column= line.toString.split(lineSplit)
+          val comlumarray= (0 to output.length-1).map(i=>{
+            (output(i),column(i))
+          }).toArray
+          var boradkey = ""
+          for (arg <-Key) {
+            val item = comlumarray.toMap
+            boradkey +=  item.getOrElse(arg,"")
+          }
+          out += (boradkey ->comlumarray)
+        })
+      }
+      result +=(tableName->out)
+    }
+    result
+  }
+}
+
+abstract class StreamingStep(broadcast:HashMap[String, HashMap[String, Array[(String,String)]]]) extends Logging{
 
   /**
    * Step 运行主方法
@@ -72,3 +118,5 @@ abstract class StreamingSource(sc:StreamingContext) extends Logging{
   def createStream(source:Node):DStream[Array[(String,String)]]
 
 }
+
+
