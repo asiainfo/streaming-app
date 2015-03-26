@@ -1,4 +1,4 @@
-package com.asiainfo.ocdc.streaming.tools
+package com.asiainfo.ocdc.streaming
 
 object CacheManager {
 
