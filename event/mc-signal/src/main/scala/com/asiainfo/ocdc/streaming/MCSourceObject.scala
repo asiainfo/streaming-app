@@ -8,8 +8,6 @@ case class MCSourceObject(
     time: Long,
     lac: Int,
     ci: Int,
-    simei: Long,
-    dimei: Long,
-    simsi: Long,
-    dimsi: Long) extends SourceObject {
+    imsi: Long,
+    imei: Long) extends SourceObject {
 }
