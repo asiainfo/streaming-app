@@ -8,6 +8,9 @@ abstract class SourceObject extends Serializable {
   final def setLabel(key: String, value: Object) = {
     labels.put(key, value)
   }
+  final def getLabel(key: String): Object = {
+    labels.get(key)
+  }
   final def removeLabel(key: String) = {
     labels.remove(key)
   }
