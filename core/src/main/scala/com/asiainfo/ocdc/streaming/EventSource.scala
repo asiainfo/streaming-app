@@ -2,19 +2,26 @@ package com.asiainfo.ocdc.streaming
 
 import java.util.ArrayList
 
+import com.asiainfo.ocdc.streaming.SourceObject
+import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.sql.{Row, SQLContext, DataFrame}
 
+import scala.collection.mutable.ArrayBuffer
+
+
 abstract class EventSource() {
+  val name: String = ""
 
-  private val labelRules = new ArrayList[LabelRule]
-  private val eventRules = new ArrayList[EventRule]
-  private var beanclass = ""
 
-  def addEventRule(rule: EventRule): Unit = eventRules.add(rule)
+  private val labelRules = new ArrayBuffer[LabelRule]
+  private val eventRules = new ArrayBuffer[EventRule]
+  def beanclass :String
 
-  def addLabelRule(rule: LabelRule): Unit = labelRules.add(rule)
+  def addEventRule(rule: EventRule): Unit = { eventRules += rule }
+
+  def addLabelRule(rule: LabelRule): Unit = { labelRules += rule }
 
   def init(conf: EventSourceConf): Unit
 
@@ -30,14 +37,46 @@ abstract class EventSource() {
 
     inputStream.foreachRDD { rdd =>
       val sourceRDD = rdd.map(transform).collect {
-        case Some(source) => source
+        case Some(source: SourceObject) => source
       }
 
-      val labelRuleIter = labelRules.iterator
-      while(labelRuleIter.hasNext) {
-        sourceRDD.map(labelRuleIter.next.attachLabel)
-      }
-      val df = sqlContext.createDataFrame(sourceRDD, Class.forName(beanclass))
+      val labelRuleArray = labelRules.toArray
+
+      val labeledRDD = sourceRDD.mapPartitions( iter =>{
+        new Iterator[SourceObject] {
+          private[this] var currentRow: SourceObject = _
+          private[this] var currentPos: Int = 0
+          private[this] var arrayBuffer: Array[SourceObject] = null
+
+          override def hasNext: Boolean = (currentPos < arrayBuffer.length - 1) || (iter.hasNext && fetchNext())
+
+          override def next(): SourceObject = {
+            currentPos += 1
+            arrayBuffer(currentPos - 1)
+          }
+
+          private final def fetchNext(): Boolean = {
+            val currentArrayBuffer = new ArrayBuffer[SourceObject]
+            currentPos = 0
+            val totalFetch = 0
+            var result = false
+            // TODO read caches from CacheManager
+            val cache = new StreamingCache
+            while(iter.hasNext && totalFetch < 10) {
+              val currentLine = iter.next()
+              result = true
+              labelRuleArray.map(labelRule => {
+                labelRule.attachLabel(currentLine, cache)
+              })
+              currentArrayBuffer.append(currentLine)
+            }
+            // TODO update caches to CacheManager
+            arrayBuffer = currentArrayBuffer.toArray
+            result
+          }
+        }
+      })
+      val df = sqlContext.createDataFrame(labeledRDD, Class.forName(beanclass))
 
       // cache data
       df.persist
@@ -45,11 +84,20 @@ abstract class EventSource() {
       val eventRuleIter = eventRules.iterator
       while(eventRuleIter.hasNext) {
         val eventRule = eventRuleIter.next
-        val selectExprArray = eventRule.selExpr.map({
-          case (alias :String, expr :String) => expr + " as " + alias
-        })
-        val targetEvent = df.filter(eventRule.filterExpr).selectExpr(selectExprArray.toSeq: _*)
-        targetEvent.map(row =>{
+
+        // handle filter first
+        val filteredData = {
+          var inputDF = df
+          for(filter :String <- eventRule.filterExpList) {
+            inputDF = inputDF.filter(filter)
+          }
+          inputDF
+        }
+
+        // handle select
+        val selectedData = filteredData.selectExpr(eventRule.getSelectExprs: _*)
+
+        selectedData.map(row =>{
           // TODO
           // row => Event
           // sendEvent
