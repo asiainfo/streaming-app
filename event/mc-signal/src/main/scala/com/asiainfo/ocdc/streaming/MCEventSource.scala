@@ -33,8 +33,8 @@ class MCEventSource() extends EventSource() {
       val time = inputs(1).toLong
       val lac = inputs(2).toInt
       val ci = inputs(3).toInt
-      val imsi = inputs(4).toInt
-      val imei = inputs(5).toInt
+      val imei = inputs(4).toInt
+      val imsi = inputs(6).toInt
       Some(MCSourceObject(eventID, time, lac, ci, imsi, imei))
     } catch {
       case e: Exception => {
