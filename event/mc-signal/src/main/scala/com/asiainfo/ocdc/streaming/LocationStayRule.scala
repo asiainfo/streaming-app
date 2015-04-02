@@ -71,8 +71,8 @@ class LocationStayRule extends MCLabelRule {
 
       val rmIterator = tmpMap.iterator
       // 记当有效区域数据的开始时间
-      val firstTimeList = ArrayBuffer[Long]()
-      val lastTimeList = ArrayBuffer[(String, Long)]()
+      // [区域，［firstTime,lastTime］]
+      val locationStayInfo = Map[String, Tuple2[Long, Long]]()
 
       while (rmIterator.hasNext) {
         val locationNode = rmIterator.next
@@ -88,30 +88,38 @@ class LocationStayRule extends MCLabelRule {
           // del:2、设定阈值判断所有区域的lastTime加上阈值时间大于本记录time的视为过期数据清除
           else if ((thresholdValue + lastTime) > thistime) delData(areaName)
           else {
-            firstTimeList += firestTime
-            lastTimeList += (areaName -> lastTime)
+            locationStayInfo += (areaName -> (firestTime, lastTime))
           }
         } else {
+          // 本区域数据已无效清空属性map
           if ((thresholdValue + lastTime) > thistime) delData(areaName, false)
         }
       }
 
       // del:3、lastTime最大的区域的lastTime与非此区域的firstTime做差值若小于最小的阈值则视为无效值
       val rmit = tmpMap.iterator
-      val maxLastTime = (lastTimeList.sortBy(_._2).reverse)(0)
+      val lastTimelist = locationStayInfo.map(locatinfo => (locatinfo._1, locatinfo._2._2)).toList.sortBy(_._2)
+      val maxLastTime = (lastTimelist.reverse)(0)
       // 最大listTime的区域
       val masxtLTimeArea = maxLastTime._1
       val masxtLTime = maxLastTime._2
-      // 刨除最大listTime的区域数据的区域list
-      //      val areaList = lastTimeList.filter(area => area._1 != masxtLTimeArea).map(_._1)
 
       while (rmit.hasNext) {
         val locationNode = rmit.next
         val areaName = locationNode._1
         val areaProp = locationNode._2
         val firestTime = areaProp(Constant.LABEL_STAY_FIRSTTIME).toLong
-        if (areaName != masxtLTimeArea && (masxtLTime - firestTime) < selfDefStayTimeList(0))
-          delData(areaName)
+        if (areaName != masxtLTimeArea && (masxtLTime - firestTime) < selfDefStayTimeList(0)) {
+          if (locationList.contains(areaName)) {
+            // 此区域数据已过时，因为本记录又有此区域的信息所以清空属性等待设定新属性
+            delData(areaName, false)
+          } else {
+            // 此区域数据已过时，删除此区域的所有信息
+            delData(areaName)
+            // 维护有效区域的想关信息map
+            locationStayInfo.remove(areaName)
+          }
+        }
       }
 
       // 统计更新前对应的区域内所连续停留的时间 [区域，tuple2[last停留时间，本次停留时间]]
@@ -129,12 +137,15 @@ class LocationStayRule extends MCLabelRule {
         if (!locationList.contains(areaName)) {
           // update:1、根据本条记录的time与所有非本区域标签的数据的持续时间区间比兑
           //若在其间则视为该区域数据的firstTime无效，把大于thisTime中最小的lastTime设为firstTime
-          if (thistime >= firestTime && firestTime <= lastTime) {
-            // 把lastTime放入，在没有满足条件的时候，就会设此值（目的为了保证estimateList.size>0）
-            firstTimeList += lastTime.toLong
-            val estimateList = firstTimeList
-              .filter(time => (time >= thistime && thistime <= lastTime)).sorted
-            areaProp += (Constant.LABEL_STAY_FIRSTTIME -> estimateList(0).toString)
+          if (thistime >= firestTime && thistime <= lastTime) {
+            // 估测起始时间
+            val estimateList = locationStayInfo.map(locatinfo => locatinfo._2._2).toList.
+              filter(last => (last >= thistime && last <= lastTime)).sorted
+            if (estimateList.size > 0)
+              areaProp += (Constant.LABEL_STAY_FIRSTTIME -> estimateList(0).toString)
+            else
+               // 把lastTime放入，在没有满足条件的时候
+              areaProp += (Constant.LABEL_STAY_FIRSTTIME -> lastTime.toString)
           }
         } else {
           // 正常情况的更新处理
@@ -153,7 +164,6 @@ class LocationStayRule extends MCLabelRule {
         }
 
         // 打标签
-
         //StayTimeMap
         val pushlist = StayTimeMap.map(f => {
           val localName = f._1
@@ -177,15 +187,8 @@ class LocationStayRule extends MCLabelRule {
        * 删除无效属性
        * del_flg=true:移除，false：只清空数据
        */
-      def delData(areaName: String, del_flg: Boolean = true) = {
-        if (del_flg) {
-          tmpMap.remove(areaName)
-          firstTimeList.remove(0)
-          lastTimeList.remove(0)
-        } else {
-
-        }
-      }
+      def delData(areaName: String, del_flg: Boolean = true) =
+        if (del_flg) tmpMap.remove(areaName) else tmpMap(areaName).clear
     }
   }
 }
