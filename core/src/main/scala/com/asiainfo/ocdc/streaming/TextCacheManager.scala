@@ -8,9 +8,9 @@ object TextCacheManager extends CacheManager {
   private val CommonCacheValue:Map[String,Map[String, String]] = Map("LGValue"-> Map("laccell" -> "2015value"))
   private val CommonCacheList:Map[String,List[String]] = Map("LGList" -> List("2015list"))
 
-  private var HashCacheMap:Map[String, Map[String, String]] = null
-  private var HashCacheString:Map[String,String] = null
-  private var HashCacheList:Map[String,List[String]] = null
+  private var HashCacheMap = Map[String, Map[String, String]]()
+  private var HashCacheString = Map[String,String]()
+  private var HashCacheList = Map[String,List[String]]()
 
 
   override def getHashCacheList(key: String): List[String] = {
@@ -26,15 +26,15 @@ object TextCacheManager extends CacheManager {
   }
 
   override def setHashCacheList(key: String, value: List[String]) {
-    HashCacheList = Map(key -> value)
+    HashCacheList += (key -> value)
   }
 
   override def setHashCacheMap(key: String, value: Map[String, String]) {
-    HashCacheMap = Map(key -> value)
+    HashCacheMap += (key -> value)
   }
 
   override def setHashCacheString(key: String, value: String) {
-    HashCacheString = Map(key -> value)
+    HashCacheString += (key -> value)
   }
 
   override def getCommonCacheMap(key: String): Map[String, String] = {
