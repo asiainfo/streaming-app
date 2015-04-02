@@ -1,8 +1,8 @@
 package com.asiainfo.ocdc.streaming
 
 import java.text.SimpleDateFormat
-
 import org.scalatest.{BeforeAndAfter, FunSuite}
+
 
 /**
  * Created by yfq on 15/4/2.
@@ -10,10 +10,8 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 
   val sdf=new SimpleDateFormat("yyyyMMdd HH:mm:ss.SSSZ")
-  val timeout=300
 
   test("1 test with sample cases") {
-
 
     val mc1_out = MCSourceObject(9, sdf.parse("20150401 08:20:00.000").getTime, 111, 1, 13900000000L ,13900000000L)
     val mc2=MCSourceObject(1, sdf.parse("20150401 08:20:00.000").getTime, 112, 1, 13900000000L ,13900000000L)
@@ -50,7 +48,6 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
     assert(mc5.getLabel(Constant.STAY_TIME).get("1")=="20")
     assert(mc5.getLabel(Constant.STAY_TIME).get("2")=="20")
     assert(mc5.getLabel(Constant.STAY_TIME).get("3")=="20")
-
 
   }
 }

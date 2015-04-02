@@ -7,7 +7,7 @@ import org.scalatest.{BeforeAndAfter, FunSuite}
 /**
  * Created by yfq on 15/4/2.
  */
-class SiteRuleSuite extends FunSuite with BeforeAndAfter{
+class SiteRuleSuite extends FunSuite with BeforeAndAfter {
 
   val sdf=new SimpleDateFormat("yyyyMMdd HH:mm:ss.SSSZ")
   val timeout=300
