@@ -6,16 +6,16 @@ object TextCacheManager extends CacheManager {
 
   private val CommonCacheMap:Map[String, Map[String, String]] = Map("LGMAP"-> Map("laccell" -> "2015map"))
   private val CommonCacheValue:Map[String,Map[String, String]] = Map("LGValue"-> Map("laccell" -> "2015value"))
-  private val CommonCacheList = Map[String,List[String]]()
+  private var CommonCacheList = Map[String,List[String]]()
 
   private var HashCacheMap = Map[String, Map[String, String]]()
   private var HashCacheString = Map[String,String]()
   private var HashCacheList = Map[String,List[String]]()
 
   def init(){
-    CommonCacheMapinit("/home/ocdc/asiainfo/cachemap")
+    CommonCacheMapinit
     CommonCacheValueinit
-    CommonCacheListinit
+    CommonCacheListinit("/home/ocdc/asiainfo/cachemap")
   }
 
  // getCommonCacheList(key: String): List[String]
@@ -24,7 +24,7 @@ object TextCacheManager extends CacheManager {
 
   def CommonCacheListinit(filename: String) {
     for (line <- Source.fromFile(filename).getLines){
-      val kv = line.split(",")
+      var kv = line.split(",")
       CommonCacheList += (kv(0) -> kv.toList)
     }
   }
