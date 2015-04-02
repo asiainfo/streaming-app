@@ -1,5 +1,7 @@
 package com.asiainfo.ocdc.streaming
 
+
+
 object TextCacheManager extends CacheManager {
 
   private val CommonCacheMap:Map[String, Map[String, String]] = Map("LGMAP"-> Map("laccell" -> "2015map"))
