@@ -2,6 +2,11 @@ package com.asiainfo.ocdc.streaming
 
 import com.asiainfo.ocdc.save.LabelProps
 
+/**
+ * @author surq
+ * @since 2015.4.2
+ * @comment 给mc信令标记区域标签
+ */
 class SiteRule extends MCLabelRule {
   def attachMCLabel(mcSourceObj: MCSourceObject, cache: StreamingCache) = {
     val lac = mcSourceObj.lac
@@ -9,9 +14,9 @@ class SiteRule extends MCLabelRule {
 
     // 根据largeCell解析出所属区域
     val onsiteList = largeCellAnalysis((lac, ci))
-    val labelProps = new LabelProps
-    val areasLableList = labelProps.setSingleConditionProps(onsiteList)
-    mcSourceObj.setLabel(Constant.LABEL_ONSITE, labelProps)
+    val propMap = scala.collection.mutable.Map[String, String]()
+    onsiteList.map(location => (propMap += (location -> "true")))
+    mcSourceObj.setLabel(Constant.LABEL_ONSITE, propMap)
   }
 
   /**

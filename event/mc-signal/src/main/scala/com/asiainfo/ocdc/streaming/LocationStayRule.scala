@@ -5,6 +5,11 @@ import scala.collection.mutable.Map
 import com.asiainfo.ocdc.save.LabelProps
 import scala.collection.mutable.ArrayBuffer
 
+/**
+ * @author surq
+ * @since 2015.4.2
+ * @comment 给mc信令标记连续停留时间标签
+ */
 class LocationStayRule extends MCLabelRule {
   // TODO 配置文件读入的，
   val selfDefStayTimeList = Array(10 * 60 * 1000, 5 * 60 * 1000, 3 * 60 * 1000).sorted
