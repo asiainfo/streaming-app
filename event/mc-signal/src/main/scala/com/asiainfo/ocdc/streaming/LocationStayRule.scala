@@ -121,7 +121,6 @@ class LocationStayRule extends MCLabelRule {
           }
         }
       }
-
       // 统计更新前对应的区域内所连续停留的时间 [区域，tuple2[last停留时间，本次停留时间]]
       val StayTimeMap = Map[String, Tuple2[Long, Long]]()
 
