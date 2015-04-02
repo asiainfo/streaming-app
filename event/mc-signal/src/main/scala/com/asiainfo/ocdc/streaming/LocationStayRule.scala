@@ -13,44 +13,54 @@ import scala.collection.mutable.ArrayBuffer
 class LocationStayRule extends MCLabelRule {
   // TODO 配置文件读入的，
   val selfDefStayTimeList = Array(10 * 60 * 1000, 5 * 60 * 1000, 3 * 60 * 1000).sorted
+  // 推送满足设置的数据坎的最小值:true;最大值：false
+  val userDefPushOrde = true
+  // 推送满足设置的数据的限定值，还是真实的累计值.真实的累计值:false;限定值:true
+  val pushLimitValue = false
+  // 无效数据阈值的设定
   val thresholdValue = 20 * 60 * 1000
   def attachMCLabel(mcSourceObj: MCSourceObject, cache: StreamingCache) {
     val cacheInstance = cache.asInstanceOf[MCStatus]
 
     // 取在siteRule（区域规则）中所打的标签对像
-    val MCLabelonsite = (mcSourceObj.getLabel(Constant.LABEL_ONSITE)).asInstanceOf[LabelProps]
+    val MCLabelonsite = (mcSourceObj.getLabel(Constant.LABEL_ONSITE)).toList
+    // 本记录的area标签list
+    val locationList = for (local <- MCLabelonsite) yield local._1
 
-    // 获取基于区域标签之上的处理预订obj
-    val MCPropList = MCLabelonsite.getLabelsPropList
+    // mcsource labels用
+    val mcStayLabelsMap = Map[String, String]()
 
     val mcCache = cacheInstance.getUpdateStatus
     // 数据库中无此用户记录
     if (mcCache == null) {
       //新处理的手机号（无记录数据） [遍历所有的区域，并对其做停留时间处理]
-      // TODO 改变了mcsource Labels的内容，此处打上标签了!!!!
-      val updatePropList = MCPropList.map(prop => {
+      // 给mc的label打标签
+      locationList.foreach(location => mcStayLabelsMap += (location -> "true"))
+      mcSourceObj.setLabel(Constant.LABEL_STAY, mcStayLabelsMap)
+      // 更新cache
+      val cacheLabelProps = new LabelProps
+      // 设定区域（第一层key）
+      cacheLabelProps.setSingleConditionProps(locationList)
+      // 给不同区域的属性map中添加连续停留的开始时间，和最后时间
+      val locationPropList = cacheLabelProps.getLabelsPropList
+      locationPropList.map(prop => {
+        val locationName = prop._1
         val propMap = prop._2
         propMap += (Constant.LABEL_STAY_FIRSTTIME -> (mcSourceObj.time).toString)
         propMap += (Constant.LABEL_STAY_LASTTIME -> (mcSourceObj.time).toString)
-        (prop._1, propMap)
+        (locationName, propMap)
       })
-      MCLabelonsite.setLabelsPropList(updatePropList)
       // 更新k/v库数据内容
-      cacheInstance.setUpdateStatus((Constant.LABEL_ONSITE, MCLabelonsite))
+      cacheInstance.setUpdateStatus((Constant.LABEL_ONSITE, cacheLabelProps))
     } else {
+      // 本记录时间戳
       val thistime = mcSourceObj.time.toLong
-      val event = mcSourceObj.eventID
-      // 本记录的area标签集合
-      val locationList = for (local <- MCPropList) yield local._1
-
-      val baseLabel = mcCache._1
-      val baseLabelProp = mcCache._2
-      val areaListPropList = baseLabelProp.getLabelsPropList
+      val cacheLabelProp = mcCache._2
+      val areaListPropList = cacheLabelProp.getLabelsPropList
       // 清除cache中过期或无效的数据
       // 1、根据本条记录的time与所有非本区域标签的数据的lastTime比兑若大于，则再与FirstTime做差值若小于最小的阈值则视为无效值
-      // 2、通过event标签确定“切出”时间，清除本区域的数据
-      // 3、设定阈值判断所有区域的lastTime加上阈值时间大于本记录time的视为过期数据清除
-      // 4、lastTime最大的区域的lastTime与非此区域的firstTime做差值若小于最小的阈值则视为无效值
+      // 2、设定阈值判断所有区域的lastTime加上阈值时间大于本记录time的视为过期数据清除
+      // 3、lastTime最大的区域的lastTime与非此区域的firstTime做差值若小于最小的阈值则视为无效值
       // 数据更新
       // 1、根据本条记录的time与所有非本区域标签的数据的持续时间区间比兑若在其中则视为该区域数据的firstTime无效，
       // 把大于thisTime小于lastTime所有有效数据中最小的lastTime设为firstTime(此做法不严谨)
@@ -63,11 +73,6 @@ class LocationStayRule extends MCLabelRule {
       // 记当有效区域数据的开始时间
       val firstTimeList = ArrayBuffer[Long]()
       val lastTimeList = ArrayBuffer[(String, Long)]()
-      def delData(areaName: String) = {
-        tmpMap.remove(areaName)
-        firstTimeList.remove(0)
-        lastTimeList.remove(0)
-      }
 
       while (rmIterator.hasNext) {
         val locationNode = rmIterator.next
@@ -76,21 +81,22 @@ class LocationStayRule extends MCLabelRule {
         val firestTime = areaProp(Constant.LABEL_STAY_FIRSTTIME).toLong
         val lastTime = areaProp(Constant.LABEL_STAY_LASTTIME).toLong
 
-        firstTimeList += firestTime
-        lastTimeList += (areaName -> lastTime)
-
         if (!locationList.contains(areaName)) {
           // del:1、根据本条记录的time与所有非本区域标签的数据的lastTime比较若大于，则再与FirstTime做差值若小于最小的阈值则视为无效值
           if (thistime >= lastTime && (thistime - firestTime) < selfDefStayTimeList(0))
             delData(areaName)
-        } // del:2、通过event标签确定“切出”时间，并且时间段小于业务所需最小时间，清除本区域的数据(8:切入;9:切出)
-        else if (event == 9 && (thistime - firestTime) < selfDefStayTimeList(0))
-          delData(areaName)
-        // del:3、设定阈值判断所有区域的lastTime加上阈值时间大于本记录time的视为过期数据清除
-        if ((thresholdValue + lastTime) > thistime) delData(areaName)
+          // del:2、设定阈值判断所有区域的lastTime加上阈值时间大于本记录time的视为过期数据清除
+          else if ((thresholdValue + lastTime) > thistime) delData(areaName)
+          else {
+            firstTimeList += firestTime
+            lastTimeList += (areaName -> lastTime)
+          }
+        } else {
+          if ((thresholdValue + lastTime) > thistime) delData(areaName, false)
+        }
       }
 
-      // 4、lastTime最大的区域的lastTime与非此区域的firstTime做差值若小于最小的阈值则视为无效值
+      // del:3、lastTime最大的区域的lastTime与非此区域的firstTime做差值若小于最小的阈值则视为无效值
       val rmit = tmpMap.iterator
       val maxLastTime = (lastTimeList.sortBy(_._2).reverse)(0)
       // 最大listTime的区域
@@ -108,6 +114,9 @@ class LocationStayRule extends MCLabelRule {
           delData(areaName)
       }
 
+      // 统计更新前对应的区域内所连续停留的时间 [区域，tuple2[last停留时间，本次停留时间]]
+      val StayTimeMap = Map[String, Tuple2[Long, Long]]()
+
       // 更新cache操作
       val upIterator = tmpMap.iterator
       while (upIterator.hasNext) {
@@ -116,6 +125,7 @@ class LocationStayRule extends MCLabelRule {
         val areaProp = locationNode._2
         val firestTime = areaProp(Constant.LABEL_STAY_FIRSTTIME).toLong
         val lastTime = areaProp(Constant.LABEL_STAY_LASTTIME).toLong
+
         if (!locationList.contains(areaName)) {
           // update:1、根据本条记录的time与所有非本区域标签的数据的持续时间区间比兑
           //若在其间则视为该区域数据的firstTime无效，把大于thisTime中最小的lastTime设为firstTime
@@ -134,25 +144,48 @@ class LocationStayRule extends MCLabelRule {
           else if (thistime > lastTime) newlastTime = lastTime
           areaProp += (Constant.LABEL_STAY_FIRSTTIME -> newfirstTime.toString)
           areaProp += (Constant.LABEL_STAY_LASTTIME -> newlastTime.toString)
+
+          // 本次记录之前停留时间
+          val laststayTime = lastTime - firestTime
+          // 本记录当前区域的停留时间
+          val thisstayTime = newlastTime - newfirstTime
+          StayTimeMap += (areaName -> (laststayTime, thisstayTime))
         }
 
         // 打标签
-        // 计算停留时间
-        val stayTime = areaProp(Constant.LABEL_STAY_LASTTIME).toLong -
-          areaProp(Constant.LABEL_STAY_FIRSTTIME).toLong
 
-          val st = for ((areaName,v)<-MCPropList)yield (v)
-          val propMap = st(0)
-          propMap += (Constant.STAY_TIME -> stayTime.toString)
-          
-          // TODO 如何只在达到阈值时推送？
-          //        selfDefStayTimeList.map(defstaytime => {
-//          if (stayTime >= defstaytime) {
-//          }
-//        })
+        //StayTimeMap
+        val pushlist = StayTimeMap.map(f => {
+          val localName = f._1
+          val lastStayTime = f._2._1
+          val thisStayTime = f._2._2
+          // 满足设置的数据坎列表
+          val valuesList = selfDefStayTimeList.
+            filter(threshold => (lastStayTime < threshold && thisStayTime >= threshold))
+          if (!pushLimitValue) {
+            mcStayLabelsMap += (localName -> thisStayTime.toString)
+          } else {
+            if (userDefPushOrde) mcStayLabelsMap += (localName -> (valuesList.min).toString)
+            else mcStayLabelsMap += (localName -> (valuesList.max).toString)
+          }
+        })
       }
       // 重置cache
-      baseLabelProp.setLabelsPropList(tmpMap.toList)
+      cacheLabelProp.setLabelsPropList(tmpMap.toList)
+
+      /**
+       * 删除无效属性
+       * del_flg=true:移除，false：只清空数据
+       */
+      def delData(areaName: String, del_flg: Boolean = true) = {
+        if (del_flg) {
+          tmpMap.remove(areaName)
+          firstTimeList.remove(0)
+          lastTimeList.remove(0)
+        } else {
+
+        }
+      }
     }
   }
 }
