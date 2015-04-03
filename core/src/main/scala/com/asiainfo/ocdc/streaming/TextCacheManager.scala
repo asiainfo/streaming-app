@@ -15,17 +15,13 @@ object TextCacheManager extends CacheManager {
   private val delim = ":"
 
   def init(){
-    CommonCacheMapinit("/home/ocdc/asiainfo/cachemap")
-    CommonCacheValueinit("/home/ocdc/asiainfo/cachevalue")
-    CommonCacheListinit("/home/ocdc/asiainfo/cachelist")
+    CommonCacheMapinit("core/src/main/resources/CacheMapFile")
+    CommonCacheValueinit("core/src/main/resources/CacheValueFile")
+    CommonCacheListinit("core/src/main/resources/CacheListFile")
   }
 
   /*
-    inputformat:
-        key1:value11,value12,value13,value14,value15
-        key2:value21,value22,value23,value24,value25
-    outputformat:
-        Map(key1 -> List(value11,value12,value13,value14,value15))
+    outputformat: Map(key1 -> List(value11,value12,value13,value14,value15))
   */
 
   def CommonCacheListinit(filename: String) {
@@ -37,11 +33,7 @@ object TextCacheManager extends CacheManager {
   }
 
   /*
-    input format:
-        KeyA:keya1,valuea1:keya2,valuea2:keya3,valuea3
-        KeyB:keyb1,valueb1:keyb2,valueb2:keyb3,valueb3
-    output format:
-        Map(KeyA -> Map(keya1 -> valuea1, keya2 -> valuea2, keya3 -> valuea3))
+    output format: Map(KeyA -> Map(keya1 -> valuea1, keya2 -> valuea2, keya3 -> valuea3))
   */
 
   def CommonCacheMapinit(filename: String) {
@@ -57,13 +49,8 @@ object TextCacheManager extends CacheManager {
   }
 
   /*
-  input format:
-      groupA:lacAcellA:AAAA
-      groupA:lacBcellB:BBBB
-      groupB:lacBcellA:AAAA
-  output format:
-      Map(groupA -> Map(lacAcellA -> AAAA, lacBcellB -> BBBB), groupB -> Map(lacBcellA -> AAAA))
-*/
+    output format: Map(groupA -> Map(lacAcellA -> AAAA, lacBcellB -> BBBB), groupB -> Map(lacBcellA -> AAAA))
+  */
 
   def CommonCacheValueinit(filename: String) {
 
