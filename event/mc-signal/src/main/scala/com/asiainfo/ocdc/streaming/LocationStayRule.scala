@@ -73,6 +73,13 @@ class LocationStayRule extends MCLabelRule {
       // [区域，［firstTime,lastTime］]
       val locationStayInfo = Map[String, Tuple2[Long, Long]]()
 
+      /**
+       * 删除无效属性
+       * del_flg=true:移除，false：只清空数据
+       */
+      def delData(areaName: String, del_flg: Boolean = true) =
+        if (del_flg) tmpMap.remove(areaName) else tmpMap(areaName).clear
+
       while (rmIterator.hasNext) {
         val locationNode = rmIterator.next
         val areaName = locationNode._1
@@ -182,12 +189,6 @@ class LocationStayRule extends MCLabelRule {
       // 重置cache
       cacheLabelProp.setLabelsPropList(tmpMap.toList)
 
-      /**
-       * 删除无效属性
-       * del_flg=true:移除，false：只清空数据
-       */
-      def delData(areaName: String, del_flg: Boolean = true) =
-        if (del_flg) tmpMap.remove(areaName) else tmpMap(areaName).clear
     }
     // 给mcsoruce设定连续停留[LABEL_STAY]标签
     mcSourceObj.setLabel(Constant.LABEL_STAY, mcStayLabelsMap)

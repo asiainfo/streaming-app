@@ -5,7 +5,7 @@ package com.asiainfo.ocdc.streaming
  */
 trait LabelRule extends Serializable {
   // load config from LabelRuleConf
-  var conf: LabelRuleConf
+  var conf: LabelRuleConf = null
 
   def init(lrconf: LabelRuleConf) {
     conf = lrconf
