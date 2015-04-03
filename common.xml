@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<property>
+    <mysql>
+        <url>jdbc:mysql://localhost:3306/streaming</url>
+        <username>root</username>
+        <password>123</password>
+    </mysql>
+</property>

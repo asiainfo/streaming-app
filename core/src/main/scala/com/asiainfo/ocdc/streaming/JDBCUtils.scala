@@ -12,10 +12,13 @@ object JDBCUtils {
 
   private def connection: Connection = {
     val xml = XML.load("common.xml")
-    val mysql_url = (xml \ "mysqlurl").text
-    val conn_str = mysql_url //"jdbc:mysql://localhost:3306/streaming?user=root&password=123"
+    val mysqlNode = (xml \ "mysql")
+    val url = (mysqlNode \ "url").text
+    val username = (mysqlNode \ "username").text
+    val password = (mysqlNode \ "password").text
+    val conn_str = url
     classOf[com.mysql.jdbc.Driver]
-    DriverManager.getConnection(conn_str)
+    DriverManager.getConnection(conn_str, username, password)
   }
 
   def query(sql: String): Array[Map[String, String]] = {
@@ -34,7 +37,7 @@ object JDBCUtils {
 
       // Iterate Over ResultSet
       while (rs.next) {
-        val line: Map[String, String] = (1 to md.getColumnCount).map(index =>{
+        val line: Map[String, String] = (1 to md.getColumnCount).map(index => {
           (md.getColumnLabel(index), rs.getString(index))
         }).toMap[String, String]
         result += line
@@ -42,8 +45,8 @@ object JDBCUtils {
       result.toArray
     }
     finally {
-      if(statement != null) statement.close()
-      if(rs != null) rs.close()
+      if (statement != null) statement.close()
+      if (rs != null) rs.close()
     }
   }
 
@@ -57,7 +60,7 @@ object JDBCUtils {
       statement.execute(sql)
     }
     finally {
-      if(statement != null) statement.close()
+      if (statement != null) statement.close()
     }
   }
 
