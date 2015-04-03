@@ -2,6 +2,8 @@ package com.asiainfo.ocdc.streaming
 
 import java.sql.{Connection, DriverManager, ResultSet, Statement}
 
+import com.asiainfo.ocdc.streaming.constant.CommonConstant
+
 import scala.collection.mutable.ArrayBuffer
 import scala.xml.XML
 
@@ -11,14 +13,13 @@ import scala.xml.XML
 object JDBCUtils {
 
   private def connection: Connection = {
-    val xml = XML.load("common.xml")
+    val xml = XML.load(CommonConstant.commonConfFileName)
     val mysqlNode = (xml \ "mysql")
     val url = (mysqlNode \ "url").text
     val username = (mysqlNode \ "username").text
     val password = (mysqlNode \ "password").text
-    val conn_str = url
     classOf[com.mysql.jdbc.Driver]
-    DriverManager.getConnection(conn_str, username, password)
+    DriverManager.getConnection(url, username, password)
   }
 
   def query(sql: String): Array[Map[String, String]] = {
