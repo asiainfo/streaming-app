@@ -5,8 +5,18 @@ package com.asiainfo.ocdc.streaming.constant
  */
 object TableNameConstants {
 
+  val MainFramePropTableName = "MainFrameProp"
+
   val KafkaSourceTableName = "KafkaSource"
 
   val EventSourceTableName = "EventSource"
+
+  val LabelRulesTableName = "LabelRules"
+
+  val LabelRulesPropTableName = "LabelRulesProp"
+
+  val EventRulesTableName = "EventRules"
+
+  val EventRulesPropTableName = "EventRulesProp"
 
 }

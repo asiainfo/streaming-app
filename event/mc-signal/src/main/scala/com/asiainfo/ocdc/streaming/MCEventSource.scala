@@ -1,12 +1,7 @@
 package com.asiainfo.ocdc.streaming
 
-import kafka.serializer.StringDecoder
-import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
-import org.apache.spark.streaming.kafka.KafkaUtils
-
-import scala.util.Random
 
 class MCEventSource() extends EventSource() {
 
@@ -14,15 +9,8 @@ class MCEventSource() extends EventSource() {
 
   override def readSource(ssc: StreamingContext): DStream[String] = {
 
-//    val kafkaParams = Map(
-//      "zookeeper.connect" -> conf.getString("source.zookeeper"),
-//      "group.id" -> s"test-consumer-${Random.nextInt(10000)}",
-//      "auto.offset.reset" -> "smallest")
-//    val topic = conf.getString("source.topic")
-//    val stream = KafkaUtils.createStream[String, String, StringDecoder, StringDecoder](
-//      ssc, kafkaParams, Map(topic -> 1), StorageLevel.MEMORY_ONLY)
-//    stream.map(_._2)
-    ssc.textFileStream("hdfs://localhost:8020/user/tianyi/streaming/input")
+    EventSourceFactory.getEventSource(ssc,conf.getString("type"),conf.getInt("sourceid"))
+//    ssc.textFileStream("hdfs://localhost:8020/user/tianyi/streaming/input")
 
   }
 

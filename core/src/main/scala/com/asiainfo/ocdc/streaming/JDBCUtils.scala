@@ -29,13 +29,10 @@ object JDBCUtils {
       // Getting column names
       val md = rs.getMetaData
 
-      val columnNames = (1 to md.getColumnCount).map(md.getColumnName(_)).toList
-
-
       // Iterate Over ResultSet
       while (rs.next) {
         val line: Map[String, String] = (1 to md.getColumnCount).map(index =>{
-          (md.getColumnName(index), rs.getString(index))
+          (md.getColumnLabel(index), rs.getString(index))
         }).toMap[String, String]
         result += line
       }
