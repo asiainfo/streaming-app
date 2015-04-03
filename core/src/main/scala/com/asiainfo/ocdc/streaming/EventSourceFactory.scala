@@ -13,16 +13,19 @@ object EventSourceFactory {
 
   def getEventSource(ssc: StreamingContext, sourceType: String, id: Int): DStream[String] = {
     if ("kafka".equals(sourceType)) {
-      val sql = "select id,topic,groupid as group.id,zookeeper as zookeeper.connect,brokerlist,serializerclass,msgkey,autooffset as auto.offset.reset from " + TableNameConstants.KafkaSourceTableName
+      val sql = "select id,topic,groupid as group.id,zookeeper as zookeeper.connect,brokerlist," +
+        "serializerclass,msgkey,autooffset as auto.offset.reset from " + TableNameConstants.KafkaSourceTableName + " where id = " + id
       val result = JDBCUtils.query(sql)(0)
       val stream = KafkaUtils.createStream(
         ssc, result, Map(result.get("topic").get -> 1), StorageLevel.MEMORY_ONLY)
       stream.map(_._2)
 
     } else if ("hdfs".equals(sourceType)) {
-      null
+      val sql = "select id,path from " + TableNameConstants.HDFSSourceTableName + " where id = " + id
+      val result = JDBCUtils.query(sql)(0)
+      ssc.textFileStream(result.get("path").get)
     } else {
-      null
+      throw new Exception("EventSourceType " + sourceType + " is not support !")
     }
   }
 

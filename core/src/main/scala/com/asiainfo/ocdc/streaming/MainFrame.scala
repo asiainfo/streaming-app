@@ -31,7 +31,7 @@ object MainFrame {
 
       MainFrameConf.getEventRulesBySource(eventSource.name).map(eventRuleConf => {
         val eventRule :EventRule =
-          Class.forName(eventRuleConf.classname).newInstance().asInstanceOf[EventRule]
+          Class.forName(eventRuleConf.getClassName()).newInstance().asInstanceOf[EventRule]
         eventRule.init(eventRuleConf)
         eventSource.addEventRule(eventRule)
       })

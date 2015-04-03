@@ -8,10 +8,7 @@ class MCEventSource() extends EventSource() {
   var conf: EventSourceConf = null
 
   override def readSource(ssc: StreamingContext): DStream[String] = {
-
-    EventSourceFactory.getEventSource(ssc,conf.getString("type"),conf.getInt("sourceid"))
-//    ssc.textFileStream("hdfs://localhost:8020/user/tianyi/streaming/input")
-
+    EventSourceFactory.getEventSource(ssc,conf.get("type"),conf.getInt("sourceid",0))
   }
 
   def formatSource(inputs: Array[String]): Option[MCSourceObject] = {
@@ -32,7 +29,7 @@ class MCEventSource() extends EventSource() {
   }
 
   override def transform(source: String): Option[MCSourceObject] = {
-    val inputArray = source.split(conf.getString("source.format.delim"))
+    val inputArray = source.split(conf.get("source.format.delim"))
     if(source.length != conf.getInt("source.format.length")) {
       None
     } else {

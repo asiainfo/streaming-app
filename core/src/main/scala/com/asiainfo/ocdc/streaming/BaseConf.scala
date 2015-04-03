@@ -56,7 +56,7 @@ abstract class BaseConf(val conf: Map[String, String] = null) {
   }
 
   /** Get a parameter as an integer, falling back to a default if not set */
-  def getInt(key: String, defaultValue: Int): Int = {
+  def getInt(key: String, defaultValue: Int = 0): Int = {
     getOption(key).map(_.toInt).getOrElse(defaultValue)
   }
 

@@ -9,6 +9,8 @@ object TableNameConstants {
 
   val KafkaSourceTableName = "KafkaSource"
 
+  val HDFSSourceTableName = "HDFSSource"
+
   val EventSourceTableName = "EventSource"
 
   val LabelRulesTableName = "LabelRules"
