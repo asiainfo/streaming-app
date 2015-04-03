@@ -20,11 +20,11 @@ object MainFrame {
     val eventSourceList = MainFrameConf.sources.map(conf =>{
       // use reflect to create all eventsources
       val eventSource :EventSource =
-        Class.forName(conf.classname).newInstance().asInstanceOf[EventSource]
+        Class.forName(conf.getClassName()).newInstance().asInstanceOf[EventSource]
       eventSource.init(conf)
       MainFrameConf.getLabelRulesBySource(eventSource.name).map(labelRuleConf => {
         val labelRule :LabelRule =
-          Class.forName(labelRuleConf.classname).newInstance().asInstanceOf[LabelRule]
+          Class.forName(labelRuleConf.getClassName()).newInstance().asInstanceOf[LabelRule]
         labelRule.init(labelRuleConf)
         eventSource.addLabelRule(labelRule)
       })

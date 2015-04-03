@@ -10,9 +10,9 @@ import scala.collection.mutable.ArrayBuffer
 object JDBCUtils {
 
   private def connection: Connection = {
-    val conn_str = "jdbc:mysql://localhost:3306/streaming?user=root&password=mz8xvw7+MI"
+    val conn_str = "jdbc:mysql://localhost:3306/streaming?user=root&password=123"
     classOf[com.mysql.jdbc.Driver]
-    DriverManager.getConnection(conn_str,"root","mz8xvw7+MI")
+    DriverManager.getConnection(conn_str)
   }
 
   def query(sql: String): Array[Map[String, String]] = {
@@ -29,13 +29,10 @@ object JDBCUtils {
       // Getting column names
       val md = rs.getMetaData
 
-      val columnNames = (1 to md.getColumnCount).map(md.getColumnName(_)).toList
-
-
       // Iterate Over ResultSet
       while (rs.next) {
         val line: Map[String, String] = (1 to md.getColumnCount).map(index =>{
-          (md.getColumnName(index), rs.getString(index))
+          (md.getColumnLabel(index), rs.getString(index))
         }).toMap[String, String]
         result += line
       }
