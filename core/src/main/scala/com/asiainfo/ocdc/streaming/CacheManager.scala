@@ -1,5 +1,7 @@
 package com.asiainfo.ocdc.streaming
 
+import scala.collection.mutable.Map
+
 trait CacheManager {
 
   def getHashCacheList(key: String): List[String]
