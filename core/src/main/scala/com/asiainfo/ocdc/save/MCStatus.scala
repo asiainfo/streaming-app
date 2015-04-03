@@ -2,6 +2,11 @@ package com.asiainfo.ocdc.save
 
 import scala.beans.BeanProperty
 
+/**
+ * @author surq
+ * @since 2015.4.2
+ * @comment mc信令cache结构
+ */
 class MCStatus extends SaveStatus {
 
   @BeanProperty

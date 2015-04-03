@@ -1,6 +1,12 @@
 package com.asiainfo.ocdc.streaming
 
 import scala.beans.BeanProperty
+
+/**
+ * @author surq
+ * @since 2015.4.2
+ * @comment 全局常量定义列表
+ */
 object Constant {
   // 区域标签
   val LABEL_ONSITE = "onsite"
