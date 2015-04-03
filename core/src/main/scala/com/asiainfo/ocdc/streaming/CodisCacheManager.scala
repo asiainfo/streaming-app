@@ -3,6 +3,7 @@ package com.asiainfo.ocdc.streaming
 import redis.clients.jedis.{JedisPool, Jedis,Pipeline,JedisPoolConfig}
 import scala.collection.convert.wrapAsJava.mapAsJavaMap
 import scala.collection.convert.wrapAsScala._
+import scala.collection.mutable.Map
 
 
 /**
@@ -52,7 +53,7 @@ object CodisCacheManager extends CacheManager {
     try{
       jedisPool = getPool()
       jedis = jedisPool.getResource
-      jedis.hgetAll(key).toMap
+      jedis.hgetAll(key)
     }catch{
       case e:Exception => e.printStackTrace()
         jedisPool.returnBrokenResource(jedis).asInstanceOf[Map[String,String]]
@@ -104,7 +105,7 @@ object CodisCacheManager extends CacheManager {
     try{
       jedisPool = getPool()
       jedis = jedisPool.getResource
-      jedis.hgetAll(key).toMap
+      jedis.hgetAll(key)
     }catch{
       case e:Exception => e.printStackTrace()
         jedisPool.returnBrokenResource(jedis).asInstanceOf[Map[String,String]]
