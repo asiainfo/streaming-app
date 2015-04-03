@@ -102,12 +102,5 @@ object MainFrameConf extends BaseConf {
       }).toSeq
     })
 
-    print("")
-
   }
-
-  def main(args: Array[String]) {
-    init()
-  }
-
 }
