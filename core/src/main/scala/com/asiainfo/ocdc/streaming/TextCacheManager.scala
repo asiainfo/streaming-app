@@ -14,15 +14,12 @@ object TextCacheManager extends CacheManager {
   private var HashCacheList = Map[String,List[String]]()
   private val delim = ":"
 
-  def init(){
+  def init() {
     CommonCacheMapinit("core/src/main/resources/CacheMapFile")
     CommonCacheValueinit("core/src/main/resources/CacheValueFile")
     CommonCacheListinit("core/src/main/resources/CacheListFile")
   }
 
-  /*
-    outputformat: Map(key1 -> List(value11,value12,value13,value14,value15))
-  */
 
   def CommonCacheListinit(filename: String) {
     for (line <- Source.fromFile(filename).getLines){
@@ -31,10 +28,6 @@ object TextCacheManager extends CacheManager {
     }
     // TODO: optimize this code
   }
-
-  /*
-    output format: Map(KeyA -> Map(keya1 -> valuea1, keya2 -> valuea2, keya3 -> valuea3))
-  */
 
   def CommonCacheMapinit(filename: String) {
     for (line <- Source.fromFile(filename).getLines){
@@ -48,10 +41,6 @@ object TextCacheManager extends CacheManager {
     // TODO: optimize this code
   }
 
-  /*
-    output format: Map(groupA -> Map(lacAcellA -> AAAA, lacBcellB -> BBBB), groupB -> Map(lacBcellA -> AAAA))
-  */
-
   def CommonCacheValueinit(filename: String) {
 
     for (line <- Source.fromFile(filename).getLines){
@@ -64,7 +53,6 @@ object TextCacheManager extends CacheManager {
     }
     // TODO: optimize this code
   }
-
 
   override def getHashCacheList(key: String): List[String] = {
     HashCacheList.getOrElse(key,null)
@@ -101,5 +89,4 @@ object TextCacheManager extends CacheManager {
   override def getCommonCacheValue(cacheName: String, key: String): String = {
     CommonCacheValue.getOrElse(cacheName,null).getOrElse(key,null)
   }
-
 }
