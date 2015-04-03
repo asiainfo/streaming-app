@@ -1,8 +1,9 @@
 package com.asiainfo.ocdc.streaming
 
-import java.sql.{Statement, ResultSet, DriverManager, Connection}
+import java.sql.{Connection, DriverManager, ResultSet, Statement}
 
 import scala.collection.mutable.ArrayBuffer
+import scala.xml.XML
 
 /**
  * Created by tianyi on 3/30/15.
@@ -10,7 +11,9 @@ import scala.collection.mutable.ArrayBuffer
 object JDBCUtils {
 
   private def connection: Connection = {
-    val conn_str = "jdbc:mysql://localhost:3306/streaming?user=root&password=123"
+    val xml = XML.load("common.xml")
+    val mysql_url = (xml \ "mysqlurl").text
+    val conn_str = mysql_url //"jdbc:mysql://localhost:3306/streaming?user=root&password=123"
     classOf[com.mysql.jdbc.Driver]
     DriverManager.getConnection(conn_str)
   }
