@@ -141,11 +141,11 @@ object CodisCacheManager extends CacheManager {
   }
 
   override def setHashCacheList(key: String, value: List[String]): Unit = {
-    //    val pl = jedis.pipelined()
-    //    value.map{ x=>
-    //      pl.rpush(key,x)
-    //    }
-    //    pl.sync()
+    /*
+       val pl = jedis.pipelined()
+       value.map{ x=> pl.rpush(key,x)}
+       pl.sync()
+    */
     try{
       jedisPool = getPool()
       jedis = jedisPool.getResource
