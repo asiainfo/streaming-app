@@ -35,8 +35,8 @@ class LocationStayRule extends MCLabelRule {
     if (mcCache == null) {
       //新处理的手机号（无记录数据） [遍历所有的区域，并对其做停留时间处理]
       // 给mc的label打标签
-      locationList.foreach(location => mcStayLabelsMap += (location -> "true"))
-      mcSourceObj.setLabel(Constant.LABEL_STAY, mcStayLabelsMap)
+      locationList.foreach(location => mcStayLabelsMap += (location -> "0"))
+
       // 更新cache
       val cacheLabelProps = new LabelProps
       // 设定区域（第一层key）
@@ -143,7 +143,7 @@ class LocationStayRule extends MCLabelRule {
             if (estimateList.size > 0)
               areaProp += (Constant.LABEL_STAY_FIRSTTIME -> estimateList(0).toString)
             else
-               // 把lastTime放入，在没有满足条件的时候
+              // 把lastTime放入，在没有满足条件的时候
               areaProp += (Constant.LABEL_STAY_FIRSTTIME -> lastTime.toString)
           }
         } else {
@@ -179,6 +179,7 @@ class LocationStayRule extends MCLabelRule {
           }
         })
       }
+
       // 重置cache
       cacheLabelProp.setLabelsPropList(tmpMap.toList)
 
@@ -189,5 +190,7 @@ class LocationStayRule extends MCLabelRule {
       def delData(areaName: String, del_flg: Boolean = true) =
         if (del_flg) tmpMap.remove(areaName) else tmpMap(areaName).clear
     }
+    // 给mcsoruce设定连续停留[LABEL_STAY]标签
+    mcSourceObj.setLabel(Constant.LABEL_STAY, mcStayLabelsMap)
   }
 }
