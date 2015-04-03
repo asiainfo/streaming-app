@@ -22,10 +22,8 @@ class LocationStayRule extends MCLabelRule {
   def attachMCLabel(mcSourceObj: MCSourceObject, cache: StreamingCache) {
     val cacheInstance = cache.asInstanceOf[MCStatus]
 
-    // 取在siteRule（区域规则）中所打的标签对像
-    val MCLabelonsite = (mcSourceObj.getLabel(Constant.LABEL_ONSITE)).toList
-    // 本记录的area标签list
-    val locationList = for (local <- MCLabelonsite) yield local._1
+    // 取在siteRule（区域规则）中所打的area标签list
+    val locationList = (mcSourceObj.getLabel(Constant.LABEL_ONSITE)).map(_._1).toList
 
     // mcsource labels用
     val mcStayLabelsMap = Map[String, String]()
@@ -54,7 +52,8 @@ class LocationStayRule extends MCLabelRule {
       cacheInstance.setUpdateStatus((Constant.LABEL_ONSITE, cacheLabelProps))
     } else {
       // 本记录时间戳
-      val thistime = mcSourceObj.time.toLong
+      val thistime = mcSourceObj.time
+      // LabelProps(区域以及对应的属性)
       val cacheLabelProp = mcCache._2
       val areaListPropList = cacheLabelProp.getLabelsPropList
       // 清除cache中过期或无效的数据
