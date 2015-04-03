@@ -3,6 +3,7 @@ package com.asiainfo.ocdc.save
 import com.asiainfo.ocdc.streaming.SourceObject
 import scala.collection.mutable.Map
 import scala.beans.BeanProperty
+import com.asiainfo.ocdc.streaming.StreamingCache
 
 /**
  * @author surq
