@@ -1,7 +1,7 @@
 package com.asiainfo.ocdc.streaming
 
-class CacheFetchManager {
-  def factory(manager: String):CacheManager = {
+class CacheFactory {
+  def getManager(manager: String = "TextCacheManager"):CacheManager = {
     if(manager.equals("TextCacheManager")){
       TextCacheManager
     }else if(manager.equals("CodisCacheManager")){
