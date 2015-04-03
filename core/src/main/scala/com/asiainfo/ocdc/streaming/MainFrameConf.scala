@@ -53,13 +53,13 @@ object MainFrameConf extends BaseConf {
         } else {
           val lrconf = new LabelRuleConf()
           lrconf.set(name, pvalue)
-          lrconf.set("labelrule.classname", classname)
+          lrconf.set("classname", classname)
           midmap.get(esid).get += (lrid -> lrconf)
         }
       } else {
         val lrconf = new LabelRuleConf()
         lrconf.set(name, pvalue)
-        lrconf.set("labelrule.classname", classname)
+        lrconf.set("classname", classname)
         midmap += (esid -> Map(lrid -> lrconf))
       }
     })
@@ -86,13 +86,13 @@ object MainFrameConf extends BaseConf {
         } else {
           val erconf = new EventRuleConf()
           erconf.set(name, pvalue)
-          erconf.set("eventrule.classname", classname)
+          erconf.set("classname", classname)
           midmap2.get(esid).get += (erid -> erconf)
         }
       } else {
         val erconf = new EventRuleConf()
         erconf.set(name, pvalue)
-        erconf.set("eventrule.classname", classname)
+        erconf.set("classname", classname)
         midmap2 += (esid -> Map(erid -> erconf))
       }
     })
