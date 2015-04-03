@@ -8,7 +8,7 @@ class MCEventSource() extends EventSource() {
   var conf: EventSourceConf = null
 
   override def readSource(ssc: StreamingContext): DStream[String] = {
-    EventSourceFactory.getEventSource(ssc,conf.get("type"),conf.getInt("sourceid",0))
+    EventSourceFactory.getEventSource(ssc,conf.get("type"),conf.getInt("sourceid"))
   }
 
   def formatSource(inputs: Array[String]): Option[MCSourceObject] = {
