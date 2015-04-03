@@ -4,6 +4,9 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("internal","20");
 -- init Kafka Sources
 INSERT INTO `KafkaSource` (`topic`,`groupid`,`zookeeper`,`brokerlist`,`serializerclass`,`msgkey`,`autooffset`) VALUES ("topic1","groupid1","zookeeper1","brokerlist1","serializerclass1","msgkey1","autooffset1");
 
+-- init HDFS Sources
+INSERT INTO `HDFSSource` (`path`) VALUES ("");
+
 -- init EventSources
 INSERT INTO `EventSource` (`type`,`sourceid`,`delim`,`formatlength`,`classname`) VALUES ("kafka",1,",","100","com.asiainfo.ocdc.streaming.MCEventSource");
 

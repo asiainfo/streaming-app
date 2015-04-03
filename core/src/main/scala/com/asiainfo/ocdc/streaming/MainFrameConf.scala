@@ -10,35 +10,53 @@ import scala.collection.mutable.Map
 
 object MainFrameConf extends BaseConf {
 
+  var sources: Array[EventSourceConf] = null
+  var sourceLabelRules = Map[String, Seq[LabelRuleConf]]()
+  var sourceEventRules = Map[String, Seq[EventRuleConf]]()
+
   def getEventRulesBySource(value: String) = sourceEventRules.get(value).get
 
   def getLabelRulesBySource(value: String) = sourceLabelRules.get(value).get
 
   def getInternal: Long = getLong("internal", 1)
 
-  var sourceLabelRules = Map[String, Seq[LabelRuleConf]]()
-  var sourceEventRules = Map[String, Seq[EventRuleConf]]()
-
-  var sources: Array[EventSourceConf] = null
-
-
   def init(): Unit = {
-    // read main frame config
-    var sql = "select name,pvalue from " + TableNameConstants.MainFramePropTableName
+    initMainFrameConf
+
+    initEventSourceConf
+
+    initLabelRuleConf
+
+    initEventRuleConf
+  }
+
+  /**
+   * read main frame config
+   */
+  def initMainFrameConf {
+    val sql = "select name,pvalue from " + TableNameConstants.MainFramePropTableName
     val mainframedata = JDBCUtils.query(sql)
     mainframedata.foreach(x => {
       set(x.get("name").get, x.get("pvalue").get)
     })
+  }
 
-    // read event source list and config
-    sql = "select id,type,sourceid,delim,formatlength,classname from " + TableNameConstants.EventSourceTableName
+  /**
+   * read event source list and config
+   */
+  def initEventSourceConf {
+    val sql = "select id,type,sourceid,delim,formatlength,classname from " + TableNameConstants.EventSourceTableName
     val events = JDBCUtils.query(sql)
     sources = events.map(x => {
       new EventSourceConf(x)
     })
+  }
 
-    // read label rule list and config
-    sql = "select lrp.name,lrp.pvalue,lr.classname,lr.id as lrid,es.id as esid from LabelRulesProp lrp join LabelRules lr on lrp.lrid = lr.id join EventSource es on lr.esourceid = es.id"
+  /**
+   * read label rule list and config
+   */
+  def initLabelRuleConf {
+    val sql = "select lrp.name,lrp.pvalue,lr.classname,lr.id as lrid,es.id as esid from LabelRulesProp lrp join LabelRules lr on lrp.lrid = lr.id join EventSource es on lr.esourceid = es.id"
     val labrules = JDBCUtils.query(sql)
     val midmap = Map[String, Map[String, LabelRuleConf]]()
     labrules.foreach(x => {
@@ -69,9 +87,13 @@ object MainFrameConf extends BaseConf {
         y._2
       }).toSeq
     })
+  }
 
-    // read event rule list and config
-    sql = "select erp.name,erp.pvalue,er.classname,er.id as erid,es.id as esid from EventRulesProp erp join EventRules er on erp.erid = er.id join EventSource es on er.esourceid = es.id"
+  /**
+   * read event rule list and config
+   */
+  def initEventRuleConf {
+    val sql = "select erp.name,erp.pvalue,er.classname,er.id as erid,es.id as esid from EventRulesProp erp join EventRules er on erp.erid = er.id join EventSource es on er.esourceid = es.id"
     val eventrules = JDBCUtils.query(sql)
     val midmap2 = Map[String, Map[String, EventRuleConf]]()
     eventrules.foreach(x => {
@@ -101,6 +123,5 @@ object MainFrameConf extends BaseConf {
         y._2
       }).toSeq
     })
-
   }
 }
