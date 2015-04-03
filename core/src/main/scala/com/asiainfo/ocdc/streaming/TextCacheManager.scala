@@ -55,9 +55,14 @@ object TextCacheManager extends CacheManager {
     // TODO: optimize this code
   }
 
-  //getCommonCacheValue(cacheName: String, key: String): String
-  //groupA,lacAcellA,AAAA
-  //groupA,lacBcellB,BBBB
+  /*
+  input format:
+      groupA,lacAcellA,AAAA
+      groupA,lacBcellB,BBBB
+      groupB,lacBcellA,AAAA
+  output format:
+      Map(groupA -> Map(lacAcellA -> AAAA, lacBcellB -> BBBB), groupB -> Map(lacBcellA -> AAAA))
+*/
 
   def CommonCacheValueinit(filename: String) {
     CommonCacheValue +=
