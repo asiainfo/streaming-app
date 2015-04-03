@@ -1,6 +1,7 @@
 package com.asiainfo.ocdc.streaming
 
 import scala.io.Source
+import scala.collection.mutable.Map
 
 object TextCacheManager extends CacheManager {
 
@@ -57,15 +58,24 @@ object TextCacheManager extends CacheManager {
 
   /*
   input format:
-      groupA,lacAcellA,AAAA
-      groupA,lacBcellB,BBBB
-      groupB,lacBcellA,AAAA
+      groupA:lacAcellA:AAAA
+      groupA:lacBcellB:BBBB
+      groupB:lacBcellA:AAAA
   output format:
       Map(groupA -> Map(lacAcellA -> AAAA, lacBcellB -> BBBB), groupB -> Map(lacBcellA -> AAAA))
 */
 
   def CommonCacheValueinit(filename: String) {
-    CommonCacheValue +=
+
+    for (line <- Source.fromFile(filename).getLines){
+      val cachevalue = line.split(delim)
+
+      CommonCacheValue.get(cachevalue(0)) match {
+        case Some(value) => value += (cachevalue(1)->cachevalue(2))
+        case None =>  CommonCacheValue += (cachevalue(0) -> Map((cachevalue(1)->cachevalue(2))))
+      }
+    }
+    // TODO: optimize this code
   }
 
 
