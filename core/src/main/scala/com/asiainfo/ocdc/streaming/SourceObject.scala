@@ -9,9 +9,16 @@ abstract class SourceObject extends Serializable {
   final def setLabel(key: String, value: Map[String,String]) = {
     labels.put(key, value)
   }
-  final def getLabel(key: String): Map[String,String] = {
-    labels.get(key)
-  }
+//  final def getLabel(key: String): Map[String,String] = {
+//    labels.get(key)
+//  }
+
+	final def getLabel(key: String): Map[String,String] = {
+		if (! labels.containsKey(key)){
+			setLabel(key, Map[String,String]())
+		}
+		labels.get(key)
+	}
   final def removeLabel(key: String) = {
     labels.remove(key)
   }
