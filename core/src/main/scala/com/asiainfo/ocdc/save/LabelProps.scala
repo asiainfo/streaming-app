@@ -1,5 +1,7 @@
 package com.asiainfo.ocdc.save
 
+import com.asiainfo.ocdc.streaming.StreamingCache
+
 import scala.beans.BeanProperty
 import scala.collection.mutable.Map
 
@@ -8,7 +10,7 @@ import scala.collection.mutable.Map
  * @since 2015.4.2
  * @comment cache中的细粒度对像
  */
-class LabelProps extends Serializable {
+class LabelProps extends StreamingCache with Serializable {
 
   @BeanProperty
   var labelsPropList:Map[String,Map[String,String]] = null
