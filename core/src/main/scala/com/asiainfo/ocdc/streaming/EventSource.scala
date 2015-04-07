@@ -4,6 +4,7 @@ import org.apache.spark.sql.SQLContext
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 
@@ -52,12 +53,14 @@ abstract class EventSource() {
           private[this] var currentPos: Int = 0
           private[this] var arrayBuffer: Array[SourceObject] = null
 
-          override def hasNext: Boolean = (currentPos < arrayBuffer.length - 1) || (iter.hasNext && fetchNext())
+          override def hasNext: Boolean = (currentPos < arrayBuffer.length - 1) || fetchNext()
 
           override def next(): SourceObject = {
             currentPos += 1
             arrayBuffer(currentPos - 1)
           }
+
+
 
           private final def fetchNext(): Boolean = {
             val currentArrayBuffer = new ArrayBuffer[SourceObject]
@@ -66,14 +69,22 @@ abstract class EventSource() {
             var result = false
             // TODO read caches from CacheManager
             val cache = new StreamingCache
+            CacheFactory.getManager().geth
+            val minimap = mutable.Map[String, SourceObject]()
             while (iter.hasNext && totalFetch < 10) {
               val currentLine = iter.next()
               result = true
+
+              minimap += (currentLine.id -> currentLine)
+
               labelRuleArray.map(labelRule => {
                 labelRule.attachLabel(currentLine, cache)
               })
               currentArrayBuffer.append(currentLine)
             }
+
+
+
             // TODO update caches to CacheManager
             arrayBuffer = currentArrayBuffer.toArray
             result

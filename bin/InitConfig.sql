@@ -8,7 +8,7 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxActive","1000");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMEM","600000");
 
 -- init EventSources
-INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VALUES ("MC_Kafka","kafka",",","100","com.asiainfo.ocdc.streaming.MCEventSource");
+--INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VALUES ("MC_Kafka","kafka",",","100","com.asiainfo.ocdc.streaming.MCEventSource");
 INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VALUES ("MC_HDFS","hdfs",",","100","com.asiainfo.ocdc.streaming.MCEventSource");
 
 -- init EventSourcesDetail
@@ -24,15 +24,13 @@ INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("autooffset"
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("path","hdfs://localhost:9000/user/leo",2);
 
 -- init LabelRules
-INSERT INTO `LabelRules` (`esourceid`,`classname`) VALUES (1,"com.asiainfo.ocdc.streaming.MCLabelRule");
-INSERT INTO `LabelRules` (`esourceid`,`classname`) VALUES (1,"com.asiainfo.ocdc.streaming.MCLabelRule2");
+INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.LocationStayRule",1);
 
 -- init LabelRulesProp
-INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("name11","pvalue11",1);
-INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("name12","pvalue12",1);
-INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("name21","pvalue21",2);
-INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("name22","pvalue22",2);
-INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("name23","pvalue23",2);
+INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.limits","10 * 60 * 1000, 5 * 60 * 1000, 3 * 60 * 1000",1);
+INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.matchMax","true",1);
+INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.outputThreshold","true",1);
+INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.timeout","30 * 60 * 1000",1);
 
 -- init EventRules
 INSERT INTO `EventRules` (`esourceid`,`classname`) VALUES (1,"");
