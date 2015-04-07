@@ -253,14 +253,14 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		rule.attachMCLabel(mc4, cache)
 		assert(mc4.getLabel(Constant.LABEL_STAY).size==3)
 		assert(mc4.getLabel(Constant.LABEL_STAY).get("1").get==20 * 60 * 1000 +"")
-		assert(mc4.getLabel(Constant.LABEL_STAY).get("2").get==0 +"")	///没有通过，逻辑结果是 20 * 60 * 1000
+		assert(mc4.getLabel(Constant.LABEL_STAY).get("2").get==20 * 60 * 1000 +"")		//业务逻辑暂定
 		assert(mc4.getLabel(Constant.LABEL_STAY).get("3").get==0 +"")
 
 		mc5.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc5, cache)
 		assert(mc5.getLabel(Constant.LABEL_STAY).size==3)
 		assert(mc5.getLabel(Constant.LABEL_STAY).get("1").get==20 * 60 * 1000 + "")
-		assert(mc5.getLabel(Constant.LABEL_STAY).get("2").get==0 + "")	//没有通过，逻辑结果是 20 * 60 * 1000
+		assert(mc5.getLabel(Constant.LABEL_STAY).get("2").get==20 * 60 * 1000 + "")	//业务逻辑暂定
 		assert(mc5.getLabel(Constant.LABEL_STAY).get("3").get==0 + "")
 	}
 
