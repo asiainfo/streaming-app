@@ -1,6 +1,6 @@
 package com.asiainfo.ocdc.streaming
 
-import scala.collection.mutable.Map
+import scala.collection.mutable.{Map, ArrayBuffer}
 
 /**
  * @author surq
@@ -8,13 +8,14 @@ import scala.collection.mutable.Map
  * @comment 给mc信令标记连续停留时间标签
  */
 
-class LabelProps extends Serializable {
+class LabelProps extends StreamingCache with Serializable {
   var labelsPropList:Map[String,Map[String,String]] = Map[String,Map[String,String]]()
 }
 
 class LocationStayRule extends MCLabelRule {
   // TODO 配置文件读入的，
-  val selfDefStayTimeList = Array(10 * 60 * 1000, 5 * 60 * 1000, 3 * 60 * 1000).sorted
+//  val selfDefStayTimeList = Array(10 * 60 * 1000, 5 * 60 * 1000, 3 * 60 * 1000).sorted
+	val selfDefStayTimeList = Array(20 * 60 * 1000).sorted
   // 推送满足设置的数据坎的最小值:true;最大值：false
   val userDefPushOrde = true
   // 推送满足设置的数据的限定值，还是真实的累计值.真实的累计值:false;限定值:true
@@ -23,13 +24,21 @@ class LocationStayRule extends MCLabelRule {
   val thresholdValue = 20 * 60 * 1000
 
   def evaluateTime(oldStayTime: Long, newStayTime: Long): Int = {
-    selfDefStayTimeList.filter(limit => oldStayTime< limit && newStayTime > limit).max
+		if(newStayTime <= oldStayTime){
+			oldStayTime.toInt
+		} else {
+			selfDefStayTimeList.filter(limit => oldStayTime < limit && newStayTime > limit).max
+		}
   }
 
   def attachMCLabel(mc: MCSourceObject, cache: StreamingCache) {
     val cacheInstance = cache.asInstanceOf[LabelProps]
 
-    // 取在siteRule（区域规则）中所打的area标签list
+		if(cacheInstance.labelsPropList == null){
+			cacheInstance.labelsPropList = Map[String,Map[String,String]]()
+		}
+
+		// 取在siteRule（区域规则）中所打的area标签list
     val locationList = (mc.getLabel(Constant.LABEL_ONSITE)).keys
 
     // mcsource labels用
@@ -88,3 +97,4 @@ class LocationStayRule extends MCLabelRule {
     mc.setLabel(Constant.LABEL_STAY, mcStayLabelsMap)
   }
 }
+

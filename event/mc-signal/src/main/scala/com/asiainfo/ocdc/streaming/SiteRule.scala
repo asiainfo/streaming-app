@@ -1,5 +1,6 @@
 package com.asiainfo.ocdc.streaming
 
+
 /**
  * @author surq
  * @since 2015.4.2
@@ -24,11 +25,15 @@ class SiteRule extends MCLabelRule {
    * @return 所属区域列表
    */
   def largeCellAnalysis(lac: Int, ci: Int): List[String] = {
-    val cachedArea = CacheFactory.getManager().getCommonCacheValue("lacci2area", lac.toString+":"+ci.toString)
-    if(cachedArea.isEmpty) {
-      List[String]()
-    } else {
-      cachedArea.split(",").toList
-    }
+//    val cachedArea = new CacheFactory().getManager().getCommonCacheValue("lacci2area", lac.toString+":"+ci.toString)
+//    if(cachedArea.isEmpty) {
+//      List[String]()
+//    } else {
+//      cachedArea.split(",").toList
+//    }
+
+		val set = new java.util.HashSet[Char]()
+		lac.toString.substring(0, 3).toCharArray.foreach(x => set.add(x))
+		set.toArray.map(_.toString).toList
   }
 }
