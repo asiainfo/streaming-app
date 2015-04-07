@@ -52,7 +52,7 @@ object MainFrameConf extends BaseConf {
     events.map(x => {
       val sourceId = x.get("id").get
       if (sourcemap.contains(sourceId)) {
-        sourcemap.get(sourceId).get.set(x.get("name").get, x.get("pvalue").get)
+        sourcemap.get(sourceId).get.set(x.get("pname").get, x.get("pvalue").get)
       } else {
         val esconf = new EventSourceConf()
         esconf.set("id", x.get("id").get)
@@ -61,7 +61,7 @@ object MainFrameConf extends BaseConf {
         esconf.set("delim", x.get("delim").get)
         esconf.set("formatlength", x.get("formatlength").get)
         esconf.set("classname", x.get("classname").get)
-        esconf.set(x.get("name").get, x.get("pvalue").get)
+        esconf.set(x.get("pname").get, x.get("pvalue").get)
         sourcemap += (sourceId -> esconf)
       }
     })
@@ -140,5 +140,9 @@ object MainFrameConf extends BaseConf {
         y._2
       }).toSeq
     })
+  }
+
+  def main (args: Array[String]) {
+    init()
   }
 }
