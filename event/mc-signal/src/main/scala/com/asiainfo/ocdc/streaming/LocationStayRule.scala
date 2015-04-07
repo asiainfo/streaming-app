@@ -15,20 +15,25 @@ class LabelProps extends StreamingCache with Serializable {
 class LocationStayRule extends MCLabelRule {
   // TODO 配置文件读入的，
 //  val selfDefStayTimeList = Array(10 * 60 * 1000, 5 * 60 * 1000, 3 * 60 * 1000).sorted
-	val selfDefStayTimeList = Array(20 * 60 * 1000).sorted
+	lazy val selfDefStayTimeList = conf.get("stay.limits").split(",")
   // 推送满足设置的数据坎的最小值:true;最大值：false
-  val userDefPushOrde = true
+  lazy val userDefPushOrde = conf.getBoolean("stay.matchMax", true)
   // 推送满足设置的数据的限定值，还是真实的累计值.真实的累计值:false;限定值:true
-  val pushLimitValue = false
+  lazy val pushLimitValue = conf.getBoolean("stay.outputThreshold", true)
   // 无效数据阈值的设定
-  val thresholdValue = 20 * 60 * 1000
+  lazy val thresholdValue = conf.getLong("stay.timeout", 30 * 60 * 1000)
 
-  def evaluateTime(oldStayTime: Long, newStayTime: Long): Int = {
+  def evaluateTime(oldStayTime: Long, newStayTime: Long): Long = {
 		if(newStayTime <= oldStayTime){
-			oldStayTime.toInt
+			0
 		} else {
-			selfDefStayTimeList.filter(limit => oldStayTime < limit && newStayTime > limit).max
-		}
+			val matchList = selfDefStayTimeList.filter(limit => (oldStayTime <= limit.toLong && newStayTime >= limit.toLong))
+		  if(matchList.isEmpty) {
+        0
+      } else {
+        matchList.map(_.toLong).max
+      }
+    }
   }
 
   def attachMCLabel(mc: MCSourceObject, cache: StreamingCache) {
@@ -72,7 +77,9 @@ class LocationStayRule extends MCLabelRule {
             } else {
               // 本条记录属于延迟到达，更新开始时间
               currentStatus.put(Constant.LABEL_STAY_FIRSTTIME, mc.time.toString)
-              mcStayLabelsMap.put(location, evaluateTime(last - first, last - mc.time).toString)
+//              mcStayLabelsMap.put(location, evaluateTime(last - first, last - mc.time).toString)
+							mcStayLabelsMap.put(location, evaluateTime(last - first, mc.time - first).toString)
+
             }
           } else if(mc.time <= last){
             // 本条属于延迟到达，不处理
@@ -86,7 +93,7 @@ class LocationStayRule extends MCLabelRule {
           } else {
             // 本条为正常新数据，更新cache后判定
             currentStatus.put(Constant.LABEL_STAY_LASTTIME, mc.time.toString)
-            mcStayLabelsMap.put(location, evaluateTime(last - first, last - mc.time).toString)
+            mcStayLabelsMap.put(location, evaluateTime(last - first, mc.time - first).toString)
           }
 
         }
