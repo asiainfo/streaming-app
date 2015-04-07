@@ -21,9 +21,9 @@ object CodisCacheManager extends CacheManager {
     if (jedisPool == null){
       val hp = getProxy()
       val JedisConfig = new JedisPoolConfig()
-      JedisConfig.setMaxIdle(300)
-      JedisConfig.setMaxActive(1000)
-      JedisConfig.setMinEvictableIdleTimeMillis(600000)
+      JedisConfig.setMaxIdle(MainFrameConf.getInt("JedisMaxIdle"))
+      JedisConfig.setMaxActive(MainFrameConf.getInt("JedisMaxActive"))
+      JedisConfig.setMinEvictableIdleTimeMillis(MainFrameConf.getInt("JedisMEM"))
       JedisConfig.setTestOnBorrow(true)
       jedisPool = new JedisPool(JedisConfig,hp._1,hp._2.toInt)
     }

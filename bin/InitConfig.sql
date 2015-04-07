@@ -1,5 +1,11 @@
 -- init MainFrameProp
-INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("internal","20");
+
+---- followings are used for Cache related
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("CodisProxy","192.168.1.1:1000,192.168.1.2:1001");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("DefaultCacheManager","TextCacheManager");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxIdle","300");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxActive","1000");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMEM","600000");
 
 -- init EventSources
 INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VALUES ("MC_Kafka","kafka",",","100","com.asiainfo.ocdc.streaming.MCEventSource");
