@@ -20,8 +20,8 @@ CREATE TABLE `EventSource` (
 );
 
 -- 3 EventSourcesDetail
-DROP TABLE IF EXISTS `EventSourceDetail`;
-CREATE TABLE `EventSourceDetail` (
+DROP TABLE IF EXISTS `EventSourceProp`;
+CREATE TABLE `EventSourceProp` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(30) NOT NULL,
   `pvalue` varchar(50) NOT NULL,

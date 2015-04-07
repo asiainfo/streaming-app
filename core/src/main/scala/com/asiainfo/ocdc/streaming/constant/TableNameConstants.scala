@@ -9,7 +9,7 @@ object TableNameConstants {
 
   val EventSourceTableName = "EventSource"
 
-  val EventSourceDetailTableName = "EventSourceDetailTableName"
+  val EventSourcePropTableName = "EventSourceProp"
 
   val LabelRulesTableName = "LabelRules"
 

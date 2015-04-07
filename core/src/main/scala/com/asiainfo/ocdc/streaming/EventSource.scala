@@ -29,7 +29,7 @@ abstract class EventSource() {
   }
 
   def readSource(ssc: StreamingContext): DStream[String] = {
-    EventSourceReader.getEventSource(ssc, conf)
+    EventSourceReader.readSource(ssc, conf)
   }
 
   def transform(source: String): Option[SourceObject]
