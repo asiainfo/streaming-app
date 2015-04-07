@@ -4,6 +4,7 @@ import redis.clients.jedis.{JedisPool, Jedis,Pipeline,JedisPoolConfig}
 import scala.collection.convert.wrapAsJava.mapAsJavaMap
 import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
+import java.net.InetAddress
 
 
 /**
@@ -18,14 +19,13 @@ object CodisCacheManager extends CacheManager {
 
   def getPool():JedisPool = {
     if (jedisPool == null){
-      val host = MainFrameConf.get("codishostname")
-      val port = MainFrameConf.getInt("codisport")
+      val hp = getProxy()
       val JedisConfig = new JedisPoolConfig()
       JedisConfig.setMaxIdle(300)
       JedisConfig.setMaxActive(1000)
       JedisConfig.setMinEvictableIdleTimeMillis(600000)
       JedisConfig.setTestOnBorrow(true)
-      jedisPool = new JedisPool(JedisConfig,host,port)
+      jedisPool = new JedisPool(JedisConfig,hp._1,hp._2.toInt)
     }
     jedisPool
   }
@@ -34,6 +34,22 @@ object CodisCacheManager extends CacheManager {
     if(jedis != null){
       pool.returnResource(jedis)
     }
+  }
+
+  def getProxy(proxy: String = MainFrameConf.get("CodisProxy")): Tuple2[String,String] = {
+    val proxylist = proxy.split(",")
+    val localip = InetAddress.getLocalHost.getHostAddress
+    val proxymap = proxylist.map(args => (args.split(":")(0),args.split(":")(1))).toMap
+    var rhost:String = null
+    var rip:String = null
+
+    proxymap.get(localip) match {
+      case Some(value) =>  rhost = localip
+                             rip = value
+      case None => rhost = proxylist(0).split(":")(0)
+                     rip = proxylist(0).split(":")(1)
+    }
+    (rhost,rip)
   }
 
   override def getHashCacheList(key: String): List[String] = {
