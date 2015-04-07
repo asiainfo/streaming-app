@@ -12,6 +12,8 @@ object TextCacheManager extends CacheManager {
   private var HashCacheMap = Map[String, Map[String, String]]()
   private var HashCacheString = Map[String,String]()
   private var HashCacheList = Map[String,List[String]]()
+  private var ByteCacheString = Map[String,String]()
+
   private val delim = ":"
 
   def init() {
@@ -102,5 +104,13 @@ object TextCacheManager extends CacheManager {
     val temp = CommonCacheValue.getOrElse(cacheName, Map[String, String]())
     temp.put(key, value)
     CommonCacheValue += cacheName -> temp
+  }
+
+  def setByteCacheString(key: Array[Byte], value: Array[Byte]) {
+    //TODO
+  }
+
+  def getByteCacheString(key: Array[Byte]*): List[Array[Byte]] = {
+    // TODO
   }
 }
