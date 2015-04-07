@@ -28,7 +28,7 @@ CREATE TABLE `EventSourceProp` (
   `esourceid` int NOT NULL,
   PRIMARY KEY (`id`)
 );
-alter table EventSourceDetail add foreign key (esourceid) references EventSource(id) ON
+alter table EventSourceProp add foreign key (esourceid) references EventSource(id) ON
 DELETE CASCADE;
 
 -- 4 LabelRules
