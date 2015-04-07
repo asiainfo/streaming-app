@@ -1,6 +1,6 @@
 package com.asiainfo.ocdc.streaming
 
-class CacheFactory {
+object CacheFactory {
   def getManager(manager: String = "TextCacheManager"):CacheManager = {
     if(manager.equals("TextCacheManager")){
       TextCacheManager
