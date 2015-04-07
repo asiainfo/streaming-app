@@ -18,8 +18,8 @@ object CodisCacheManager extends CacheManager {
 
   def getPool():JedisPool = {
     if (jedisPool == null){
-      val host = "192.168.84.142"
-      val port = 6381
+      val host = MainFrameConf.get("codishostname")
+      val port = MainFrameConf.getInt("codisport")
       val JedisConfig = new JedisPoolConfig()
       JedisConfig.setMaxIdle(300)
       JedisConfig.setMaxActive(1000)
