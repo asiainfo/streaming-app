@@ -27,7 +27,7 @@ class LocationStayRule extends MCLabelRule {
 		if(newStayTime <= oldStayTime){
 			0
 		} else {
-			val matchList = selfDefStayTimeList.filter(limit => (oldStayTime < limit.toLong && newStayTime >= limit.toLong))
+			val matchList = selfDefStayTimeList.filter(limit => (oldStayTime <= limit.toLong && newStayTime >= limit.toLong))
 		  if(matchList.isEmpty) {
         0
       } else {
@@ -77,7 +77,9 @@ class LocationStayRule extends MCLabelRule {
             } else {
               // 本条记录属于延迟到达，更新开始时间
               currentStatus.put(Constant.LABEL_STAY_FIRSTTIME, mc.time.toString)
-              mcStayLabelsMap.put(location, evaluateTime(last - first, last - mc.time).toString)
+//              mcStayLabelsMap.put(location, evaluateTime(last - first, last - mc.time).toString)
+							mcStayLabelsMap.put(location, evaluateTime(last - first, mc.time - first).toString)
+
             }
           } else if(mc.time <= last){
             // 本条属于延迟到达，不处理

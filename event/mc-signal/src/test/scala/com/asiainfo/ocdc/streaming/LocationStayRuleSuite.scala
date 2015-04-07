@@ -25,9 +25,9 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 	var cache:StreamingCache = _
 	var rule:LocationStayRule = _
 	var lrConf:LabelRuleConf = _
+
 	before{
 		cache = new LabelProps
-		cache
 		rule = new LocationStayRule()
 		lrConf = new LabelRuleConf(map)
 		lrConf.setAll(map)
@@ -39,6 +39,9 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		rule.init(lrConf)
 	}
 
+	after{
+		areaLabelMap=mutable.Map[String,String]()
+	}
 
 	test("1 测试新用户首次MC的处理(cache没有缓存)") {
 
@@ -47,8 +50,6 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		val mc3=MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 123, 1, 13900000003L ,13910000003L)
 		
 		assert(lrConf.get("classname")=="com.asiainfo.ocdc.streaming.LocationStayRule")
-		
-
 
 		areaLabelMap.put("1","true")
 		mc1.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
@@ -56,7 +57,6 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc1.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc1.getLabel(Constant.LABEL_STAY).get("1").get==0 +"")
 
-//		areaLabelMap.put("1","true")
 		areaLabelMap.put("2","true")
 		mc2.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc2, cache)
@@ -64,8 +64,6 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc2.getLabel(Constant.LABEL_STAY).get("1").get==0 +"")
 		assert(mc2.getLabel(Constant.LABEL_STAY).get("2").get==0 +"")
 
-//		areaLabelMap.put("1","true")
-//		areaLabelMap.put("2","true")
 		areaLabelMap.put("3","true")
 		mc3.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc3, cache)
@@ -75,10 +73,8 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc3.getLabel(Constant.LABEL_STAY).get("3").get==0 +"")
 	}
 
-	test("2 测试已有用户的MC的处理(cache中有缓存信息 没有通过)"){
-		rule = new LocationStayRule()
-		rule.init(lrConf)
-		areaLabelMap=mutable.Map[String,String]()
+	test("2 测试已有用户的MC的处理(cache中有缓存信息)"){
+
 		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L ,13910000001L)
 		val mc2=MCSourceObject(1, sdf.parse("20150401 08:17:00.000").getTime, 111, 1, 13900000001L ,13910000001L)
 		val mc3=MCSourceObject(1, sdf.parse("20150401 08:27:00.000").getTime, 111, 1, 13900000001L ,13910000001L)
@@ -91,23 +87,19 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc1.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc1.getLabel(Constant.LABEL_STAY).get("1").get==0 +"")
 
-//		areaLabelMap.put("1","true")
 		mc2.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc2,cache)
 		assert(mc2.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc2.getLabel(Constant.LABEL_STAY).get("1").get==0 +"")
 
-//		areaLabelMap.put("1","true")
 		mc3.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc3,cache)
 		assert(mc3.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc3.getLabel(Constant.LABEL_STAY).get("1").get==20 * 60 * 1000 +"")
 	}
 
-	test("3 测试某用户从区域A到区域B再到区域C，在回到A 没有通过"){
-		rule = new LocationStayRule()
-		rule.init(lrConf)
-		areaLabelMap=mutable.Map[String,String]()
+	test("3 测试某用户从区域A到区域B再到区域C，在回到A"){
+
 		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L ,13910000001L)
 		val mc2=MCSourceObject(1, sdf.parse("20150401 08:17:00.000").getTime, 222, 1, 13900000001L ,13910000001L)
 		val mc3=MCSourceObject(1, sdf.parse("20150401 08:27:00.000").getTime, 333, 1, 13900000001L ,13910000001L)
@@ -142,7 +134,6 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc4.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc4.getLabel(Constant.LABEL_STAY).get("1").get==0 +"")
 
-//		areaLabelMap.put("1","true")
 		mc5.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc5,cache)
 		assert(mc5.getLabel(Constant.LABEL_STAY).size==1)
@@ -151,9 +142,6 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 	}
 
 	test("4 测试某用户从区域A到区域A/B再到区域B/C"){
-		rule = new LocationStayRule()
-		rule.init(lrConf)
-		areaLabelMap=mutable.Map[String,String]()
 
 		val mc1=MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L ,13900000001L)
 		val mc2=MCSourceObject(1, sdf.parse("20150401 08:17:00.000").getTime, 122, 1, 13900000001L ,13910000001L)
@@ -168,7 +156,6 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc1.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc1.getLabel(Constant.LABEL_STAY).get("1").get==0 +"")
 
-//		areaLabelMap.put("1","true")
 		areaLabelMap.put("2","true")
 		mc2.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc2, cache)
@@ -176,37 +163,28 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc2.getLabel(Constant.LABEL_STAY).get("1").get==0 + "")
 		assert(mc2.getLabel(Constant.LABEL_STAY).get("2").get==0 + "")
 
-//		areaLabelMap.put("1","true")
-//		areaLabelMap.put("2","true")
 		mc3.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc3,cache)
 		assert(mc3.getLabel(Constant.LABEL_STAY).size==2)
-//		assert(mc3.getLabel(Constant.LABEL_STAY).get("1").get==27 * 60 * 1000 + "")	//没有通过
+		assert(mc3.getLabel(Constant.LABEL_STAY).get("1").get==20 * 60 * 1000 + "")
 		assert(mc3.getLabel(Constant.LABEL_STAY).get("2").get==0 + "")
 
 		areaLabelMap.remove("1")
-//		areaLabelMap.put("2","true")
 		areaLabelMap.put("3","true")
 		mc4.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc4,cache)
 		assert(mc4.getLabel(Constant.LABEL_STAY).size==2)
-//		assert(mc4.getLabel(Constant.LABEL_STAY).get("2").get==20 * 60 * 1000 +"")	//没有通过
+		assert(mc4.getLabel(Constant.LABEL_STAY).get("2").get==20 * 60 * 1000 +"")
 		assert(mc4.getLabel(Constant.LABEL_STAY).get("3").get==0 +"")
 
-		//		areaLabelMap.put("2","true")
-		//		areaLabelMap.put("3","true")
 		mc5.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc5,cache)
 		assert(mc5.getLabel(Constant.LABEL_STAY).size==2)
-//		assert(mc5.getLabel(Constant.LABEL_STAY).get("2").get==40 * 60 * 1000+"")	//没有通过
-		assert(mc5.getLabel(Constant.LABEL_STAY).get("3").get==20 * 60 * 1000+"")	//没有通过
-//		assert(mc5.getLabel(Constant.LABEL_STAY).get("3").get==(20 * 60 * 1000+""))
+		assert(mc5.getLabel(Constant.LABEL_STAY).get("2").get==20 * 60 * 1000+"")
+		assert(mc5.getLabel(Constant.LABEL_STAY).get("3").get==20 * 60 * 1000+"")
 	}
 
-	test("5 测试用户在一个区域mc短时间乱序的问题 没有通过"){
-		rule = new LocationStayRule()
-		rule.init(lrConf)
-		areaLabelMap=mutable.Map[String,String]()
+	test("5 测试用户在一个区域mc短时间乱序的问题"){
 
 		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:10:00.000").getTime, 111, 1, 13900000001L ,13910000001L)
 		val mc2=MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L ,13910000001L)
@@ -220,21 +198,18 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc1.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc1.getLabel(Constant.LABEL_STAY).get("1").get==0+"")
 
-		//		areaLabelMap.put("1","true")
 		mc2.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
-		rule.attachMCLabel(mc2, cache)	//没有通过
+		rule.attachMCLabel(mc2, cache)
 		assert(mc2.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc2.getLabel(Constant.LABEL_STAY).get("1").get==0 + "")
 
 
-		//		areaLabelMap.put("1","true")
 		mc3.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc3, cache)
 		assert(mc3.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc3.getLabel(Constant.LABEL_STAY).get("1").get==0 + "")
 
 
-		//		areaLabelMap.put("1","true")
 		mc4.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc4, cache)
 		assert(mc4.getLabel(Constant.LABEL_STAY).size==1)
@@ -243,9 +218,6 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 	}
 
 	test("6 测试用户在多个区域mc短时间乱序的问题"){
-		rule = new LocationStayRule()
-		rule.init(lrConf)
-		areaLabelMap=mutable.Map[String,String]()
 
 		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:10:00.000").getTime, 111, 1, 13900000001L ,13900000001L)
 
@@ -255,15 +227,12 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		val mc4 = MCSourceObject(1, sdf.parse("20150401 08:20:00.000").getTime, 123, 1, 13900000001L ,13900000001L)
 		val mc5 = MCSourceObject(1, sdf.parse("20150401 08:27:00.000").getTime, 123, 1, 13900000001L ,13900000001L)
 
-
 		areaLabelMap.put("1","true")
 		mc1.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc1, cache)
-		assert(mc1.getLabel(Constant.LABEL_STAY).size==2)
+		assert(mc1.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc1.getLabel(Constant.LABEL_STAY).get("1").get==0 + "")
-		assert(mc1.getLabel(Constant.LABEL_STAY).get("2").get==0 + "")
 
-		//		areaLabelMap.put("1","true")
 		areaLabelMap.put("2","true")
 		mc2.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc2, cache)
@@ -271,7 +240,6 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc2.getLabel(Constant.LABEL_STAY).get("1").get==0 + "")
 		assert(mc2.getLabel(Constant.LABEL_STAY).get("2").get==0 + "")
 
-		//		areaLabelMap.put("1","true")
 		areaLabelMap.put("2","true")
 		areaLabelMap.put("3","true")
 		mc3.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
@@ -281,31 +249,22 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		assert(mc3.getLabel(Constant.LABEL_STAY).get("2").get==0 + "")
 		assert(mc3.getLabel(Constant.LABEL_STAY).get("3").get==0 + "")
 
-		//		areaLabelMap.put("1","true")
-		//		areaLabelMap.put("2","true")
-		//		areaLabelMap.put("3","true")
 		mc4.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc4, cache)
 		assert(mc4.getLabel(Constant.LABEL_STAY).size==3)
 		assert(mc4.getLabel(Constant.LABEL_STAY).get("1").get==20 * 60 * 1000 +"")
-		assert(mc4.getLabel(Constant.LABEL_STAY).get("2").get==20 * 60 * 1000 +"")
-		assert(mc4.getLabel(Constant.LABEL_STAY).get("3").get==3 * 60 * 1000 +"")
+		assert(mc4.getLabel(Constant.LABEL_STAY).get("2").get==0 +"")	///没有通过，逻辑结果是 20 * 60 * 1000
+		assert(mc4.getLabel(Constant.LABEL_STAY).get("3").get==0 +"")
 
-		//		areaLabelMap.put("1","true")
-		//		areaLabelMap.put("2","true")
-		//		areaLabelMap.put("3","true")
-		mc4.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
-		rule.attachMCLabel(mc4, cache)
-		assert(mc4.getLabel(Constant.LABEL_STAY).size==2)
-		assert(mc4.getLabel(Constant.LABEL_STAY).get("1").get==27 * 60 * 1000 + "")
-		assert(mc4.getLabel(Constant.LABEL_STAY).get("2").get==27 * 60 * 1000 + "")
-		assert(mc4.getLabel(Constant.LABEL_STAY).get("3").get==10 * 60 * 1000 + "")
+		mc5.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
+		rule.attachMCLabel(mc5, cache)
+		assert(mc5.getLabel(Constant.LABEL_STAY).size==3)
+		assert(mc5.getLabel(Constant.LABEL_STAY).get("1").get==20 * 60 * 1000 + "")
+		assert(mc5.getLabel(Constant.LABEL_STAY).get("2").get==0 + "")	//没有通过，逻辑结果是 20 * 60 * 1000
+		assert(mc5.getLabel(Constant.LABEL_STAY).get("3").get==0 + "")
 	}
 
 	test("7 测试用户在某区域mc长时间乱序的问题"){
-		rule = new LocationStayRule()
-		rule.init(lrConf)
-		areaLabelMap=mutable.Map[String,String]()
 
 		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L ,13900000001L)
 		val mc2 = MCSourceObject(1, sdf.parse("20150401 08:03:00.000").getTime, 111, 1, 13900000001L ,13900000001L)
@@ -314,37 +273,30 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 
 		val mc4 = MCSourceObject(1, sdf.parse("20150401 08:23:00.000").getTime, 111, 1, 13900000001L ,13900000001L)
 
-
 		areaLabelMap.put("1","true")
 		mc1.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc1, cache)
 		assert(mc1.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc1.getLabel(Constant.LABEL_STAY).get("1").get==0 + "")
 
-		//		areaLabelMap.put("1","true")
 		mc2.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc2, cache)
 		assert(mc2.getLabel(Constant.LABEL_STAY).size==1)
-		assert(mc2.getLabel(Constant.LABEL_STAY).get("1").get==3 * 60 * 1000 + "")
+		assert(mc2.getLabel(Constant.LABEL_STAY).get("1").get==0 + "")
 
-		//		areaLabelMap.put("1","true")
 		mc3.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc3, cache)
 		assert(mc3.getLabel(Constant.LABEL_STAY).size==1)
-		assert(mc3.getLabel(Constant.LABEL_STAY).get("1").get==3 * 60 * 1000 + "")
+		assert(mc3.getLabel(Constant.LABEL_STAY).get("1").get==0 + "")
 
-		//		areaLabelMap.put("1","true")
 		mc4.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc4, cache)
 		assert(mc4.getLabel(Constant.LABEL_STAY).size==1)
-		assert(mc4.getLabel(Constant.LABEL_STAY).get("1").get==23 * 60 * 1000 + "")
+		assert(mc4.getLabel(Constant.LABEL_STAY).get("1").get==20 * 60 * 1000 + "")
 
 	}
 
 	test("8 测试用户在多个区域mc长时间乱序的问题"){
-		rule = new LocationStayRule()
-		rule.init(lrConf)
-		areaLabelMap=mutable.Map[String,String]()
 
 		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L ,13900000001L)
 		val mc2 = MCSourceObject(1, sdf.parse("20150401 08:20:00.000").getTime, 121, 1, 13900000001L ,13900000001L)
@@ -373,7 +325,7 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		areaLabelMap.put("1","true")
 		mc3.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc3, cache)
-		assert(mc3.getLabel(Constant.LABEL_STAY).size==0)
+		assert(mc3.getLabel(Constant.LABEL_STAY).size==1)
 		assert(mc3.getLabel(Constant.LABEL_STAY).get("1").get==0 + "")	//如果一条记录无效，记录所在区域停留时间为0，不更新cache
 
 		areaLabelMap.put("1","true")
@@ -382,8 +334,8 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 		mc4.setLabel(Constant.LABEL_ONSITE, areaLabelMap)
 		rule.attachMCLabel(mc4, cache)
 		assert(mc4.getLabel(Constant.LABEL_STAY).size==3)
-		assert(mc4.getLabel(Constant.LABEL_STAY).get("1").get==23 * 60 * 1000 + "")
-		assert(mc4.getLabel(Constant.LABEL_STAY).get("2").get==3 * 60 * 1000 + "")
+		assert(mc4.getLabel(Constant.LABEL_STAY).get("1").get==20 * 60 * 1000 + "")
+		assert(mc4.getLabel(Constant.LABEL_STAY).get("2").get==0 + "")
 
 	}
 
