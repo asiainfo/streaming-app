@@ -7,11 +7,9 @@ object TableNameConstants {
 
   val MainFramePropTableName = "MainFrameProp"
 
-  val KafkaSourceTableName = "KafkaSource"
-
-  val HDFSSourceTableName = "HDFSSource"
-
   val EventSourceTableName = "EventSource"
+
+  val EventSourceDetailTableName = "EventSourceDetailTableName"
 
   val LabelRulesTableName = "LabelRules"
 

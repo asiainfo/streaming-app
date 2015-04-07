@@ -1,32 +1,36 @@
 package com.asiainfo.ocdc.streaming
 
-import java.util.ArrayList
-
-import com.asiainfo.ocdc.streaming.SourceObject
-import org.apache.spark.sql.catalyst.expressions._
+import org.apache.spark.sql.SQLContext
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
-import org.apache.spark.sql.{Row, SQLContext, DataFrame}
 
 import scala.collection.mutable.ArrayBuffer
 
 
 abstract class EventSource() {
   val name: String = ""
-
+  var conf: EventSourceConf = null
 
   private val labelRules = new ArrayBuffer[LabelRule]
   private val eventRules = new ArrayBuffer[EventRule]
-  def beanclass :String
 
-  def addEventRule(rule: EventRule): Unit = { eventRules += rule }
+  def beanclass: String
 
-  def addLabelRule(rule: LabelRule): Unit = { labelRules += rule }
+  def addEventRule(rule: EventRule): Unit = {
+    eventRules += rule
+  }
 
-  def init(conf: EventSourceConf): Unit
+  def addLabelRule(rule: LabelRule): Unit = {
+    labelRules += rule
+  }
 
-  // interface
-  def readSource(ssc: StreamingContext): DStream[String]
+  def init(conf: EventSourceConf): Unit = {
+    this.conf = conf
+  }
+
+  def readSource(ssc: StreamingContext): DStream[String] = {
+    EventSourceReader.getEventSource(ssc, conf)
+  }
 
   def transform(source: String): Option[SourceObject]
 
@@ -42,7 +46,7 @@ abstract class EventSource() {
 
       val labelRuleArray = labelRules.toArray
 
-      val labeledRDD = sourceRDD.mapPartitions( iter =>{
+      val labeledRDD = sourceRDD.mapPartitions(iter => {
         new Iterator[SourceObject] {
           private[this] var currentRow: SourceObject = _
           private[this] var currentPos: Int = 0
@@ -62,7 +66,7 @@ abstract class EventSource() {
             var result = false
             // TODO read caches from CacheManager
             val cache = new StreamingCache
-            while(iter.hasNext && totalFetch < 10) {
+            while (iter.hasNext && totalFetch < 10) {
               val currentLine = iter.next()
               result = true
               labelRuleArray.map(labelRule => {
@@ -82,13 +86,13 @@ abstract class EventSource() {
       df.persist
 
       val eventRuleIter = eventRules.iterator
-      while(eventRuleIter.hasNext) {
+      while (eventRuleIter.hasNext) {
         val eventRule = eventRuleIter.next
 
         // handle filter first
         val filteredData = {
           var inputDF = df
-          for(filter :String <- eventRule.filterExpList) {
+          for (filter: String <- eventRule.filterExpList) {
             inputDF = inputDF.filter(filter)
           }
           inputDF
@@ -97,7 +101,7 @@ abstract class EventSource() {
         // handle select
         val selectedData = filteredData.selectExpr(eventRule.getSelectExprs: _*)
 
-        selectedData.map(row =>{
+        selectedData.map(row => {
           // TODO
           // row => Event
           // sendEvent

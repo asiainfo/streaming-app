@@ -1,15 +1,6 @@
 package com.asiainfo.ocdc.streaming
 
-import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.dstream.DStream
-
 class MCEventSource() extends EventSource() {
-
-  var conf: EventSourceConf = null
-
-  override def readSource(ssc: StreamingContext): DStream[String] = {
-    EventSourceFactory.getEventSource(ssc,conf.get("type"),conf.getInt("sourceid"))
-  }
 
   def formatSource(inputs: Array[String]): Option[MCSourceObject] = {
     // 事件ID,时间,LAC,CI,主叫IMEI,被叫IMEI,主叫IMSI,被叫IMSI
@@ -35,10 +26,6 @@ class MCEventSource() extends EventSource() {
     } else {
       formatSource(inputArray)
     }
-  }
-
-  override def init(conf: EventSourceConf): Unit = {
-    this.conf = conf
   }
 
   override def beanclass: String = MCSourceObject.getClass.getName

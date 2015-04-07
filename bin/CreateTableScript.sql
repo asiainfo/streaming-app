@@ -7,44 +7,31 @@ CREATE TABLE `MainFrameProp` (
   PRIMARY KEY (`id`)
 );
 
-
--- 2 Kafka Sources
-DROP TABLE IF EXISTS `KafkaSource`;
-CREATE TABLE `KafkaSource` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `topic` varchar(30) NOT NULL,
-  `groupid` varchar(20) NOT NULL,
-  `zookeeper` varchar(100) NOT NULL,
-  `brokerlist` varchar(100) NOT NULL,
-  `serializerclass` varchar(100),
-  `msgkey`  varchar(30),
-  `autooffset`  varchar(30),
-  PRIMARY KEY (`id`)
-);
-
--- 3 HDFS Sources
-DROP TABLE IF EXISTS `HDFSSource`;
-CREATE TABLE `HDFSSource` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `path` varchar(500) NOT NULL,
-  PRIMARY KEY (`id`)
-);
-
--- 4 EventSources
+-- 2 EventSources
 DROP TABLE IF EXISTS `EventSource`;
 CREATE TABLE `EventSource` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `type` varchar(10) NOT NULL,
-  `sourceid` int NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `type` varchar(20) NOT NULL,
   `delim` varchar(10) NOT NULL,
   `formatlength` int NOT NULL,
   `classname` varchar(200) NOT NULL,
   PRIMARY KEY (`id`)
 );
-alter table EventSource add foreign key (sourceid) references KafkaSource(id) ON
+
+-- 3 EventSourcesDetail
+DROP TABLE IF EXISTS `EventSourceDetail`;
+CREATE TABLE `EventSourceDetail` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(30) NOT NULL,
+  `pvalue` varchar(50) NOT NULL,
+  `esourceid` int NOT NULL,
+  PRIMARY KEY (`id`)
+);
+alter table EventSourceDetail add foreign key (esourceid) references EventSource(id) ON
 DELETE CASCADE;
 
--- 5 LabelRules
+-- 4 LabelRules
 DROP TABLE IF EXISTS `LabelRules`;
 CREATE TABLE `LabelRules` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -55,7 +42,7 @@ CREATE TABLE `LabelRules` (
 alter table LabelRules add foreign key (esourceid) references EventSource(id) ON
 DELETE CASCADE;
 
--- 6 LabelRulesProp
+-- 5 LabelRulesProp
 DROP TABLE IF EXISTS `LabelRulesProp`;
 CREATE TABLE `LabelRulesProp` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -67,7 +54,7 @@ CREATE TABLE `LabelRulesProp` (
 alter table LabelRulesProp add foreign key (lrid) references LabelRules(id) ON
 DELETE CASCADE;
 
--- 7 EventRules
+-- 6 EventRules
 DROP TABLE IF EXISTS `EventRules`;
 CREATE TABLE `EventRules` (
   `id` int NOT NULL AUTO_INCREMENT,
@@ -78,7 +65,7 @@ CREATE TABLE `EventRules` (
 alter table EventRules add foreign key (esourceid) references EventSource(id) ON
 DELETE CASCADE;
 
--- 8 EventRulesProp
+-- 7 EventRulesProp
 DROP TABLE IF EXISTS `EventRulesProp`;
 CREATE TABLE `EventRulesProp` (
   `id` int NOT NULL,

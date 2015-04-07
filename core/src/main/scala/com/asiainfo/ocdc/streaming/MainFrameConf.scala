@@ -45,7 +45,7 @@ object MainFrameConf extends BaseConf {
    * read event source list and config
    */
   def initEventSourceConf {
-    val sql = "select id,type,sourceid,delim,formatlength,classname from " + TableNameConstants.EventSourceTableName
+    val sql = "select id,name,type,delim,formatlength,classname from " + TableNameConstants.EventSourceTableName
     val events = JDBCUtils.query(sql)
     sources = events.map(x => {
       new EventSourceConf(x)
