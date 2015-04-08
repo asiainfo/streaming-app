@@ -74,19 +74,21 @@ abstract class EventSource() {
               result = true
             }
 
-            val caches = CacheFactory.getManager().getMultiCacheByKeys(minimap.keys.toList)
-            var i = 0
-            minimap.values.foreach(x -> {
-
-              val cache = caches(i).asInstanceOf[StreamingCache]
+            val cachemap_old = CacheFactory.getManager().getMultiCacheByKeys(minimap.keys.toList)
+            val cachemap_new = minimap.map(x => {
+              val key = x._1
+              val value = x._2
+              val cache = cachemap_old.get(key).get
               labelRuleArray.foreach(labelRule => {
-                labelRule.attachLabel(x, cache)
+                labelRule.attachLabel(value, cache)
               })
-              currentArrayBuffer.append(x)
-              i += 1
+              currentArrayBuffer.append(value)
+              (key, cache)
             })
 
-            // TODO update caches to CacheManager
+            //update caches to CacheManager
+            CacheFactory.getManager().setMultiCache(cachemap_new)
+
             arrayBuffer = currentArrayBuffer.toArray
             result
           }
