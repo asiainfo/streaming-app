@@ -1,10 +1,12 @@
 package com.asiainfo.ocdc.streaming
 
-import redis.clients.jedis.{JedisPool, Jedis,Pipeline,JedisPoolConfig}
+import java.net.InetAddress
+
+import redis.clients.jedis.{Jedis, JedisPool, JedisPoolConfig}
+
 import scala.collection.convert.wrapAsJava.mapAsJavaMap
 import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
-import java.net.InetAddress
 
 
 /**

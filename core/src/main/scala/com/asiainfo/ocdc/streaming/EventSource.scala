@@ -65,6 +65,7 @@ abstract class EventSource() {
             var result = false
 
             val minimap = mutable.Map[String, SourceObject]()
+
             while (iter.hasNext && totalFetch < 10) {
               val currentLine = iter.next()
               minimap += (currentLine.id -> currentLine)
@@ -73,8 +74,7 @@ abstract class EventSource() {
               result = true
             }
 
-
-            val caches = CacheFactory.getManager().getByteCacheString(minimap.keys.seq.map(new Byte()))
+            val caches = CacheFactory.getManager().getMultiCacheByKeys(minimap.keys.toSeq)
             var i = 0
             minimap.values.foreach(x -> {
               val cache = caches(i).asInstanceOf[StreamingCache]
