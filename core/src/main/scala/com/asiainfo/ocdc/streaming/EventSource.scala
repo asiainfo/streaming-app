@@ -78,12 +78,13 @@ abstract class EventSource() {
             val cachemap_new = minimap.map(x => {
               val key = x._1
               val value = x._2
-              val cache = cachemap_old.get(key).get
+              val rule_caches = cachemap_old.get(key).get.asInstanceOf[Map[String,StreamingCache]]
               labelRuleArray.foreach(labelRule => {
+                val cache = rule_caches.get(labelRule.conf.get("id")).get
                 labelRule.attachLabel(value, cache)
               })
               currentArrayBuffer.append(value)
-              (key, cache)
+              (key, rule_caches.asInstanceOf[Any])
             })
 
             //update caches to CacheManager

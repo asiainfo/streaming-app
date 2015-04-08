@@ -26,8 +26,8 @@ trait CacheManager {
 
   def getByteCacheString(key: String): List[String]
 
-  def setMultiCache(values: Map[String, StreamingCache])
+  def setMultiCache(keysvalues: Map[String, Any])
 
-  def getMultiCacheByKeys(keys: List[String]): Map[String, StreamingCache]
+  def getMultiCacheByKeys(keys: List[String]): Map[String, Any]
 
 }
