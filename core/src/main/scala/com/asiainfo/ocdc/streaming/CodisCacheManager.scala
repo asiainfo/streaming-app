@@ -175,4 +175,21 @@ object CodisCacheManager extends CacheManager {
       returnResource(jedisPool,jedis)
     }
   }
+
+
+  override def setByteCacheString(key: String, value: String) {
+    //TODO
+  }
+
+  override def getByteCacheString(key: String): List[String] = {
+    // TODO
+  }
+
+  override def setMultiCacheString(keysvalues: String*) {
+    //TODO
+  }
+
+  override def getMultiCacheString(keys: String*): List[String] = {
+    // TODO
+  }
 }
