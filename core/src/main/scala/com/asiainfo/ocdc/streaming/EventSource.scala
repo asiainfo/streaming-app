@@ -61,7 +61,7 @@ abstract class EventSource() {
           private final def fetchNext(): Boolean = {
             val currentArrayBuffer = new ArrayBuffer[SourceObject]
             currentPos = -1
-            val totalFetch = 0
+            var totalFetch = 0
             var result = false
 
             val minimap = mutable.Map[String, SourceObject]()
@@ -74,9 +74,10 @@ abstract class EventSource() {
               result = true
             }
 
-            val caches = CacheFactory.getManager().getMultiCacheByKeys(minimap.keys.toSeq)
+            val caches = CacheFactory.getManager().getMultiCacheByKeys(minimap.keys.toList)
             var i = 0
             minimap.values.foreach(x -> {
+
               val cache = caches(i).asInstanceOf[StreamingCache]
               labelRuleArray.foreach(labelRule => {
                 labelRule.attachLabel(x, cache)

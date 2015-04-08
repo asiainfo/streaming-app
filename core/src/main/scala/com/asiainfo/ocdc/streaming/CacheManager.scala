@@ -28,6 +28,6 @@ trait CacheManager {
 
   def setMultiCache(values: Map[String, StreamingCache])
 
-  def getMultiCacheByKeys(keys: String*): Map[String, StreamingCache]
+  def getMultiCacheByKeys(keys: List[String]): Map[String, StreamingCache]
 
 }
