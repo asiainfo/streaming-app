@@ -51,7 +51,7 @@ abstract class EventSource() {
           private[this] var currentPos: Int = -1
           private[this] var arrayBuffer: Array[SourceObject] = _
 
-          override def hasNext: Boolean = (currentPos < arrayBuffer.length) || fetchNext()
+          override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || fetchNext()
 
           override def next(): SourceObject = {
             currentPos += 1
