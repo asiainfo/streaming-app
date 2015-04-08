@@ -3,10 +3,8 @@ package com.asiainfo.ocdc.streaming
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
-
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-
 
 abstract class EventSource() {
   val name: String = ""
@@ -50,40 +48,42 @@ abstract class EventSource() {
       val labeledRDD = sourceRDD.mapPartitions(iter => {
         new Iterator[SourceObject] {
           private[this] var currentRow: SourceObject = _
-          private[this] var currentPos: Int = 0
-          private[this] var arrayBuffer: Array[SourceObject] = null
+          private[this] var currentPos: Int = -1
+          private[this] var arrayBuffer: Array[SourceObject] = _
 
-          override def hasNext: Boolean = (currentPos < arrayBuffer.length - 1) || fetchNext()
+          override def hasNext: Boolean = (currentPos < arrayBuffer.length) || fetchNext()
 
           override def next(): SourceObject = {
             currentPos += 1
             arrayBuffer(currentPos - 1)
           }
 
-
-
           private final def fetchNext(): Boolean = {
             val currentArrayBuffer = new ArrayBuffer[SourceObject]
-            currentPos = 0
+            currentPos = -1
             val totalFetch = 0
             var result = false
-            // TODO read caches from CacheManager
-            val cache = new StreamingCache
-            CacheFactory.getManager().geth
+
             val minimap = mutable.Map[String, SourceObject]()
             while (iter.hasNext && totalFetch < 10) {
               val currentLine = iter.next()
-              result = true
-
               minimap += (currentLine.id -> currentLine)
-
-              labelRuleArray.map(labelRule => {
-                labelRule.attachLabel(currentLine, cache)
-              })
-              currentArrayBuffer.append(currentLine)
+              totalFetch += 1
+              currentPos = 0
+              result = true
             }
 
 
+            val caches = CacheFactory.getManager().getByteCacheString(minimap.keys.seq.map(new Byte()))
+            var i = 0
+            minimap.values.foreach(x -> {
+              val cache = caches(i).asInstanceOf[StreamingCache]
+              labelRuleArray.foreach(labelRule => {
+                labelRule.attachLabel(x, cache)
+              })
+              currentArrayBuffer.append(x)
+              i += 1
+            })
 
             // TODO update caches to CacheManager
             arrayBuffer = currentArrayBuffer.toArray

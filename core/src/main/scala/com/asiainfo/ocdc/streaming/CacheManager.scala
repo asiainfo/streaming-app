@@ -16,4 +16,8 @@ trait CacheManager {
   def getCommonCacheList(key: String): List[String]
   def getCommonCacheValue(cacheName: String, key: String): String
 
+  def setByteCacheString(key: Array[Byte], value: Array[Byte])
+
+  def getByteCacheString(key: Array[Byte]*): List[Array[Byte]]
+
 }
