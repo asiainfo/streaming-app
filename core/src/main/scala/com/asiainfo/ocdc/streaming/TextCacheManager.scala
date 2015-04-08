@@ -112,15 +112,15 @@ object TextCacheManager extends CacheManager {
   }
 
   override def getByteCacheString(key: String): List[String] = {
-    // TODO
-  }
-
-  override def setMultiCacheString(keysvalues: String*) {
     //TODO
   }
 
-  override def getMultiCacheString(keys: String*): List[String] = {
-    // TODO
+  override def setMultiCache(values: Map[String, StreamingCache]) {
+    //TODO
+  }
+
+  override def getMultiCacheByKeys(keys: String*): Map[String, StreamingCache] = {
+    //TODO
   }
 
 }
