@@ -1,10 +1,12 @@
 package com.asiainfo.ocdc.streaming
 
-import redis.clients.jedis.{JedisPool, Jedis,Pipeline,JedisPoolConfig}
+import java.net.InetAddress
+
+import redis.clients.jedis.{Jedis, JedisPool, JedisPoolConfig}
+
 import scala.collection.convert.wrapAsJava.mapAsJavaMap
 import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
-import java.net.InetAddress
 
 /**
  * Created by tianyi on 3/30/15.
@@ -180,14 +182,14 @@ object CodisCacheManager extends CacheManager {
   }
 
   override def getByteCacheString(key: String): List[String] = {
+    null
+  }
+
+  override def setMultiCache(keysvalues: Map[String, Any]) {
     //TODO
   }
 
-  override def setMultiCache(values: Map[String, StreamingCache]) {
-    //TODO
-  }
-
-  override def getMultiCacheByKeys(keys: String*): Map[String, StreamingCache] = {
-    //TODO
+  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
+    null
   }
 }

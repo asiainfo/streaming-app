@@ -68,7 +68,7 @@ abstract class EventSource() {
 
             while (iter.hasNext && totalFetch < 10) {
               val currentLine = iter.next()
-              minimap += (currentLine.id -> currentLine)
+              minimap += (currentLine.generateId -> currentLine)
               totalFetch += 1
               currentPos = 0
               result = true

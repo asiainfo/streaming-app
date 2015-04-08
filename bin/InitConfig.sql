@@ -13,6 +13,7 @@ INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VAL
 
 -- init EventSourcesDetail
 -- kafka
+/*
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("topic","topic1",1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("groupid","groupid1",1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("zookeeper","zookeeper1",1);
@@ -20,8 +21,9 @@ INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("brokerlist"
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("serializerclass","serializerclass1",1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("msgkey","msgkey1",1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("autooffset","autooffset1",1);
+*/
 -- hdfs
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("path","hdfs://localhost:9000/user/leo",2);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("path","hdfs://localhost:9000/user/leo/streaming",3);
 
 -- init LabelRules
 INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.LocationStayRule",1);

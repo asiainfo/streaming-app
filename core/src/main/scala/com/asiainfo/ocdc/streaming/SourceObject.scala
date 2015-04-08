@@ -6,8 +6,6 @@ import scala.collection.mutable.Map
  */
 abstract class SourceObject extends Serializable {
 
-  val id: String
-
   private val labels = new java.util.HashMap[String, Map[String,String]]()
   final def setLabel(key: String, value: Map[String,String]) = {
     labels.put(key, value)
@@ -25,5 +23,7 @@ abstract class SourceObject extends Serializable {
   final def removeLabel(key: String) = {
     labels.remove(key)
   }
+
+  def generateId: String
 }
 
