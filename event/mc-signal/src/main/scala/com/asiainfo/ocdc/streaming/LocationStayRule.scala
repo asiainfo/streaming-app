@@ -77,9 +77,7 @@ class LocationStayRule extends MCLabelRule {
             } else {
               // 本条记录属于延迟到达，更新开始时间
               currentStatus.put(Constant.LABEL_STAY_FIRSTTIME, mc.time.toString)
-//              mcStayLabelsMap.put(location, evaluateTime(last - first, last - mc.time).toString)
-							mcStayLabelsMap.put(location, evaluateTime(last - first, mc.time - first).toString)
-
+              mcStayLabelsMap.put(location, evaluateTime(last - first, last - mc.time).toString)
             }
           } else if(mc.time <= last){
             // 本条属于延迟到达，不处理
