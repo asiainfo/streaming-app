@@ -46,7 +46,7 @@ object MainFrameConf extends BaseConf {
    */
   def initEventSourceConf {
 
-    val sql = "select es.id,es.name as sourcename,es.type,es.delim,es.formatlength,es.classname,esp.name as pname,esp.pvalue from " + TableNameConstants.EventSourceTableName + " es left join " + TableNameConstants.EventSourcePropTableName +" esp on es.id = esp.esourceid "
+    val sql = "select es.id,es.name as sourcename,es.type,es.delim,es.formatlength,es.classname,esp.name as pname,esp.pvalue from " + TableNameConstants.EventSourceTableName + " es left join " + TableNameConstants.EventSourcePropTableName + " esp on es.id = esp.esourceid "
     val events = JDBCUtils.query(sql)
     val sourcemap = Map[String, EventSourceConf]()
     events.map(x => {
@@ -83,19 +83,22 @@ object MainFrameConf extends BaseConf {
       val pvalue = x.get("pvalue").get
       val classname = x.get("classname").get
       if (midmap.contains(esid)) {
-        if (midmap.get(esid).get.contains(lrid)) {
-          midmap.get(esid).get.get(lrid).get.set(name, pvalue)
-        } else {
-          val lrconf = new LabelRuleConf()
-          lrconf.set(name, pvalue)
-          lrconf.set("classname", classname)
-          midmap.get(esid).get += (lrid -> lrconf)
+        if (name != null) {
+          if (midmap.get(esid).get.contains(lrid)) {
+            midmap.get(esid).get.get(lrid).get.set(name, pvalue)
+          } else {
+            val lrconf = new LabelRuleConf()
+            lrconf.set("id", lrid)
+            lrconf.set("classname", classname)
+            lrconf.set(name, pvalue)
+            midmap.get(esid).get += (lrid -> lrconf)
+          }
         }
       } else {
         val lrconf = new LabelRuleConf()
-        lrconf.set("id",lrid)
+        lrconf.set("id", lrid)
         lrconf.set("classname", classname)
-        lrconf.set(name, pvalue)
+        if (name != null) lrconf.set(name, pvalue)
         midmap += (esid -> Map(lrid -> lrconf))
       }
     })
@@ -143,7 +146,7 @@ object MainFrameConf extends BaseConf {
     })
   }
 
-  def main (args: Array[String]) {
+  def main(args: Array[String]) {
     init()
   }
 }

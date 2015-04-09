@@ -37,7 +37,9 @@ class LocationStayRule extends MCLabelRule {
   }
 
   def attachMCLabel(mc: MCSourceObject, cache: StreamingCache) {
-    val cacheInstance = cache.asInstanceOf[LabelProps]
+    var cacheInstance: LabelProps = null
+    if(cache == null) cacheInstance = new LabelProps
+    else cacheInstance = cache.asInstanceOf[LabelProps]
 
 		if(cacheInstance.labelsPropList == null){
 			cacheInstance.labelsPropList = Map[String,Map[String,String]]()
