@@ -1,8 +1,10 @@
 package com.asiainfo.ocdc.streaming
 
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
+
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
@@ -10,8 +12,8 @@ abstract class EventSource() extends Serializable {
   var id: String = null
   var conf: EventSourceConf = null
 
-  private val labelRules = new ArrayBuffer[LabelRule]
-  private val eventRules = new ArrayBuffer[EventRule]
+  protected val labelRules = new ArrayBuffer[LabelRule]
+  protected val eventRules = new ArrayBuffer[EventRule]
 
   def beanclass: String
 
@@ -34,9 +36,36 @@ abstract class EventSource() extends Serializable {
 
   def transform(source: String): Option[SourceObject]
 
+  def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]){
+
+    if(labeledRDD.partitions.length > 0){
+
+      val df = sqlContext.createDataFrame(labeledRDD, Class.forName(beanclass))
+
+      // cache data
+      df.persist
+
+      val eventRuleIter = eventRules.iterator
+      while (eventRuleIter.hasNext) {
+        val eventRule = eventRuleIter.next
+
+        // handle filter first
+        val filteredData = {
+          val inputDF = df
+          inputDF.filter(eventRule.filterExp)
+        }
+
+        // handle select
+        val selectedData = filteredData.selectExpr(eventRule.selectExp: _*)
+
+        eventRule.output(selectedData)
+
+      }
+    }
+  }
+
   final def process(ssc: StreamingContext) = {
     val sqlContext = new SQLContext(ssc.sparkContext)
-
     val inputStream = readSource(ssc)
 
     inputStream.foreachRDD { rdd =>
@@ -84,7 +113,18 @@ abstract class EventSource() extends Serializable {
               val cachemap_new = minimap.map(x => {
                 val key = x._1
                 val value = x._2
-                val rule_caches = cachemap_old.get(key).get.asInstanceOf[Map[String, StreamingCache]]
+
+                val rule_caches = cachemap_old.get(key).get match {
+                  case cache: mutable.Map[String, StreamingCache] => cache
+                  case None => {
+                    val cachemap = mutable.Map[String, StreamingCache]()
+                    labelRuleArray.foreach(labelRule => {
+                      cachemap += (labelRule.conf.get("id") -> null)
+                    })
+                    cachemap
+                  }
+                }
+
                 labelRuleArray.foreach(labelRule => {
                   val cache = rule_caches.get(labelRule.conf.get("id")).get
                   labelRule.attachLabel(value, cache)
@@ -102,35 +142,7 @@ abstract class EventSource() extends Serializable {
           }
         })
 
-        println(labeledRDD.count())
-
-        /* val df = sqlContext.createDataFrame(labeledRDD, Class.forName(beanclass))
-
-         // cache data
-         df.persist
-         df.count()*/
-        /*val eventRuleIter = eventRules.iterator
-        while (eventRuleIter.hasNext) {
-          val eventRule = eventRuleIter.next
-
-          // handle filter first
-          val filteredData = {
-            var inputDF = df
-            for (filter: String <- eventRule.filterExpList) {
-              inputDF = inputDF.filter(filter)
-            }
-            inputDF
-          }
-
-          // handle select
-          val selectedData = filteredData.selectExpr(eventRule.getSelectExprs: _*)
-
-          selectedData.map(row => {
-            // TODO
-            // row => Event
-            // sendEvent
-          }).count()
-        }*/
+        makeEvents(sqlContext, labeledRDD)
       }
     }
   }

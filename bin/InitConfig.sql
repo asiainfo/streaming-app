@@ -35,7 +35,8 @@ INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.outputThresh
 INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.timeout","30 * 60 * 1000",3);
 
 -- init EventRules
-INSERT INTO `EventRules` (`esourceid`,`classname`) VALUES (1,"");
+INSERT INTO `EventRules` (`esourceid`,`classname`) VALUES (3,"com.asiainfo.ocdc.streaming.MCEventRule");
 
 -- init EventRulesProp
-INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("","",1);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("selectExp","eventID,imei,imsi,time",2);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("filterExp","1=1",2);

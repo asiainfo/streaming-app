@@ -124,7 +124,7 @@ object TextCacheManager extends CacheManager {
   override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
     val rmap = Map[String, Any]()
     keys.foreach( key => {
-      rmap += (key-> MultiCache.getOrElse(key,"null"))
+      rmap += (key-> MultiCache.getOrElse(key,None))
     })
     rmap
   }

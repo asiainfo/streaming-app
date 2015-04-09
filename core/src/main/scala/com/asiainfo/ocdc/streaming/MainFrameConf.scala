@@ -93,8 +93,9 @@ object MainFrameConf extends BaseConf {
         }
       } else {
         val lrconf = new LabelRuleConf()
-        lrconf.set(name, pvalue)
+        lrconf.set("id",lrid)
         lrconf.set("classname", classname)
+        lrconf.set(name, pvalue)
         midmap += (esid -> Map(lrid -> lrconf))
       }
     })
