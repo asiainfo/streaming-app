@@ -1,13 +1,17 @@
 package com.asiainfo.ocdc.streaming
 
 object CacheFactory {
-  def getManager(manager: String = MainFrameConf.get("DefaultCacheManager")):CacheManager = {
-    if(manager.equals("TextCacheManager")){
-      TextCacheManager
-    }else if(manager.equals("CodisCacheManager")){
-      CodisCacheManager
-    }else{
-      throw new RuntimeException("CacheFetchManager is not found!")
+
+  val getManager:CacheManager = {
+    val manager = MainFrameConf.get("DefaultCacheManager")
+    manager match {
+      case "TextCacheManager" => new TextCacheManager
+      case "CodisCacheManager" => new CodisCacheManager
+      case "JodisCacheManager" => new JodisCacheManager
+      case _ => throw new Exception("CacheFetchManager is not found!")
     }
   }
+
 }
+
+

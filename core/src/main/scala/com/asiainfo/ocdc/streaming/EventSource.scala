@@ -109,7 +109,7 @@ abstract class EventSource() extends Serializable {
                 result = true
               }
 
-              val cachemap_old = CacheFactory.getManager().getMultiCacheByKeys(minimap.keys.toList)
+              val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
               val cachemap_new = minimap.map(x => {
                 val key = x._1
                 val value = x._2
@@ -134,7 +134,7 @@ abstract class EventSource() extends Serializable {
               })
 
               //update caches to CacheManager
-              CacheFactory.getManager().setMultiCache(cachemap_new)
+              CacheFactory.getManager.setMultiCache(cachemap_new)
 
               arrayBuffer = currentArrayBuffer.toArray
               result

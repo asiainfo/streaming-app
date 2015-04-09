@@ -9,7 +9,7 @@ import scala.collection.immutable
  */
 class LabelRuleConfSuite extends FunSuite with BeforeAndAfter {
 
-	test("1 测试 LabelRule 配置的获取") {
+	test("1 测试 LabelRuleConf 配置设置与获取") {
 
 		val map = immutable.Map[String, String]()
 		val lrConf = new LabelRuleConf(map)
