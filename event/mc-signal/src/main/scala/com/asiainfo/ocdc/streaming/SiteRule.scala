@@ -25,7 +25,7 @@ class SiteRule extends MCLabelRule {
    * @return 所属区域列表
    */
   def largeCellAnalysis(lac: Int, ci: Int): List[String] = {
-    val cachedArea = CacheFactory.getManager().getCommonCacheValue("lacci2area", lac.toString+":"+ci.toString)
+    val cachedArea = CacheFactory.getManager.getCommonCacheValue("lacci2area", lac.toString+":"+ci.toString)
     if(cachedArea.isEmpty) {
       List[String]()
     } else {
