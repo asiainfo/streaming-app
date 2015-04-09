@@ -10,5 +10,5 @@ case class MCSourceObject(
                            ci: Int,
                            imei: Long,
                            imsi: Long) extends SourceObject {
-  override def generateId = imsi
+  override def generateId = imsi.toString
 }

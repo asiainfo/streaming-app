@@ -6,7 +6,7 @@ import scala.collection.JavaConverters._
 /**
  * Created by tianyi on 3/30/15.
  */
-abstract class BaseConf(val conf: Map[String, String] = null) {
+abstract class BaseConf(val conf: Map[String, String] = null) extends Serializable {
 
   private val settings = new ConcurrentHashMap[String, String]()
   if(conf != null) settings.putAll(conf.asJava)

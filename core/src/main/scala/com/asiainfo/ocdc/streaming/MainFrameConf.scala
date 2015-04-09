@@ -14,9 +14,9 @@ object MainFrameConf extends BaseConf {
   var sourceLabelRules = Map[String, Seq[LabelRuleConf]]()
   var sourceEventRules = Map[String, Seq[EventRuleConf]]()
 
-  def getEventRulesBySource(value: String) = sourceEventRules.get(value).get
+  def getEventRulesBySource(value: String) = sourceEventRules.getOrElse(value, Seq())
 
-  def getLabelRulesBySource(value: String) = sourceLabelRules.get(value).get
+  def getLabelRulesBySource(value: String) = sourceLabelRules.getOrElse(value, Seq())
 
   def getInternal: Long = getLong("internal", 1)
 

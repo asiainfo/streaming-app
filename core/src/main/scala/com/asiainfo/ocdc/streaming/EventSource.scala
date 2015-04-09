@@ -6,8 +6,8 @@ import org.apache.spark.streaming.dstream.DStream
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-abstract class EventSource() {
-  val name: String = ""
+abstract class EventSource() extends Serializable {
+  var id: String = null
   var conf: EventSourceConf = null
 
   private val labelRules = new ArrayBuffer[LabelRule]
@@ -25,6 +25,7 @@ abstract class EventSource() {
 
   def init(conf: EventSourceConf): Unit = {
     this.conf = conf
+    id = this.conf.get("id")
   }
 
   def readSource(ssc: StreamingContext): DStream[String] = {
@@ -39,88 +40,97 @@ abstract class EventSource() {
     val inputStream = readSource(ssc)
 
     inputStream.foreachRDD { rdd =>
-      val sourceRDD = rdd.map(transform).collect {
-        case Some(source: SourceObject) => source
-      }
 
-      val labelRuleArray = labelRules.toArray
+      if (rdd.partitions.length > 0) {
 
-      val labeledRDD = sourceRDD.mapPartitions(iter => {
-        new Iterator[SourceObject] {
-          private[this] var currentRow: SourceObject = _
-          private[this] var currentPos: Int = -1
-          private[this] var arrayBuffer: Array[SourceObject] = _
+        val l = rdd.map(transform).partitions.length
 
-          override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || fetchNext()
+        val sourceRDD = rdd.map(transform).collect {
+          case Some(source: SourceObject) => source
+        }
 
-          override def next(): SourceObject = {
-            currentPos += 1
-            arrayBuffer(currentPos - 1)
-          }
+        val labelRuleArray = labelRules.toArray
 
-          private final def fetchNext(): Boolean = {
-            val currentArrayBuffer = new ArrayBuffer[SourceObject]
-            currentPos = -1
-            var totalFetch = 0
-            var result = false
+        val labeledRDD = sourceRDD.mapPartitions(iter => {
+          new Iterator[SourceObject] {
+            private[this] var currentRow: SourceObject = _
+            private[this] var currentPos: Int = -1
+            private[this] var arrayBuffer: Array[SourceObject] = _
 
-            val minimap = mutable.Map[String, SourceObject]()
+            override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || fetchNext()
 
-            while (iter.hasNext && totalFetch < 10) {
-              val currentLine = iter.next()
-              minimap += (currentLine.generateId -> currentLine)
-              totalFetch += 1
-              currentPos = 0
-              result = true
+            override def next(): SourceObject = {
+              currentPos += 1
+              arrayBuffer(currentPos - 1)
             }
 
-            val cachemap_old = CacheFactory.getManager().getMultiCacheByKeys(minimap.keys.toList)
-            val cachemap_new = minimap.map(x => {
-              val key = x._1
-              val value = x._2
-              val rule_caches = cachemap_old.get(key).get.asInstanceOf[Map[String,StreamingCache]]
-              labelRuleArray.foreach(labelRule => {
-                val cache = rule_caches.get(labelRule.conf.get("id")).get
-                labelRule.attachLabel(value, cache)
+            private final def fetchNext(): Boolean = {
+              val currentArrayBuffer = new ArrayBuffer[SourceObject]
+              currentPos = -1
+              var totalFetch = 0
+              var result = false
+
+              val minimap = mutable.Map[String, SourceObject]()
+
+              while (iter.hasNext && totalFetch < 10) {
+                val currentLine = iter.next()
+                minimap += (currentLine.generateId -> currentLine)
+                totalFetch += 1
+                currentPos = 0
+                result = true
+              }
+
+              val cachemap_old = CacheFactory.getManager().getMultiCacheByKeys(minimap.keys.toList)
+              val cachemap_new = minimap.map(x => {
+                val key = x._1
+                val value = x._2
+                val rule_caches = cachemap_old.get(key).get.asInstanceOf[Map[String, StreamingCache]]
+                labelRuleArray.foreach(labelRule => {
+                  val cache = rule_caches.get(labelRule.conf.get("id")).get
+                  labelRule.attachLabel(value, cache)
+                })
+                currentArrayBuffer.append(value)
+                (key, rule_caches.asInstanceOf[Any])
               })
-              currentArrayBuffer.append(value)
-              (key, rule_caches.asInstanceOf[Any])
-            })
 
-            //update caches to CacheManager
-            CacheFactory.getManager().setMultiCache(cachemap_new)
+              //update caches to CacheManager
+              CacheFactory.getManager().setMultiCache(cachemap_new)
 
-            arrayBuffer = currentArrayBuffer.toArray
-            result
+              arrayBuffer = currentArrayBuffer.toArray
+              result
+            }
           }
-        }
-      })
-      val df = sqlContext.createDataFrame(labeledRDD, Class.forName(beanclass))
-
-      // cache data
-      df.persist
-
-      val eventRuleIter = eventRules.iterator
-      while (eventRuleIter.hasNext) {
-        val eventRule = eventRuleIter.next
-
-        // handle filter first
-        val filteredData = {
-          var inputDF = df
-          for (filter: String <- eventRule.filterExpList) {
-            inputDF = inputDF.filter(filter)
-          }
-          inputDF
-        }
-
-        // handle select
-        val selectedData = filteredData.selectExpr(eventRule.getSelectExprs: _*)
-
-        selectedData.map(row => {
-          // TODO
-          // row => Event
-          // sendEvent
         })
+
+        println(labeledRDD.count())
+
+        /* val df = sqlContext.createDataFrame(labeledRDD, Class.forName(beanclass))
+
+         // cache data
+         df.persist
+         df.count()*/
+        /*val eventRuleIter = eventRules.iterator
+        while (eventRuleIter.hasNext) {
+          val eventRule = eventRuleIter.next
+
+          // handle filter first
+          val filteredData = {
+            var inputDF = df
+            for (filter: String <- eventRule.filterExpList) {
+              inputDF = inputDF.filter(filter)
+            }
+            inputDF
+          }
+
+          // handle select
+          val selectedData = filteredData.selectExpr(eventRule.getSelectExprs: _*)
+
+          selectedData.map(row => {
+            // TODO
+            // row => Event
+            // sendEvent
+          }).count()
+        }*/
       }
     }
   }

@@ -10,9 +10,11 @@ object MainFrame {
   def main(args: Array[String]): Unit = {
     // read config first
     MainFrameConf.init()
+    CacheFactory.getManager()
 
     // init spark streaming context
     val sparkConf = new SparkConf().setAppName("OCDC-Streaming")
+    sparkConf.setMaster("local[4]")
     val interval = MainFrameConf.getInternal
     val ssc = new StreamingContext(sparkConf, Seconds(interval))
 
@@ -22,14 +24,14 @@ object MainFrame {
       val eventSource :EventSource =
         Class.forName(conf.getClassName()).newInstance().asInstanceOf[EventSource]
       eventSource.init(conf)
-      MainFrameConf.getLabelRulesBySource(eventSource.name).map(labelRuleConf => {
+      MainFrameConf.getLabelRulesBySource(eventSource.id).map(labelRuleConf => {
         val labelRule :LabelRule =
           Class.forName(labelRuleConf.getClassName()).newInstance().asInstanceOf[LabelRule]
         labelRule.init(labelRuleConf)
         eventSource.addLabelRule(labelRule)
       })
 
-      MainFrameConf.getEventRulesBySource(eventSource.name).map(eventRuleConf => {
+      MainFrameConf.getEventRulesBySource(eventSource.id).map(eventRuleConf => {
         val eventRule :EventRule =
           Class.forName(eventRuleConf.getClassName()).newInstance().asInstanceOf[EventRule]
         eventRule.init(eventRuleConf)
@@ -38,6 +40,10 @@ object MainFrame {
 
       eventSource.process(ssc)
     })
+
+    ssc.start()
+    ssc.awaitTermination()
+    exit()
 
   }
 }
