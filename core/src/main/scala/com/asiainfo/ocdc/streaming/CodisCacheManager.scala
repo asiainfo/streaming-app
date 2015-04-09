@@ -7,6 +7,9 @@ import redis.clients.jedis.{Jedis, JedisPool, JedisPoolConfig}
 import scala.collection.convert.wrapAsJava.mapAsJavaMap
 import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
+import java.util
+import com.asiainfo.ocdc.streaming.tool.KryoSerializerStreamAppTool
+import java.nio.ByteBuffer
 
 /**
  * Created by tianyi on 3/30/15.
@@ -186,10 +189,38 @@ object CodisCacheManager extends CacheManager {
   }
 
   override def setMultiCache(keysvalues: Map[String, Any]) {
-    //TODO
+    try{
+      jedisPool = getPool()
+      jedis = jedisPool.getResource
+      val seqlist = new util.ArrayList[Array[Byte]]()
+      val it = keysvalues.keySet.iterator
+      while (it.hasNext){
+        val elem = it.next()
+        seqlist.add(elem.getBytes)
+        seqlist.add(KryoSerializerStreamAppTool.serialize(keysvalues(elem)).array())
+      }
+      jedis.mset(seqlist.toIndexedSeq: _*)
+    }catch{
+      case e:Exception => e.printStackTrace()
+        jedisPool.returnBrokenResource(jedis)
+    }finally {
+      returnResource(jedisPool,jedis)
+    }
   }
 
   override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
-    null
+    try{
+      jedisPool = getPool()
+      jedis = jedisPool.getResource
+      val bytekeys = keys.map(x=> x.getBytes).toSeq
+      val anyvalues = jedis.mget(bytekeys: _*).toList.map{x=> KryoSerializerStreamAppTool.deserialize[Any](ByteBuffer.wrap(x))}
+      keys.zip(anyvalues).toMap
+    }catch{
+      case e:Exception => e.printStackTrace()
+        jedisPool.returnBrokenResource(jedis)
+    }finally {
+      returnResource(jedisPool,jedis)
+    }
+    //TODO need to test
   }
 }

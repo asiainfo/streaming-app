@@ -12,8 +12,7 @@ object TextCacheManager extends CacheManager {
   private var HashCacheMap = Map[String, Map[String, String]]()
   private var HashCacheString = Map[String,String]()
   private var HashCacheList = Map[String,List[String]]()
-  private var ByteCacheString = Map[String,String]()
-  private var MultiCacheString = Map[String,String]()
+  private var MultiCache = Map[String,Any]()
 
   private val delim = ":"
 
@@ -117,11 +116,15 @@ object TextCacheManager extends CacheManager {
   }
 
   override def setMultiCache(keysvalues: Map[String, Any]) {
-    //TODO
+    MultiCache += keysvalues
   }
 
   override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
-    null
+    val rmap = Map[String, Any]()
+    keys.foreach( key => {
+      rmap += (key-> MultiCache.getOrElse(key,"null"))
+    })
+    rmap
   }
 
 }
