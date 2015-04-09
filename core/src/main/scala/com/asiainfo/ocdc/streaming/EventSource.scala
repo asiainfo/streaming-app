@@ -94,7 +94,7 @@ abstract class EventSource() extends Serializable {
               })
 
               //update caches to CacheManager
-              CacheFactory.getManager().setMultiCache(cachemap_new)
+              CacheFactory.getManager.setMultiCache(cachemap_new)
 
               arrayBuffer = currentArrayBuffer.toArray
               result
