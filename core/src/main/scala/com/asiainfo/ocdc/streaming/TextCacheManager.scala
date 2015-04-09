@@ -3,7 +3,7 @@ package com.asiainfo.ocdc.streaming
 import scala.io.Source
 import scala.collection.mutable.Map
 
-object TextCacheManager extends CacheManager {
+class TextCacheManager extends CacheManager {
 
   private var CommonCacheMap = Map[String, Map[String, String]]()
   private var CommonCacheValue = Map[String,Map[String, String]]()

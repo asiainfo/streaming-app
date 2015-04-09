@@ -10,7 +10,7 @@ object MainFrame {
   def main(args: Array[String]): Unit = {
     // read config first
     MainFrameConf.init()
-    CacheFactory.getManager()
+    CacheFactory.getManager
 
     // init spark streaming context
     val sparkConf = new SparkConf().setAppName("OCDC-Streaming")
