@@ -10,9 +10,6 @@ import scala.collection.mutable.Map
 import com.asiainfo.ocdc.streaming.tool.KryoSerializerStreamAppTool
 import java.nio.ByteBuffer
 import java.util.ArrayList
-import scala.collection.immutable.Seq
-import scala.collection.mutable
-
 
 /**
  * Created by tianyi on 3/30/15.
@@ -21,21 +18,17 @@ import scala.collection.mutable
 
 object CodisCacheManager extends CacheManager {
 
-  private var jedisPool: JedisPool = null
-  private var jedis: Jedis = null
-
-  def getPool():JedisPool = {
-    if (jedisPool == null){
-      val hp = getProxy()
-      val JedisConfig = new JedisPoolConfig()
-      JedisConfig.setMaxIdle(MainFrameConf.getInt("JedisMaxIdle"))
-      JedisConfig.setMaxActive(MainFrameConf.getInt("JedisMaxActive"))
-      JedisConfig.setMinEvictableIdleTimeMillis(MainFrameConf.getInt("JedisMEM"))
-      JedisConfig.setTestOnBorrow(true)
-      jedisPool = new JedisPool(JedisConfig,hp._1,hp._2.toInt)
-    }
-    jedisPool
+  private val jedisPool: JedisPool = {
+    val hp = getProxy()
+    val JedisConfig = new JedisPoolConfig()
+    JedisConfig.setMaxIdle(MainFrameConf.getInt("JedisMaxIdle"))
+    JedisConfig.setMaxActive(MainFrameConf.getInt("JedisMaxActive"))
+    JedisConfig.setMinEvictableIdleTimeMillis(MainFrameConf.getInt("JedisMEM"))
+    JedisConfig.setTestOnBorrow(true)
+    new JedisPool(JedisConfig,hp._1,hp._2.toInt)
   }
+
+  private var jedis: Jedis = null
 
   def returnResource(pool:JedisPool, jedis:Jedis){
     if(jedis != null){
@@ -61,7 +54,6 @@ object CodisCacheManager extends CacheManager {
 
   override def getHashCacheList(key: String): List[String] = {
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       jedis.lrange(key,0,-1).toList
     }catch{
@@ -74,7 +66,6 @@ object CodisCacheManager extends CacheManager {
 
   override def getHashCacheMap(key: String): Map[String, String] = {
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       jedis.hgetAll(key)
     }catch{
@@ -87,7 +78,6 @@ object CodisCacheManager extends CacheManager {
 
   override def setHashCacheString(key: String, value: String): Unit = {
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       jedis.set(key,value)
     }catch{
@@ -100,7 +90,6 @@ object CodisCacheManager extends CacheManager {
 
   override def getCommonCacheValue(cacheName: String, key: String): String = {
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       jedis.hget(cacheName,key)
     }catch{
@@ -113,7 +102,6 @@ object CodisCacheManager extends CacheManager {
 
   override def getHashCacheString(key: String): String = {
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       jedis.get(key)
     }catch{
@@ -126,7 +114,6 @@ object CodisCacheManager extends CacheManager {
 
   override def getCommonCacheMap(key: String): Map[String, String] = {
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       jedis.hgetAll(key)
     }catch{
@@ -139,7 +126,6 @@ object CodisCacheManager extends CacheManager {
 
   override def getCommonCacheList(key: String): List[String] = {
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       jedis.lrange(key,0,-1).toList
     }catch{
@@ -152,7 +138,6 @@ object CodisCacheManager extends CacheManager {
 
   override def setHashCacheMap(key: String, value: Map[String, String]): Unit = {
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       jedis.hmset(key,mapAsJavaMap(value))
     }catch{
@@ -170,7 +155,6 @@ object CodisCacheManager extends CacheManager {
        pl.sync()
     */
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       value.map{ x=>
         jedis.rpush(key,x)
@@ -194,7 +178,6 @@ object CodisCacheManager extends CacheManager {
   override def setMultiCache(keysvalues: Map[String, Any]) {
 
     try{
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       val seqlist = new ArrayList[Array[Byte]]()
       val it = keysvalues.keySet.iterator
@@ -216,7 +199,6 @@ object CodisCacheManager extends CacheManager {
 
     try{
       val multimap = Map[String,Any]()
-      jedisPool = getPool()
       jedis = jedisPool.getResource
       val bytekeys = keys.map(x=> x.getBytes).toSeq
       val anyvalues = jedis.mget(bytekeys: _*).map(x=> {
