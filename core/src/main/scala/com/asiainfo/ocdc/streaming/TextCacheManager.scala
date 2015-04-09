@@ -116,8 +116,8 @@ object TextCacheManager extends CacheManager {
   }
 
   override def setMultiCache(keysvalues: Map[String, Any]) {
-    keysvalues.foreach((key:String,value:Any) => {
-      MultiCache += (key -> value)
+    keysvalues.foreach(x => {
+      MultiCache += (x._1 -> x._2)
     })
   }
 
