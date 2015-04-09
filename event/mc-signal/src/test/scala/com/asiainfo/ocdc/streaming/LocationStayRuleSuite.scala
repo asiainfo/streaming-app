@@ -1,4 +1,3 @@
-/*
 package com.asiainfo.ocdc.streaming
 
 import java.text.SimpleDateFormat
@@ -9,30 +8,34 @@ import scala.collection.mutable
 /**
  * Created by yfq on 15/4/2.
  */
+
 class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 
 	val sdf = new SimpleDateFormat("yyyyMMdd HH:mm:ss.SSS")
 
 	MainFrameConf.set("DefaultCacheManager", "TextCacheManager")
-	TextCacheManager.setCommonCacheValue("lacci2area", "111:1", "area1")
-	TextCacheManager.setCommonCacheValue("lacci2area", "222:1", "area2")
-	TextCacheManager.setCommonCacheValue("lacci2area", "333:1", "area3")
+  textCacheMag.setCommonCacheValue("lacci2area", "111:1", "area1")
+  textCacheMag.setCommonCacheValue("lacci2area", "222:1", "area2")
+  textCacheMag.setCommonCacheValue("lacci2area", "333:1", "area3")
 
-	TextCacheManager.setCommonCacheValue("lacci2area", "112:1", "area1,area2")
-	TextCacheManager.setCommonCacheValue("lacci2area", "122:1", "area1,area2")
-	TextCacheManager.setCommonCacheValue("lacci2area", "121:1", "area1,area2")
+  textCacheMag.setCommonCacheValue("lacci2area", "112:1", "area1,area2")
+  textCacheMag.setCommonCacheValue("lacci2area", "122:1", "area1,area2")
+  textCacheMag.setCommonCacheValue("lacci2area", "121:1", "area1,area2")
 
-	TextCacheManager.setCommonCacheValue("lacci2area", "223:1", "area2,area3")
-	TextCacheManager.setCommonCacheValue("lacci2area", "123:1", "area1,area2,area3")
+  textCacheMag.setCommonCacheValue("lacci2area", "223:1", "area2,area3")
+  textCacheMag.setCommonCacheValue("lacci2area", "123:1", "area1,area2,area3")
 
 	var areaLabelMap = mutable.Map[String, String]()
 	var cache: StreamingCache = _
 	var rule: LocationStayRule = _
 	var lrConf: LabelRuleConf = _
 
+  var textCacheMag: TextCacheManager = _
+
 	before {
 		cache = new LabelProps
 		rule = new LocationStayRule()
+    textCacheMag = new TextCacheManager
 		lrConf = new LabelRuleConf()
 		lrConf.set("classname", "com.asiainfo.ocdc.streaming.LocationStayRule")
 		lrConf.set("stay.limits", (20 * 60 * 1000).toString)
@@ -782,4 +785,4 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 
 	}
 }
-*/
+

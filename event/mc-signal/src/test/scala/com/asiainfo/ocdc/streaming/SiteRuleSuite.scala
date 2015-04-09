@@ -1,9 +1,10 @@
-/*
 package com.asiainfo.ocdc.streaming
 
 import java.text.SimpleDateFormat
+
 import org.scalatest.{BeforeAndAfter, FunSuite}
-import scala.collection.{immutable, mutable}
+
+import scala.collection.immutable
 
 /**
  * Created by yfq on 15/4/2.
@@ -17,9 +18,12 @@ class SiteRuleSuite extends FunSuite with BeforeAndAfter {
 	var rule:SiteRule = _
 	var lrConf:LabelRuleConf = _
 
+  var textCacheMag: TextCacheManager = _
+
 	before{
 		cache = new LabelProps
 		rule = new SiteRule
+    textCacheMag = new TextCacheManager
 		lrConf = new LabelRuleConf(map)
 		lrConf.setAll(map)
 		rule.init(lrConf)
@@ -28,9 +32,9 @@ class SiteRuleSuite extends FunSuite with BeforeAndAfter {
 	test("1 test SiteRule"){
 
 		MainFrameConf.set("DefaultCacheManager", "TextCacheManager")
-		TextCacheManager.setCommonCacheValue("lacci2area", "111:1", "area1")
-		TextCacheManager.setCommonCacheValue("lacci2area", "112:1", "area1,area2")
-		TextCacheManager.setCommonCacheValue("lacci2area", "123:1", "area1,area2,area3")
+    textCacheMag.setCommonCacheValue("lacci2area", "111:1", "area1")
+    textCacheMag.setCommonCacheValue("lacci2area", "112:1", "area1,area2")
+    textCacheMag.setCommonCacheValue("lacci2area", "123:1", "area1,area2,area3")
 
 		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L ,13900000001L)
 		val mc2=MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 112, 1, 13900000002L ,13910000002L)
@@ -54,4 +58,4 @@ class SiteRuleSuite extends FunSuite with BeforeAndAfter {
 
 	}
 }
-*/
+
