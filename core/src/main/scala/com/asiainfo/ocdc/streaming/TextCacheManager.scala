@@ -22,6 +22,7 @@ class TextCacheManager extends CacheManager {
     CommonCacheListinit("core/src/main/resources/CacheListFile")
   }
 
+  init()
 
   def CommonCacheListinit(filename: String) {
     for (line <- Source.fromFile(filename).getLines){
