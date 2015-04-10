@@ -28,6 +28,7 @@ trait CacheManager {
   def setMultiCache(keysvalues: Map[String, Any])
   def getMultiCacheByKeys(keys: List[String]): Map[String, Any]
 
+	def setCommonCacheValue(cacheName: String, key: String, value: String)
 }
 
 
@@ -106,5 +107,7 @@ abstract class RedisCacheManager extends CacheManager {
     }
   }
 
-
+	override def setCommonCacheValue(cacheName: String, key: String, value: String) = {
+		exec { jedis => jedis.hset(cacheName,key,value)}
+	}
 }

@@ -11,51 +11,108 @@ import scala.collection.immutable
  */
 class SiteRuleSuite extends FunSuite with BeforeAndAfter {
 
-	val sdf=new SimpleDateFormat("yyyyMMdd HH:mm:ss.SSS")
-	val map=immutable.Map[String,String]()
+	val sdf = new SimpleDateFormat("yyyyMMdd HH:mm:ss.SSS")
 
-	var cache:StreamingCache = _
-	var rule:SiteRule = _
-	var lrConf:LabelRuleConf = _
+	var cacher :CacheManager = _
+	var cache: StreamingCache = _
+	var rule: SiteRule = _
+	var lrConf: LabelRuleConf = _
 
-  var textCacheMag: TextCacheManager = _
-
-	before{
-		cache = new LabelProps
+	before {
+		cache = new StreamingCache
 		rule = new SiteRule
-    textCacheMag = new TextCacheManager
-		lrConf = new LabelRuleConf(map)
-		lrConf.setAll(map)
+		lrConf = new LabelRuleConf()
 		rule.init(lrConf)
 	}
 
-	test("1 test SiteRule"){
+	after{
+//		cacher.asInstanceOf[CacheManager]
+		cacher = null
+	}
+
+/*
+  //TODO: CacheFactory.getManager 如何做到并存
+	test("测试 CacherManager") {
+		MainFrameConf.set("DefaultCacheManager", "TextCacheManager")
+		cacher = CacheFactory.getManager.asInstanceOf[TextCacheManager]
+//		val cacher1 = CacheFactory.getManager
+		assert(cacher.getClass.getName=="com.asiainfo.ocdc.streaming.TextCacheManager")
+
+		MainFrameConf.set("DefaultCacheManager", "CodisCacheManager")
+		cacher = CacheFactory.getManager.asInstanceOf[CodisCacheManager]
+//		val cacher2 = CacheFactory.getManager.asInstanceOf[CodisCacheManager]
+		assert(cacher.getClass.getName=="com.asiainfo.ocdc.streaming.CodisCacheManager")
+	}
+*/
+
+/*
+	test("1 test SiteRule with textCacheManager") {
 
 		MainFrameConf.set("DefaultCacheManager", "TextCacheManager")
-    textCacheMag.setCommonCacheValue("lacci2area", "111:1", "area1")
-    textCacheMag.setCommonCacheValue("lacci2area", "112:1", "area1,area2")
-    textCacheMag.setCommonCacheValue("lacci2area", "123:1", "area1,area2,area3")
+//			val cacher = new TextCacheManager		//error
+		//	  val cacher = CacheFactory.getManager	//error
+		cacher = CacheFactory.getManager.asInstanceOf[TextCacheManager]
 
-		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L ,13900000001L)
-		val mc2=MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 112, 1, 13900000002L ,13910000002L)
-		val mc3=MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 123, 1, 13900000003L ,13910000003L)
+		cacher.setCommonCacheValue("lacci2area", "111:1", "area1")
+		cacher.setCommonCacheValue("lacci2area", "112:1", "area1,area2")
+		cacher.setCommonCacheValue("lacci2area", "123:1", "area1,area2,area3")
 
+		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L, 13900000001L)
+		val mc2 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 112, 1, 13900000002L, 13910000002L)
+		val mc3 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 123, 1, 13900000003L, 13910000003L)
 
 		rule.attachMCLabel(mc1, cache)
-		assert(mc1.getLabel(Constant.LABEL_ONSITE).size==1)
-		assert(mc1.getLabel(Constant.LABEL_ONSITE).get("area1").get=="true")
+		assert(mc1.getLabel(Constant.LABEL_ONSITE).size == 1)
+		assert(mc1.getLabel(Constant.LABEL_ONSITE).get("area1").get == "true")
 
 		rule.attachMCLabel(mc2, cache)
-		assert(mc2.getLabel(Constant.LABEL_ONSITE).size==2)
-		assert(mc2.getLabel(Constant.LABEL_ONSITE).get("area1").get=="true")
-		assert(mc2.getLabel(Constant.LABEL_ONSITE).get("area2").get=="true")
+		assert(mc2.getLabel(Constant.LABEL_ONSITE).size == 2)
+		assert(mc2.getLabel(Constant.LABEL_ONSITE).get("area1").get == "true")
+		assert(mc2.getLabel(Constant.LABEL_ONSITE).get("area2").get == "true")
 
 		rule.attachMCLabel(mc3, cache)
-		assert(mc3.getLabel(Constant.LABEL_ONSITE).size==3)
-		assert(mc3.getLabel(Constant.LABEL_ONSITE).get("area1").get=="true")
-		assert(mc3.getLabel(Constant.LABEL_ONSITE).get("area2").get=="true")
-		assert(mc3.getLabel(Constant.LABEL_ONSITE).get("area3").get=="true")
+		assert(mc3.getLabel(Constant.LABEL_ONSITE).size == 3)
+		assert(mc3.getLabel(Constant.LABEL_ONSITE).get("area1").get == "true")
+		assert(mc3.getLabel(Constant.LABEL_ONSITE).get("area2").get == "true")
+		assert(mc3.getLabel(Constant.LABEL_ONSITE).get("area3").get == "true")
 
+	}
+*/
+
+	test("2 test SiteRule with CodisCacheManager") {
+
+		MainFrameConf.set("DefaultCacheManager", "CodisCacheManager")
+		MainFrameConf.set("CodisProxy","redis1:6379")
+		MainFrameConf.set("JedisMEM","10000")
+		MainFrameConf.set("JedisMaxActive","100")
+		MainFrameConf.set("JedisMaxActive","15")
+
+		//val cacher = new CodisCacheManager		//error
+		//val cacher = CacheFactory.getManager	//error
+		cacher = CacheFactory.getManager.asInstanceOf[CodisCacheManager]
+
+		cacher.setCommonCacheValue("lacci2area", "111:1", "area1")
+		cacher.setCommonCacheValue("lacci2area", "112:1", "area1,area2")
+		cacher.setCommonCacheValue("lacci2area", "123:1", "area1,area2,area3")
+
+		val mc1 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 111, 1, 13900000001L, 13900000001L)
+		val mc2 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 112, 1, 13900000002L, 13910000002L)
+		val mc3 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, 123, 1, 13900000003L, 13910000003L)
+
+		rule.attachMCLabel(mc1, cache)
+		assert(mc1.getLabel(Constant.LABEL_ONSITE).size == 1)
+		assert(mc1.getLabel(Constant.LABEL_ONSITE).get("area1").get == "true")
+
+		rule.attachMCLabel(mc2, cache)
+		assert(mc2.getLabel(Constant.LABEL_ONSITE).size == 2)
+		assert(mc2.getLabel(Constant.LABEL_ONSITE).get("area1").get == "true")
+		assert(mc2.getLabel(Constant.LABEL_ONSITE).get("area2").get == "true")
+
+		rule.attachMCLabel(mc3, cache)
+		assert(mc3.getLabel(Constant.LABEL_ONSITE).size == 3)
+		assert(mc3.getLabel(Constant.LABEL_ONSITE).get("area1").get == "true")
+		assert(mc3.getLabel(Constant.LABEL_ONSITE).get("area2").get == "true")
+		assert(mc3.getLabel(Constant.LABEL_ONSITE).get("area3").get == "true")
 	}
 }
 

@@ -11,9 +11,7 @@ class LabelRuleConfSuite extends FunSuite with BeforeAndAfter {
 
 	test("1 测试 LabelRuleConf 配置设置与获取") {
 
-		val map = immutable.Map[String, String]()
-		val lrConf = new LabelRuleConf(map)
-		lrConf.setAll(map)
+		val lrConf = new LabelRuleConf()
 		lrConf.set("classname","com.asiainfo.ocdc.streaming.LocationStayRule")
 		lrConf.set("stay.limits", (20 * 60 * 1000).toString)
 		lrConf.set("stay.matchMax", "true")
