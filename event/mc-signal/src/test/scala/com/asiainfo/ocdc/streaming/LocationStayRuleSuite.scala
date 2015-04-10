@@ -13,11 +13,10 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 
 	val sdf = new SimpleDateFormat("yyyyMMdd HH:mm:ss.SSS")
 
-	MainFrameConf.set("DefaultCacheManager", "TextCacheManager")
 /*
 	//test with TextCacherManager
-	//val cacher = new TextCacheManager		//ok
-	val cacher = CacheFactory.getManager.asInstanceOf[TextCacheManager]
+	MainFrameConf.set("DefaultCacheManager", "TextCacheManager")
+	val cacher = CacheFactory.getManager
 */
 
 	//test with CodisCacherManager
@@ -26,7 +25,7 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
 	MainFrameConf.set("JedisMEM","10000")
 	MainFrameConf.set("JedisMaxActive","100")
 	MainFrameConf.set("JedisMaxActive","15")
-  val cacher = CacheFactory.getManager.asInstanceOf[CodisCacheManager]
+  val cacher = CacheFactory.getManager
 
   cacher.setCommonCacheValue("lacci2area", "111:1", "area1")
   cacher.setCommonCacheValue("lacci2area", "222:1", "area2")

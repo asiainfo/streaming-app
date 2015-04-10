@@ -26,7 +26,6 @@ class SiteRuleSuite extends FunSuite with BeforeAndAfter {
 	}
 
 	after{
-//		cacher.asInstanceOf[CacheManager]
 		cacher = null
 	}
 
@@ -35,12 +34,10 @@ class SiteRuleSuite extends FunSuite with BeforeAndAfter {
 	test("测试 CacherManager") {
 		MainFrameConf.set("DefaultCacheManager", "TextCacheManager")
 		cacher = CacheFactory.getManager.asInstanceOf[TextCacheManager]
-//		val cacher1 = CacheFactory.getManager
 		assert(cacher.getClass.getName=="com.asiainfo.ocdc.streaming.TextCacheManager")
 
 		MainFrameConf.set("DefaultCacheManager", "CodisCacheManager")
 		cacher = CacheFactory.getManager.asInstanceOf[CodisCacheManager]
-//		val cacher2 = CacheFactory.getManager.asInstanceOf[CodisCacheManager]
 		assert(cacher.getClass.getName=="com.asiainfo.ocdc.streaming.CodisCacheManager")
 	}
 */
@@ -49,9 +46,7 @@ class SiteRuleSuite extends FunSuite with BeforeAndAfter {
 	test("1 test SiteRule with textCacheManager") {
 
 		MainFrameConf.set("DefaultCacheManager", "TextCacheManager")
-//			val cacher = new TextCacheManager		//error
-		//	  val cacher = CacheFactory.getManager	//error
-		cacher = CacheFactory.getManager.asInstanceOf[TextCacheManager]
+		cacher = CacheFactory.getManager
 
 		cacher.setCommonCacheValue("lacci2area", "111:1", "area1")
 		cacher.setCommonCacheValue("lacci2area", "112:1", "area1,area2")
@@ -87,9 +82,7 @@ class SiteRuleSuite extends FunSuite with BeforeAndAfter {
 		MainFrameConf.set("JedisMaxActive","100")
 		MainFrameConf.set("JedisMaxActive","15")
 
-		//val cacher = new CodisCacheManager		//error
-		//val cacher = CacheFactory.getManager	//error
-		cacher = CacheFactory.getManager.asInstanceOf[CodisCacheManager]
+		cacher = CacheFactory.getManager
 
 		cacher.setCommonCacheValue("lacci2area", "111:1", "area1")
 		cacher.setCommonCacheValue("lacci2area", "112:1", "area1,area2")
