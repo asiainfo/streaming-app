@@ -101,7 +101,7 @@ class TextCacheManager extends CacheManager {
     CommonCacheList += key -> value
   }
 
-  def setCommonCacheValue(cacheName: String, key: String, value: String) = {
+  override def setCommonCacheValue(cacheName: String, key: String, value: String) = {
     val temp = CommonCacheValue.getOrElse(cacheName, Map[String, String]())
     temp.put(key, value)
     CommonCacheValue += cacheName -> temp
