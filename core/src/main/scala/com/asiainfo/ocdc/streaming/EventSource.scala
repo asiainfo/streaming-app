@@ -36,9 +36,9 @@ abstract class EventSource() extends Serializable {
 
   def transform(source: String): Option[SourceObject]
 
-  def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]){
+  def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) {
 
-    if(labeledRDD.partitions.length > 0){
+    if (labeledRDD.partitions.length > 0) {
 
       val df = sqlContext.createDataFrame(labeledRDD, Class.forName(beanclass))
 
@@ -71,9 +71,6 @@ abstract class EventSource() extends Serializable {
     inputStream.foreachRDD { rdd =>
 
       if (rdd.partitions.length > 0) {
-
-        val l = rdd.map(transform).partitions.length
-
         val sourceRDD = rdd.map(transform).collect {
           case Some(source: SourceObject) => source
         }
@@ -86,7 +83,7 @@ abstract class EventSource() extends Serializable {
             private[this] var currentPos: Int = -1
             private[this] var arrayBuffer: Array[SourceObject] = _
 
-            override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || fetchNext()
+            override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || (iter.hasNext && fetchNext())
 
             override def next(): SourceObject = {
               currentPos += 1
@@ -126,7 +123,10 @@ abstract class EventSource() extends Serializable {
                 }
 
                 labelRuleArray.foreach(labelRule => {
-                  val cache = rule_caches.get(labelRule.conf.get("id")).get
+                  val cacheOpt = rule_caches.get(labelRule.conf.get("id"))
+                  var cache: StreamingCache = null
+                  if (cacheOpt != None) cache = cacheOpt.get
+
                   labelRule.attachLabel(value, cache)
                 })
                 currentArrayBuffer.append(value)

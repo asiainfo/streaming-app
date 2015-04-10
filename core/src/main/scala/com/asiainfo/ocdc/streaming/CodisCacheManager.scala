@@ -37,9 +37,6 @@ class CodisCacheManager extends RedisCacheManager {
     try{
       jedis = jedisPool.getResource
       f(jedis)
-    }catch{
-      case e:Exception => e.printStackTrace()
-        jedisPool.returnBrokenResource(jedis).asInstanceOf[U]
     }finally {
       if (jedis != null) jedisPool.returnResource(jedis)
     }
