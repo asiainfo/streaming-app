@@ -11,9 +11,7 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <groupId>com.asiainfo.ocdc</groupId>
     <artifactId>streaming-event-mc</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
