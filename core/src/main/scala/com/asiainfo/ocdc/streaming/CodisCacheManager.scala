@@ -5,13 +5,11 @@ import redis.clients.jedis.{Jedis, JedisPool, JedisPoolConfig}
 
 class CodisCacheManager extends RedisCacheManager {
 
-  private var jedis: Jedis = null
-
   private val jedisPool: JedisPool = {
 
     val JedisConfig = new JedisPoolConfig()
     JedisConfig.setMaxIdle(MainFrameConf.getInt("JedisMaxIdle"))
-    JedisConfig.setMaxActive(MainFrameConf.getInt("JedisMaxActive"))
+    JedisConfig.setMaxTotal(MainFrameConf.getInt("JedisMaxTotal"))
     JedisConfig.setMinEvictableIdleTimeMillis(MainFrameConf.getInt("JedisMEM"))
     JedisConfig.setTestOnBorrow(true)
 
@@ -33,19 +31,5 @@ class CodisCacheManager extends RedisCacheManager {
     new JedisPool(JedisConfig,hp._1,hp._2.toInt)
   }
 
-  override def exec[U](f: Jedis => U): U = {
-    try{
-      jedis = jedisPool.getResource
-      f(jedis)
-    }finally {
-      if (jedis != null) jedisPool.returnResource(jedis)
-    }
-  }
-
-  def returnResource(pool:JedisPool, jedis:Jedis){
-    if(jedis != null){
-      pool.returnResource(jedis)
-    }
-  }
-
+  override def getResource = jedisPool.getResource
 }

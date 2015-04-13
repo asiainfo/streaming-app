@@ -4,7 +4,7 @@
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("CodisProxy","localhost:1000");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("DefaultCacheManager","CodisCacheManager");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxIdle","300");
-INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxActive","1000");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxTotal","1000");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMEM","600000");
 
 -- init EventSources
