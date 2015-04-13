@@ -110,7 +110,8 @@ abstract class RedisCacheManager extends CacheManager {
     val multimap = Map[String,Any]()
     val bytekeys = keys.map(x=> x.getBytes).toSeq
     val anyvalues = getConnection.mget(bytekeys: _*).map(x => {
-      KryoSerializerStreamAppTool.deserialize[Any](ByteBuffer.wrap(x))
+      if(x != null) KryoSerializerStreamAppTool.deserialize[Any](ByteBuffer.wrap(x))
+      else None
     }).toList
     for(i <- 0 to keys.length -1){
       multimap += (keys(i)-> anyvalues(i))
