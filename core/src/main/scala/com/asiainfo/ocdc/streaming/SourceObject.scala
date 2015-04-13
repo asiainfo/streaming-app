@@ -1,27 +1,25 @@
 package com.asiainfo.ocdc.streaming
+
 import scala.collection.mutable.Map
 
 /**
  * Created by tianyi on 3/26/15.
  */
-abstract class SourceObject extends Serializable {
+abstract class SourceObject(val slabels: Map[String, Map[String, String]]) extends Serializable {
 
-  private val labels = new java.util.HashMap[String, Map[String,String]]()
-  final def setLabel(key: String, value: Map[String,String]) = {
-    labels.put(key, value)
+  def setLabel(key: String, value: Map[String, String]) = {
+    slabels += (key -> value)
   }
-//  final def getLabel(key: String): Map[String,String] = {
-//    labels.get(key)
-//  }
 
-	final def getLabel(key: String): Map[String,String] = {
-		if (! labels.containsKey(key)){
-			setLabel(key, Map[String,String]())
-		}
-		labels.get(key)
-	}
+  def getLabels(key: String): Map[String, String] = {
+    if (!slabels.contains(key)) {
+      setLabel(key, Map[String, String]())
+    }
+    slabels.get(key).get
+  }
+
   final def removeLabel(key: String) = {
-    labels.remove(key)
+    slabels.remove(key)
   }
 
   def generateId: String

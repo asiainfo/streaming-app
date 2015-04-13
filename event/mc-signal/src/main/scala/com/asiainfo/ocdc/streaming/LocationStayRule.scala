@@ -46,7 +46,7 @@ class LocationStayRule extends MCLabelRule {
 		}
 
 		// 取在siteRule（区域规则）中所打的area标签list
-    val locationList = (mc.getLabel(Constant.LABEL_ONSITE)).keys
+    val locationList = (mc.getLabels(Constant.LABEL_ONSITE)).keys
 
     // mcsource labels用
     val mcStayLabelsMap = Map[String, String]()

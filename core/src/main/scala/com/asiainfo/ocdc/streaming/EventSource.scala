@@ -36,33 +36,7 @@ abstract class EventSource() extends Serializable {
 
   def transform(source: String): Option[SourceObject]
 
-  def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) {
-
-    if (labeledRDD.partitions.length > 0) {
-
-      val df = sqlContext.createDataFrame(labeledRDD, Class.forName(beanclass))
-
-      // cache data
-      df.persist
-
-      val eventRuleIter = eventRules.iterator
-      while (eventRuleIter.hasNext) {
-        val eventRule = eventRuleIter.next
-
-        // handle filter first
-        val filteredData = {
-          val inputDF = df
-          inputDF.filter(eventRule.filterExp)
-        }
-
-        // handle select
-        val selectedData = filteredData.selectExpr(eventRule.selectExp: _*)
-
-        eventRule.output(selectedData)
-
-      }
-    }
-  }
+  def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject])
 
   final def process(ssc: StreamingContext) = {
     val sqlContext = new SQLContext(ssc.sparkContext)
@@ -76,73 +50,74 @@ abstract class EventSource() extends Serializable {
         }
 
         val labelRuleArray = labelRules.toArray
+        if (sourceRDD.partitions.length > 0) {
+          val labeledRDD = sourceRDD.mapPartitions(iter => {
+            new Iterator[SourceObject] {
+              private[this] var currentRow: SourceObject = _
+              private[this] var currentPos: Int = -1
+              private[this] var arrayBuffer: Array[SourceObject] = _
 
-        val labeledRDD = sourceRDD.mapPartitions(iter => {
-          new Iterator[SourceObject] {
-            private[this] var currentRow: SourceObject = _
-            private[this] var currentPos: Int = -1
-            private[this] var arrayBuffer: Array[SourceObject] = _
+              override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || (iter.hasNext && fetchNext())
 
-            override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || (iter.hasNext && fetchNext())
-
-            override def next(): SourceObject = {
-              currentPos += 1
-              arrayBuffer(currentPos - 1)
-            }
-
-            private final def fetchNext(): Boolean = {
-              val currentArrayBuffer = new ArrayBuffer[SourceObject]
-              currentPos = -1
-              var totalFetch = 0
-              var result = false
-
-              val minimap = mutable.Map[String, SourceObject]()
-
-              while (iter.hasNext && totalFetch < 10) {
-                val currentLine = iter.next()
-                minimap += (currentLine.generateId -> currentLine)
-                totalFetch += 1
-                currentPos = 0
-                result = true
+              override def next(): SourceObject = {
+                currentPos += 1
+                arrayBuffer(currentPos - 1)
               }
 
-              val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
-              val cachemap_new = minimap.map(x => {
-                val key = x._1
-                val value = x._2
+              private final def fetchNext(): Boolean = {
+                val currentArrayBuffer = new ArrayBuffer[SourceObject]
+                currentPos = -1
+                var totalFetch = 0
+                var result = false
 
-                val rule_caches = cachemap_old.get(key).get match {
-                  case cache: mutable.Map[String, StreamingCache] => cache
-                  case None => {
-                    val cachemap = mutable.Map[String, StreamingCache]()
-                    labelRuleArray.foreach(labelRule => {
-                      cachemap += (labelRule.conf.get("id") -> null)
-                    })
-                    cachemap
-                  }
+                val minimap = mutable.Map[String, SourceObject]()
+
+                while (iter.hasNext && totalFetch < 10) {
+                  val currentLine = iter.next()
+                  minimap += (currentLine.generateId -> currentLine)
+                  totalFetch += 1
+                  currentPos = 0
+                  result = true
                 }
 
-                labelRuleArray.foreach(labelRule => {
-                  val cacheOpt = rule_caches.get(labelRule.conf.get("id"))
-                  var cache: StreamingCache = null
-                  if (cacheOpt != None) cache = cacheOpt.get
+                val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+                val cachemap_new = minimap.map(x => {
+                  val key = x._1
+                  val value = x._2
 
-                  labelRule.attachLabel(value, cache)
+                  val rule_caches = cachemap_old.get(key).get match {
+                    case cache: mutable.Map[String, StreamingCache] => cache
+                    case None => {
+                      val cachemap = mutable.Map[String, StreamingCache]()
+                      labelRuleArray.foreach(labelRule => {
+                        cachemap += (labelRule.conf.get("id") -> null)
+                      })
+                      cachemap
+                    }
+                  }
+
+                  labelRuleArray.foreach(labelRule => {
+                    val cacheOpt = rule_caches.get(labelRule.conf.get("id"))
+                    var cache: StreamingCache = null
+                    if (cacheOpt != None) cache = cacheOpt.get
+
+                    labelRule.attachLabel(value, cache)
+                  })
+                  currentArrayBuffer.append(value)
+                  (key, rule_caches.asInstanceOf[Any])
                 })
-                currentArrayBuffer.append(value)
-                (key, rule_caches.asInstanceOf[Any])
-              })
 
-              //update caches to CacheManager
-              CacheFactory.getManager.setMultiCache(cachemap_new)
+                //update caches to CacheManager
+                CacheFactory.getManager.setMultiCache(cachemap_new)
 
-              arrayBuffer = currentArrayBuffer.toArray
-              result
+                arrayBuffer = currentArrayBuffer.toArray
+                result
+              }
             }
-          }
-        })
+          })
 
-        makeEvents(sqlContext, labeledRDD)
+          makeEvents(sqlContext, labeledRDD)
+        }
       }
     }
   }

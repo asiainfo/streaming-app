@@ -3,6 +3,8 @@ package com.asiainfo.ocdc.streaming
 import java.text.SimpleDateFormat
 
 import org.apache.commons.lang.StringUtils
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.SQLContext
 
 class MCEventSource() extends EventSource() {
 
@@ -38,6 +40,31 @@ class MCEventSource() extends EventSource() {
 
   override def beanclass: String = "com.asiainfo.ocdc.streaming.MCSourceObject"
 
+  override def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) {
+    import sqlContext.implicits.rddToDataFrameHolder
+    if (labeledRDD.partitions.length > 0) {
+      val df = labeledRDD.map(_.asInstanceOf[MCSourceObject]).toDF
+      // cache data
+      df.persist
+
+      val eventRuleIter = eventRules.iterator
+      while (eventRuleIter.hasNext) {
+        val eventRule = eventRuleIter.next
+
+        // handle filter first
+        val filteredData = {
+          val inputDF = df
+          inputDF.filter(eventRule.filterExp)
+        }
+
+        // handle select
+        val selectedData = filteredData.selectExpr(eventRule.selectExp: _*)
+
+        eventRule.output(selectedData)
+
+      }
+    }
+  }
 }
 
 

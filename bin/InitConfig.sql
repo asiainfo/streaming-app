@@ -40,5 +40,5 @@ INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.timeout","30
 INSERT INTO `EventRules` (`esourceid`,`classname`) VALUES (3,"com.asiainfo.ocdc.streaming.MCEventRule");
 
 -- init EventRulesProp
-INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("selectExp","eventID,imei,imsi,time",2);
-INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("filterExp","1=1",2);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("selectExp","eventID,imei,imsi,time,labels['onsite']['AAAA']",2);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("filterExp","labels['onsite']['AAAA']='true'",2);
