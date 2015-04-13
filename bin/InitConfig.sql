@@ -23,22 +23,25 @@ INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("msgkey","ms
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("autooffset","autooffset1",1);
 */
 -- hdfs
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("path","hdfs://localhost:9000/user/leo/streaming",3);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("path","hdfs://ochadoop94:9000/user/ochadoop/streaming",1);
 
 -- init LabelRules
-INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.LocationStayRule",3);
-INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.SiteRule",3);
+INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.SiteRule",1);
+INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.LocationStayRule",1);
 
 
 -- init LabelRulesProp
-INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.limits","10 * 60 * 1000, 5 * 60 * 1000, 3 * 60 * 1000",3);
-INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.matchMax","true",3);
-INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.outputThreshold","true",3);
-INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.timeout","30 * 60 * 1000",3);
+INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.limits","10 * 60 * 1000, 5 * 60 * 1000, 3 * 60 * 1000",2);
+INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.matchMax","true",2);
+INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.outputThreshold","true",2);
+INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.timeout","30 * 60 * 1000",2);
 
 -- init EventRules
-INSERT INTO `EventRules` (`esourceid`,`classname`) VALUES (3,"com.asiainfo.ocdc.streaming.MCEventRule");
+INSERT INTO `EventRules` (`esourceid`,`classname`) VALUES (1,"com.asiainfo.ocdc.streaming.MCEventRule");
 
 -- init EventRulesProp
-INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("selectExp","eventID,imei,imsi,time,labels['onsite']['AAAA']",2);
-INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("filterExp","labels['onsite']['AAAA']='true'",2);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("selectExp","eventID,imei,imsi,time,labels['onsite']['AAAA']",1);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("filterExp","labels['onsite']['AAAA']='true'",1);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("delim",",",1);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("inputLength","4",1);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("outputdir","hdfs://ochadoop94:9000/user/ochadoop/streaming/output",1);

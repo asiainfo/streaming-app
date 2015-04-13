@@ -11,12 +11,11 @@ import org.apache.spark.sql.DataFrame
  */
 class MCEventRule extends EventRule {
 
-  def getDelim: String = "|"
-
-  def inputLength: Int = 4
+  def output_dir: String = conf.get("outputdir")
 
   override def output(data: DataFrame) {
-    transforEvent2Message(data).saveAsTextFile("hdfs://localhost:9000/user/leo/streaming/output")
+    println("#################" + output_dir)
+    transforEvent2Message(data).saveAsTextFile(output_dir)
   }
 
   override def transforEvent2Message(data: DataFrame): RDD[String] = {

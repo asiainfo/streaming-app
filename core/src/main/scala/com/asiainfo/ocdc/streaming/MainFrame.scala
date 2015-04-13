@@ -13,8 +13,11 @@ object MainFrame {
     CacheFactory.getManager
 
     // init spark streaming context
-    val sparkConf = new SparkConf().setAppName("OCDC-Streaming")
+    val sparkConf = new SparkConf()
+    /*sparkConf.setMaster(args(0))
+    sparkConf.setAppName(args(1))*/
     sparkConf.setMaster("local[4]")
+    sparkConf.setAppName("TEST")
     val interval = MainFrameConf.getInternal
     val ssc = new StreamingContext(sparkConf, Seconds(interval))
 

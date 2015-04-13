@@ -14,8 +14,10 @@ abstract class EventRule extends Serializable {
     selectExp = conf.get("selectExp").split(",").toSeq
     filterExp = conf.get("filterExp")
   }
-  def getDelim: String
-  def inputLength: Int
+
+  def getDelim: String = conf.get("delim")
+  def inputLength: Int = conf.getInt("inputLength")
+
   def transforEvent2Message(data: DataFrame): RDD[String]
   def transforMessage2Event(message: RDD[String]): RDD[Option[SourceObject]]
   def output(data: DataFrame)

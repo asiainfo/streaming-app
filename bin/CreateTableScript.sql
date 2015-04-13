@@ -70,7 +70,7 @@ DROP TABLE IF EXISTS `EventRulesProp`;
 CREATE TABLE `EventRulesProp` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(30) NOT NULL,
-  `pvalue` varchar(50) NOT NULL,
+  `pvalue` varchar(200) NOT NULL,
   `erid` int NOT NULL,
   PRIMARY KEY (`id`)
 );
