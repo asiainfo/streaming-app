@@ -22,6 +22,8 @@ object Constant {
   val LABEL_STAY_LASTTIME = "lastTime"
   // 非触点数据时MC数据源上打停留时间标签时的黙认时间
   val LABEL_STAY_DEFAULT_TIME = "0"
+    // 收到第一条数据时所打标签值“0”
+  val LABEL_STAY_TIME_ZERO = "0"
   /**--------------从配置文件读入参数 -------------------*/
   //字符串黙认字段分隔符
   val ITME_SPLIT_MARK = ","
