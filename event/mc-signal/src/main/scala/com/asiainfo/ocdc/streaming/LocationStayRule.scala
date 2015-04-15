@@ -13,98 +13,146 @@ class LabelProps extends StreamingCache with Serializable {
 }
 
 class LocationStayRule extends MCLabelRule {
-  // 从配置文件读入
-  lazy val selfDefStayTimeList = conf.get("stay.limits").split(",")
+  // 从配置文件读入 用户设定的各业务连续停留的时间坎(排序升序)
+  lazy val selfDefStayTimeList = conf.get(Constant.STAY_LIMITS).split(Constant.ITME_SPLIT_MARK)
+  lazy val selfDefStayTimeOrderList = selfDefStayTimeList.map(_.toLong).sorted
   // 推送满足设置的数据坎的最大值:true;最小值：false
-  lazy val userDefPushOrde = conf.getBoolean("stay.matchMax", true)
+  lazy val userDefPushOrde = conf.getBoolean(Constant.STAY_MATCHMAX, true)
   // 推送满足设置的数据的限定值，还是真实的累计值.真实的累计值:false;限定值:true
-  lazy val pushLimitValue = conf.getBoolean("stay.outputThreshold", true)
+  lazy val pushLimitValue = conf.getBoolean(Constant.STAY_OUTPUTTHRESHOLD, true)
   // 无效数据阈值的设定
-  lazy val thresholdValue = conf.getLong("stay.timeout", 30 * 60 * 1000)
+  lazy val thresholdValue = conf.getLong(Constant.STAY_TIMEOUT, Constant.DEFAULT_TIMEOUT_VALUE)
 
-  def evaluateTime(oldStayTime: Long, newStayTime: Long): Long = {
-
-    val matchList = selfDefStayTimeList.filter(limit => (oldStayTime <= limit.toLong && newStayTime >= limit.toLong))
-    if (matchList.isEmpty) 0
-    // 推送设置的数据坎的值
-    else if (pushLimitValue) (if (userDefPushOrde) matchList.map(_.toLong).max else matchList.map(_.toLong).min)
-    // 推送真实数据值
-    else newStayTime
+  /**
+   * 根据本次以及前次的停留时间计算出标签停留时间的值
+   */
+  private def evaluateTime(oldStayTime: Long, newStayTime: Long): String = {
+    // 新状态未达到最小坎时或旧状态超过最大坎值时返回黙认值“0”
+    if (newStayTime < selfDefStayTimeOrderList(0) || oldStayTime > selfDefStayTimeOrderList.reverse(0)) {
+      Constant.LABEL_STAY_DEFAULT_TIME
+    } else {
+      val matchList = selfDefStayTimeOrderList.filter(limit => (oldStayTime <= limit && newStayTime >= limit))
+      // 新旧停留时间在某坎区间内，返回黙认值“0”
+      if (matchList.isEmpty) Constant.LABEL_STAY_DEFAULT_TIME
+      // 新旧停留时间为跨坎区域时间，推送设置的数据坎的值
+      else if (pushLimitValue) {
+        val result = if (userDefPushOrde) matchList.map(_.toLong).max else matchList.map(_.toLong).min
+        result.toString
+      } // 推送真实数据值
+      else newStayTime.toString
+    }
   }
 
+  /**
+   * 框架调用入口方法
+   */
   def attachMCLabel(mc: MCSourceObject, cache: StreamingCache) {
+    //a. 获取locationStayRule的cache对象
     val cacheInstance = if (cache == null) new LabelProps
     else cache.asInstanceOf[LabelProps]
+    // cache属性map
+    lazy val labelsPropMap = cacheInstance.labelsPropList
 
+    // b. 使用宽松的过滤策略，相同区域信令如果间隔超过${thresholdValue}，则判定为不连续
     // 取在siteRule（区域规则）中所打的area标签list
     val locationList = (mc.getLabels(Constant.LABEL_ONSITE)).keys
-
     // mcsource labels用
     val mcStayLabelsMap = Map[String, String]()
-
-    // 使用宽松的过滤策略，相同区域信令如果间隔超过${thresholdValue}，则判定为不连续
     locationList.map(location => {
-      val area = cacheInstance.labelsPropList.get(location)
+      val area = labelsPropMap.get(location)
       area match {
         case None => {
-          mcStayLabelsMap += (location -> "0")
-          cacheInstance.labelsPropList.put(location, Map(
-            Constant.LABEL_STAY_FIRSTTIME -> (mc.time).toString,
-            Constant.LABEL_STAY_LASTTIME -> (mc.time).toString))
+          mcStayLabelsMap += (location -> Constant.LABEL_STAY_DEFAULT_TIME)
+          addCacheAreaStayTime(cacheInstance, location, mc.time, mc.time)
         }
         case Some(currentStatus) => {
-          val first = currentStatus.get(Constant.LABEL_STAY_FIRSTTIME).getOrElse("0").toLong
-          val last = currentStatus.get(Constant.LABEL_STAY_LASTTIME).getOrElse("0").toLong
-
+          val first = getCacheStayTime(currentStatus).get("first").get
+          val last = getCacheStayTime(currentStatus).get("last").get
           if (first > last) {
             // 无效数据，丢弃，本条视为first
-            mcStayLabelsMap += (location -> "0")
-            cacheInstance.labelsPropList.put(location, Map(
-              Constant.LABEL_STAY_FIRSTTIME -> (mc.time).toString,
-              Constant.LABEL_STAY_LASTTIME -> (mc.time).toString))
+            mcStayLabelsMap += (location -> Constant.LABEL_STAY_DEFAULT_TIME)
+            updateCacheStayTime(currentStatus, mc.time, mc.time)
           } else if (mc.time < first) {
             if (first - mc.time > thresholdValue) {
               // 本条记录无效，输出空标签，不更新cache
-              mcStayLabelsMap += (location -> "0")
+              mcStayLabelsMap += (location -> Constant.LABEL_STAY_DEFAULT_TIME)
             } else {
               // 本条记录属于延迟到达，更新开始时间
               currentStatus.put(Constant.LABEL_STAY_FIRSTTIME, mc.time.toString)
-              mcStayLabelsMap.put(location, evaluateTime(last - first, last - mc.time).toString)
+              mcStayLabelsMap.put(location, evaluateTime(last - first, last - mc.time))
             }
           } else if (mc.time <= last) {
             // 本条属于延迟到达，不处理
-            mcStayLabelsMap += (location -> "0")
+            mcStayLabelsMap += (location -> Constant.LABEL_STAY_DEFAULT_TIME)
           } else if (mc.time - last > thresholdValue) {
             // 本条与上一条数据间隔过大，判定为不连续
-            mcStayLabelsMap += (location -> "0")
-            cacheInstance.labelsPropList.put(location, Map(
-              Constant.LABEL_STAY_FIRSTTIME -> (mc.time).toString,
-              Constant.LABEL_STAY_LASTTIME -> (mc.time).toString))
+            mcStayLabelsMap += (location -> Constant.LABEL_STAY_DEFAULT_TIME)
+            updateCacheStayTime(currentStatus, mc.time, mc.time)
           } else {
             // 本条为正常新数据，更新cache后判定
             currentStatus.put(Constant.LABEL_STAY_LASTTIME, mc.time.toString)
-            mcStayLabelsMap.put(location, evaluateTime(last - first, mc.time - first).toString)
+            mcStayLabelsMap.put(location, evaluateTime(last - first, mc.time - first))
           }
         }
       }
     })
-    // 清除cache中过期的区域信息（判断标准：取本用户cache中所有区域中的
-    // 最大lastTime向前推一个无效数据阈值时间［stay.timeout］，若小于此时刻则视为离开该区域）
-    val areaPropList = cacheInstance.labelsPropList.toArray
-    if (areaPropList.size > 1) {
-      // 对用户cache中的区域列表按lastTime排序（升序）
-      quickSort(areaPropList)(Ordering.by(_._2.getOrElse(Constant.LABEL_STAY_LASTTIME, "0")))
-      // 取用户cache区域列表中的最大lastTime
-      val maxLastTime = areaPropList(areaPropList.size - 1)._2.get(Constant.LABEL_STAY_LASTTIME).get.toLong
-      // 遍历列表与最大时间想比较若时间超过用户定义的［无效数据阈值］则视为离开该区域
-      val invalidAreaList = for {index <- 0 until areaPropList.size - 1;
-        propLastTime = areaPropList(index)._2.getOrElse(Constant.LABEL_STAY_LASTTIME, "0").toLong;
-        if (maxLastTime - propLastTime > thresholdValue)
-      } yield areaPropList(index)._1
-      // 删除无效区域属性
-      invalidAreaList map cacheInstance.labelsPropList.remove
-    }
-    // 给mcsoruce设定连续停留[LABEL_STAY]标签
+    // c. 给mcsoruce设定连续停留[LABEL_STAY]标签
     mc.setLabel(Constant.LABEL_STAY, mcStayLabelsMap)
+
+    // d. 清理cache
+    // d1.清除掉cache中区域的属性没有firstTime,lastTime的区域
+    val timeNoneList = labelsPropMap.filter(area => {
+      area._2.get(Constant.LABEL_STAY_FIRSTTIME) == None || area._2.get(Constant.LABEL_STAY_LASTTIME) == None
+    }).map(_._1).toList
+    timeNoneList foreach labelsPropMap.remove
+
+    // d2.清除cache中过期的区域信息（判断标准：取本用户cache中所有区域中的
+    // 最大lastTime向前推一个无效数据阈值时间［stay.timeout］，若小于此时刻则视为离开该区域）
+    if (labelsPropMap.size > 1) {
+      val areaPropArray = labelsPropMap.toArray
+      // 对用户cache中的区域列表按lastTime排序（升序）
+      quickSort(areaPropArray)(Ordering.by(_._2.get(Constant.LABEL_STAY_LASTTIME)))
+      // 取用户cache区域列表中的最大lastTime
+      val maxLastTime = areaPropArray.reverse(0)._2.get(Constant.LABEL_STAY_LASTTIME).get.toLong
+      // 遍历列表与最大时间想比较若时间超过用户定义的［无效数据阈值］则视为离开该区域
+      labelsPropMap.map(area => {
+        val propLastTime = area._2.get(Constant.LABEL_STAY_LASTTIME).get.toLong
+        if (maxLastTime - propLastTime > thresholdValue)
+          // 删除无效区域属性
+          labelsPropMap.remove(area._1)
+      })
+    }
+  }
+
+  /**
+   * 取cache中的firstTime,lastTime<br>
+   * 返回结果map,key:"first"和"last"<br>
+   */
+  private def getCacheStayTime(currentStatus: Map[String, String]) = {
+    var first = currentStatus.get(Constant.LABEL_STAY_FIRSTTIME).getOrElse("0").toLong
+    var last = currentStatus.get(Constant.LABEL_STAY_LASTTIME).getOrElse("0").toLong
+    if (first == 0 || last == 0) { first = 0; last = 0 }
+    Map("first" -> first, "last" -> last)
+  }
+
+  /**
+   * 在cache中追加新的区域属性map并设值<br>
+   */
+  private def addCacheAreaStayTime(
+    cacheInstance: LabelProps,
+    location: String,
+    firstTime: Long,
+    lastTime: Long) {
+    val map = Map[String, String]()
+    updateCacheStayTime(map, firstTime, lastTime)
+    cacheInstance.labelsPropList.put(location, map)
+  }
+
+  /**
+   * 更新cache中区域属性map的firstTime,lastTime值<br>
+   */
+  private def updateCacheStayTime(map: Map[String, String], firstTime: Long, lastTime: Long) {
+    map += (Constant.LABEL_STAY_FIRSTTIME -> (firstTime).toString)
+    map += (Constant.LABEL_STAY_LASTTIME -> (lastTime).toString)
   }
 }
