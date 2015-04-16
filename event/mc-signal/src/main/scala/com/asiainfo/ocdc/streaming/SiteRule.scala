@@ -7,7 +7,7 @@ package com.asiainfo.ocdc.streaming
  * @comment 给mc信令标记区域标签
  */
 class SiteRule extends MCLabelRule {
-  def attachMCLabel(mcSourceObj: MCSourceObject, cache: StreamingCache) = {
+  def attachMCLabel(mcSourceObj: MCSourceObject, cache: StreamingCache): StreamingCache = {
     val lac = mcSourceObj.lac
     val ci = mcSourceObj.ci
 
@@ -16,6 +16,7 @@ class SiteRule extends MCLabelRule {
     val propMap = scala.collection.mutable.Map[String, String]()
     onsiteList.map(location => (propMap += (location -> "true")))
     mcSourceObj.setLabel(Constant.LABEL_ONSITE, propMap)
+    cache
   }
 
   /**

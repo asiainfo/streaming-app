@@ -30,6 +30,8 @@ object MainFrameConf extends BaseConf {
     initEventRuleConf
   }
 
+  init()
+
   /**
    * read main frame config
    */
@@ -104,9 +106,9 @@ object MainFrameConf extends BaseConf {
     })
 
     sourceLabelRules = midmap.map(x => {
-      x._1 -> x._2.map(y => {
+      x._1 -> x._2.toList.sortBy(_._1).map(y => {
         y._2
-      }).toSeq
+      })
     })
   }
 
@@ -146,7 +148,4 @@ object MainFrameConf extends BaseConf {
     })
   }
 
-  def main(args: Array[String]) {
-    init()
-  }
 }

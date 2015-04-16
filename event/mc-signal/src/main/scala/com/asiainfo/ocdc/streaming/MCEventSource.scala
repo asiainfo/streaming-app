@@ -46,10 +46,12 @@ class MCEventSource() extends EventSource() {
       val df = labeledRDD.map(_.asInstanceOf[MCSourceObject]).toDF
       // cache data
       df.persist
+      df.printSchema()
 
       val eventRuleIter = eventRules.iterator
       while (eventRuleIter.hasNext) {
         val eventRule = eventRuleIter.next
+        eventRule.selectExp.foreach(x=>print(" "+x+""))
 
         // handle filter first
         val filteredData = {

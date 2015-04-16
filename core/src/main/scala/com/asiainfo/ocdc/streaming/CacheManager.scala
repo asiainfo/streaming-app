@@ -40,9 +40,12 @@ abstract class RedisCacheManager extends CacheManager {
     override def initialValue = getResource
   }
 
+//  private val currentJedis = getResource
+
   final def openConnection = currentJedis.set(getResource)
 
   final def getConnection = currentJedis.get()
+//final def getConnection = currentJedis
 
   final def closeConnection = {
     getConnection.close()
@@ -110,10 +113,14 @@ abstract class RedisCacheManager extends CacheManager {
     val multimap = Map[String,Any]()
     val bytekeys = keys.map(x=> x.getBytes).toSeq
     val anyvalues = getConnection.mget(bytekeys: _*).map(x => {
-      if(x != null) KryoSerializerStreamAppTool.deserialize[Any](ByteBuffer.wrap(x))
+      if(x != null) {
+        val data = KryoSerializerStreamAppTool.deserialize[Any](ByteBuffer.wrap(x))
+        data
+      }
       else None
     }).toList
     for(i <- 0 to keys.length -1){
+
       multimap += (keys(i)-> anyvalues(i))
     }
     multimap

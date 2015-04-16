@@ -8,34 +8,38 @@ import org.apache.spark.SparkConf
  */
 object MainFrame {
   def main(args: Array[String]): Unit = {
+
+    if (args.length < 2) {
+      System.err.println("Usage:  ./bin/spark-class com.asiainfo.ocdc.streaming.MainFrame [Master] [AppName]")
+      System.exit(1)
+    }
+
     // read config first
-    MainFrameConf.init()
     CacheFactory.getManager
 
     // init spark streaming context
     val sparkConf = new SparkConf()
-    /*sparkConf.setMaster(args(0))
-    sparkConf.setAppName(args(1))*/
-    sparkConf.setMaster("local[4]")
-    sparkConf.setAppName("TEST")
+    sparkConf.setMaster(args(0))
+    sparkConf.setAppName(args(1))
+
     val interval = MainFrameConf.getInternal
     val ssc = new StreamingContext(sparkConf, Seconds(interval))
 
     // init all the eventsources
-    val eventSourceList = MainFrameConf.sources.map(conf =>{
+    val eventSourceList = MainFrameConf.sources.map(conf => {
       // use reflect to create all eventsources
-      val eventSource :EventSource =
+      val eventSource: EventSource =
         Class.forName(conf.getClassName()).newInstance().asInstanceOf[EventSource]
       eventSource.init(conf)
       MainFrameConf.getLabelRulesBySource(eventSource.id).map(labelRuleConf => {
-        val labelRule :LabelRule =
+        val labelRule: LabelRule =
           Class.forName(labelRuleConf.getClassName()).newInstance().asInstanceOf[LabelRule]
         labelRule.init(labelRuleConf)
         eventSource.addLabelRule(labelRule)
       })
 
       MainFrameConf.getEventRulesBySource(eventSource.id).map(eventRuleConf => {
-        val eventRule :EventRule =
+        val eventRule: EventRule =
           Class.forName(eventRuleConf.getClassName()).newInstance().asInstanceOf[EventRule]
         eventRule.init(eventRuleConf)
         eventSource.addEventRule(eventRule)

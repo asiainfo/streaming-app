@@ -13,7 +13,9 @@ import scala.xml.XML
 object JDBCUtils {
 
   private def connection: Connection = {
-    val xml = XML.load(CommonConstant.commonConfFileName)
+    val spark_home = System.getenv("SPARK_HOME")
+    val xml = XML.loadFile(spark_home + "/" + CommonConstant.commonConfFileName)
+//    val xml = XML.loadFile(CommonConstant.commonConfFileName)
     val mysqlNode = (xml \ "mysql")
     val url = (mysqlNode \ "url").text
     val username = (mysqlNode \ "username").text
@@ -63,11 +65,5 @@ object JDBCUtils {
     finally {
       if (statement != null) statement.close()
     }
-  }
-
-  def main(args: Array[String]) {
-    JDBCUtils.query("select * from EVENT_RULE").map(line => {
-      line.keySet.map(key => key + "=" + line(key))
-    }).map(println)
   }
 }

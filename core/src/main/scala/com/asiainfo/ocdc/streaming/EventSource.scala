@@ -57,7 +57,10 @@ abstract class EventSource() extends Serializable {
               private[this] var currentPos: Int = -1
               private[this] var arrayBuffer: Array[SourceObject] = _
 
-              override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || (iter.hasNext && fetchNext())
+              override def hasNext: Boolean = {
+                val flag = (currentPos != -1 && currentPos < arrayBuffer.length) || (iter.hasNext && fetchNext())
+                flag
+              }
 
               override def next(): SourceObject = {
                 currentPos += 1
@@ -81,30 +84,32 @@ abstract class EventSource() extends Serializable {
                 }
 
                 val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+
                 val cachemap_new = minimap.map(x => {
                   val key = x._1
                   val value = x._2
-
-                  val rule_caches = cachemap_old.get(key).get match {
-                    case cache: mutable.Map[String, StreamingCache] => cache
+                  var rule_caches = cachemap_old.get(key).get match {
+                    case cache: Map[String, StreamingCache] => cache
                     case None => {
                       val cachemap = mutable.Map[String, StreamingCache]()
                       labelRuleArray.foreach(labelRule => {
                         cachemap += (labelRule.conf.get("id") -> null)
                       })
-                      cachemap
+
+                      cachemap.toMap
                     }
                   }
 
                   labelRuleArray.foreach(labelRule => {
                     val cacheOpt = rule_caches.get(labelRule.conf.get("id"))
-                    var cache: StreamingCache = null
-                    if (cacheOpt != None) cache = cacheOpt.get
+                    var old_cache: StreamingCache = null
+                    if (cacheOpt != None) old_cache = cacheOpt.get
 
-                    labelRule.attachLabel(value, cache)
+                    val newcache = labelRule.attachLabel(value, old_cache)
+                    rule_caches = rule_caches.updated(labelRule.conf.get("id"), newcache)
                   })
                   currentArrayBuffer.append(value)
-                  (key, rule_caches.asInstanceOf[Any])
+                  (key -> rule_caches.asInstanceOf[Any])
                 })
 
                 //update caches to CacheManager

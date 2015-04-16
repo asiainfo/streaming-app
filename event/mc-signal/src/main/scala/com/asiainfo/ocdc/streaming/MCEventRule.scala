@@ -14,7 +14,6 @@ class MCEventRule extends EventRule {
   def output_dir: String = conf.get("outputdir")
 
   override def output(data: DataFrame) {
-    println("#################" + output_dir)
     transforEvent2Message(data).saveAsTextFile(output_dir)
   }
 
@@ -25,6 +24,7 @@ class MCEventRule extends EventRule {
       for (i <- 0 to (selcol_size - 1)) {
         message += row.get(i).toString + getDelim
       }
+      println("Output Message --> " + message)
       message
     })
   }

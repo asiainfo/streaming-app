@@ -7,5 +7,5 @@ abstract class MCLabelRule extends LabelRule {
     case _ => throw new Exception("")
   }
 
-  def attachMCLabel(mc: MCSourceObject, cache: StreamingCache)
+  def attachMCLabel(mc: MCSourceObject, cache: StreamingCache): StreamingCache
 }
