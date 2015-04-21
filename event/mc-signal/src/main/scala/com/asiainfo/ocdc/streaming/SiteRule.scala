@@ -14,8 +14,12 @@ class SiteRule extends MCLabelRule {
     // 根据largeCell解析出所属区域
     val onsiteList = largeCellAnalysis(lac, ci)
     val propMap = scala.collection.mutable.Map[String, String]()
-    onsiteList.map(location => (propMap += (location -> "true")))
+    onsiteList.foreach(location => propMap += (location -> "true"))
     mcSourceObj.setLabel(Constant.LABEL_ONSITE, propMap)
+    println(" set site label !!! ")
+    propMap.iterator.foreach(x => {
+      println(" area : " + x._1 + " flag : " + x._2)
+    })
     cache
   }
 
@@ -28,9 +32,13 @@ class SiteRule extends MCLabelRule {
   def largeCellAnalysis(lac: Int, ci: Int): List[String] = {
     val cachedArea = CacheFactory.getManager.getCommonCacheValue("lacci2area", lac.toString+":"+ci.toString)
     if(cachedArea == null) {
+      println(" not find area !!! ")
       List[String]()
     } else {
-      cachedArea.split(",").toList
+      val list = cachedArea.split(",").toList
+      println(" find area !!! ")
+      list.foreach(x => print(x + "##"))
+      list
     }
 
   }
