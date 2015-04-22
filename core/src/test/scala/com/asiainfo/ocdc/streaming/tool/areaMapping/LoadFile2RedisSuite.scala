@@ -16,14 +16,15 @@ class LoadFile2RedisSuite extends FunSuite with BeforeAndAfter {
 	MainFrameConf.set("JedisMaxActive","15")
 	val cacheMgr = CacheFactory.getManager
 
-	test("test load area mapping into redis from mc log"){
-		val fileName="/data01/data/datadir_github/ai-projects/streaming-app-201503/testdata/mc-test.log"
+	test("test load area mapping into redis"){
+//		val fileName="/data01/data/datadir_github/ai-projects/streaming-app-201503/testdata/mc-test.log"
+    val fileName="/data01/data/datadir_work/ai/projects/products/streaming-201503/testdata/WLAN-areaMap.csv"
 		val serverPort="redis1:6379"
-		val mapKey="lacci2area_test1"
+		val mapKey="areaMap1"
 
 //		LoadFile2Redis.load(fileName, serverPort, mapKey)
-		LoadFile2Redis.load2(fileName, serverPort, mapKey)
+//		LoadFile2Redis.load2(fileName, serverPort, mapKey)
 //		assert(cacheMgr.getCommonCacheMap(mapKey).size==10)
-
+    LoadFile2Redis.load(fileName, serverPort, mapKey, 1, 1, 2, 3, "WLAN")
 	}
 }
