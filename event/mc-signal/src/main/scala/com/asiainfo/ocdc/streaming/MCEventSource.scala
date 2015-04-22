@@ -12,34 +12,38 @@ class MCEventSource() extends EventSource() {
     // 事件ID,时间,LAC,CI,主叫IMEI,被叫IMEI,主叫IMSI,被叫IMSI
     try {
       if (inputs(6) == "000000000000000" && inputs(7) == "000000000000000") {
+        logError(" Emsi is wrong ! ")
         None
+      }else{
+        val sdf = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss")
+        val eventID = inputs(0).toInt
+        val time = sdf.parse(inputs(1)).getTime
+        val lac = inputs(2).toInt
+        val ci = inputs(3).toInt
+
+        var imei: Long = 0
+        if (StringUtils.isNumeric(inputs(4))) imei = inputs(4).toLong
+
+        var imsi: Long = 0
+        if (eventID == 3 || eventID == 5 || eventID == 7) {
+          imsi = inputs(7).toLong
+        } else {
+          imsi = inputs(6).toLong
+        }
+
+        val eventresult = inputs(8).toInt
+        val alertstatus = inputs(9).toInt
+        val assstatus = inputs(10).toInt
+        val clearstatus = inputs(11).toInt
+        val relstatus = inputs(12).toInt
+        val xdrtype = inputs(13).toInt
+
+        Some(new MCSourceObject(eventID, time, lac, ci, imsi, imei, eventresult, alertstatus, assstatus, clearstatus, relstatus, xdrtype))
       }
-      val sdf = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss")
-      val eventID = inputs(0).toInt
-      val time = sdf.parse(inputs(1)).getTime
-      val lac = inputs(2).toInt
-      val ci = inputs(3).toInt
-
-      var imei: Long = 0
-      if (StringUtils.isNumeric(inputs(4))) imei = inputs(4).toLong
-
-      var imsi: Long = 0
-      if (eventID == 3 || eventID == 5 || eventID == 7) {
-        imsi = inputs(7).toLong
-      } else {
-        imsi = inputs(6).toLong
-      }
-
-      val eventresult = inputs(8).toInt
-      val alertstatus = inputs(9).toInt
-      val assstatus = inputs(10).toInt
-      val clearstatus = inputs(11).toInt
-      val relstatus = inputs(12).toInt
-      val xdrtype = inputs(13).toInt
-
-      Some(new MCSourceObject(eventID, time, lac, ci, imsi, imei, eventresult, alertstatus, assstatus, clearstatus, relstatus, xdrtype))
     } catch {
       case e: Exception => {
+        logError(" Source columns have wrong type ! ")
+        logError(" error data --> " + inputs)
         None
       }
     }
@@ -48,6 +52,8 @@ class MCEventSource() extends EventSource() {
   override def transform(source: String): Option[MCSourceObject] = {
     val inputArray = source.split(conf.get("delim"))
     if (inputArray.length != conf.getInt("formatlength")) {
+      logError(" Source format is wrong ! ")
+      logError(" error data --> " + source)
       None
     } else {
       formatSource(inputArray)

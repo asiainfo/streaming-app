@@ -8,7 +8,7 @@ import org.apache.spark.streaming.dstream.DStream
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-abstract class EventSource() extends Serializable {
+abstract class EventSource() extends Serializable with org.apache.spark.Logging{
   var id: String = null
   var conf: EventSourceConf = null
 
@@ -101,6 +101,7 @@ abstract class EventSource() extends Serializable {
                   }
 
                   labelRuleArray.foreach(labelRule => {
+                    logInfo(" Exec label : " + labelRule.conf.getClassName())
                     val cacheOpt = rule_caches.get(labelRule.conf.get("id"))
                     var old_cache: StreamingCache = null
                     if (cacheOpt != None) old_cache = cacheOpt.get
