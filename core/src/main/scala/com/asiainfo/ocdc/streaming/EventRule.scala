@@ -3,7 +3,7 @@ package com.asiainfo.ocdc.streaming
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 
-abstract class EventRule extends Serializable {
+abstract class EventRule extends Serializable with org.apache.spark.Logging {
 
   var conf: EventRuleConf = null
   var selectExp: Seq[String] = null
@@ -16,9 +16,12 @@ abstract class EventRule extends Serializable {
   }
 
   def getDelim: String = conf.get("delim")
+
   def inputLength: Int = conf.getInt("inputLength")
 
   def transforEvent2Message(data: DataFrame): RDD[String]
+
   def transforMessage2Event(message: RDD[String]): RDD[Option[SourceObject]]
+
   def output(data: DataFrame)
 }

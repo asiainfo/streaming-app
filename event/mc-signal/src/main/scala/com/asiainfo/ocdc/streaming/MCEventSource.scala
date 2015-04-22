@@ -2,7 +2,7 @@ package com.asiainfo.ocdc.streaming
 
 import java.text.SimpleDateFormat
 
-import org.apache.commons.lang.StringUtils
+import com.asiainfo.ocdc.streaming.tool.DataConvertTool
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
 
@@ -15,20 +15,23 @@ class MCEventSource() extends EventSource() {
         logError(" Emsi is wrong ! ")
         None
       }else{
-        val sdf = new SimpleDateFormat("yyyy-mm-dd hh:mm:ss")
+        val sdf = new SimpleDateFormat("yyyymmdd hh:mm:ss")
         val eventID = inputs(0).toInt
         val time = sdf.parse(inputs(1)).getTime
-        val lac = inputs(2).toInt
-        val ci = inputs(3).toInt
 
-        var imei: Long = 0
-        if (StringUtils.isNumeric(inputs(4))) imei = inputs(4).toLong
+        // FIXME lac ci need convert to 16 , test is 10
+        /*val lac = inputs(2).toInt
+        val ci = inputs(3).toInt*/
+        val lac = DataConvertTool.convertHex(inputs(2))
+        val ci = DataConvertTool.convertHex(inputs(3))
 
-        var imsi: Long = 0
+        val imei = inputs(4)
+
+        var imsi = ""
         if (eventID == 3 || eventID == 5 || eventID == 7) {
-          imsi = inputs(7).toLong
+          imsi = inputs(7)
         } else {
-          imsi = inputs(6).toLong
+          imsi = inputs(6)
         }
 
         val eventresult = inputs(8).toInt
@@ -43,7 +46,7 @@ class MCEventSource() extends EventSource() {
     } catch {
       case e: Exception => {
         logError(" Source columns have wrong type ! ")
-        logError(" error data --> " + inputs)
+        e.printStackTrace()
         None
       }
     }

@@ -125,9 +125,9 @@ object LoadFile2Redis {
     val formatType = args(3)
     assert(formatType == "1" || formatType == "2", "formatType valid values area [1,2]")
     if (formatType == "1") {
-      assert(args.length == 7)
+      assert(args.length == 8)
     } else {
-      assert(args.length == 6)
+      assert(args.length == 7)
     }
     val lacColIdx = args(4)
     val cellColIdx = args(5)

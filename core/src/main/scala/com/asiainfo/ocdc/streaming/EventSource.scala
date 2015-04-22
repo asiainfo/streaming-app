@@ -49,6 +49,8 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
           case Some(source: SourceObject) => source
         }
 
+        sourceRDD.map(x => (x.generateId, x)).groupByKey()
+
         val labelRuleArray = labelRules.toArray
         if (sourceRDD.partitions.length > 0) {
           val labeledRDD = sourceRDD.mapPartitions(iter => {
@@ -75,7 +77,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
 
                 val minimap = mutable.Map[String, SourceObject]()
 
-                while (iter.hasNext && totalFetch < 10) {
+                while (iter.hasNext && totalFetch < 20) {
                   val currentLine = iter.next()
                   minimap += (currentLine.generateId -> currentLine)
                   totalFetch += 1

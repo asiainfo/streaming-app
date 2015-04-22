@@ -2,6 +2,7 @@ package com.asiainfo.ocdc.streaming
 
 import scala.collection.mutable.Map
 import scala.util.Sorting.quickSort
+
 /**
  * @author surq
  * @since 2015.4.2
@@ -47,7 +48,7 @@ class LocationStayRule extends MCLabelRule {
   /**
    * 框架调用入口方法
    */
-    def attachMCLabel(mc: MCSourceObject, cache: StreamingCache): StreamingCache ={
+  def attachMCLabel(mc: MCSourceObject, cache: StreamingCache): StreamingCache = {
     //a. 获取locationStayRule的cache对象
     val cacheInstance = if (cache == null) new LabelProps
     else cache.asInstanceOf[LabelProps]
@@ -62,6 +63,7 @@ class LocationStayRule extends MCLabelRule {
     // 取在siteRule（区域规则）中所打的area标签list
     val locationList = (mc.getLabels(Constant.LABEL_ONSITE)).keys
     locationList.map(location => {
+      println(" Find Current site : " + location)
       // A.此用的所有区域在cache中的信息已经过期视为无效，标签打为“0”；重新设定cache;
       if (mc.time - cacheMaxLastTime > thresholdValue) {
         // 1. 连续停留标签置“0”
@@ -84,6 +86,11 @@ class LocationStayRule extends MCLabelRule {
     })
     // c. 给mcsoruce设定连续停留[LABEL_STAY]标签
     mc.setLabel(Constant.LABEL_STAY, mcStayLabelsMap)
+    println(" Current site : " + mc.getLabels(Constant.LABEL_ONSITE))
+    mcStayLabelsMap.iterator.foreach(x => {
+      println("area : " + x._1 + " , stay : " + x._2)
+    })
+
     cacheInstance
   }
 
@@ -92,20 +99,24 @@ class LocationStayRule extends MCLabelRule {
    */
   private def getCacheMaxLastTime(labelsPropMap: Map[String, Map[String, String]]): Long = {
     val areaPropArray = labelsPropMap.toArray
-    // 对用户cache中的区域列表按lastTime排序（升序）
-    quickSort(areaPropArray)(Ordering.by(_._2.get(Constant.LABEL_STAY_LASTTIME)))
-    // 取用户cache区域列表中的最大lastTime
-    areaPropArray.reverse(0)._2.get(Constant.LABEL_STAY_LASTTIME).get.toLong
+
+    if (areaPropArray.isEmpty) 0L
+    else {
+      // 对用户cache中的区域列表按lastTime排序（升序）
+      quickSort(areaPropArray)(Ordering.by(_._2.get(Constant.LABEL_STAY_LASTTIME)))
+      // 取用户cache区域列表中的最大lastTime
+      areaPropArray.reverse(0)._2.get(Constant.LABEL_STAY_LASTTIME).get.toLong
+    }
   }
 
   /**
    * 打标签处理并且更新cache<br>
    */
   private def labelAction(
-    location: String,
-    cacheInstance: LabelProps,
-    mcStayLabelsMap: Map[String, String],
-    mcTime: Long) {
+                           location: String,
+                           cacheInstance: LabelProps,
+                           mcStayLabelsMap: Map[String, String],
+                           mcTime: Long) {
     // cache属性map
     lazy val labelsPropMap = cacheInstance.labelsPropList
     // b. 使用宽松的过滤策略，相同区域信令如果间隔超过${thresholdValue}，则判定为不连续
@@ -165,10 +176,10 @@ class LocationStayRule extends MCLabelRule {
    * 在cache中追加新的区域属性map并设值<br>
    */
   private def addCacheAreaStayTime(
-    cacheInstance: LabelProps,
-    location: String,
-    firstTime: Long,
-    lastTime: Long) {
+                                    cacheInstance: LabelProps,
+                                    location: String,
+                                    firstTime: Long,
+                                    lastTime: Long) {
     val map = Map[String, String]()
     updateCacheStayTime(map, firstTime, lastTime)
     cacheInstance.labelsPropList.put(location, map)
@@ -178,9 +189,9 @@ class LocationStayRule extends MCLabelRule {
    * 更新cache中区域属性map的firstTime,lastTime值<br>
    */
   private def updateCacheStayTime(
-    map: Map[String, String],
-    firstTime: Long,
-    lastTime: Long) {
+                                   map: Map[String, String],
+                                   firstTime: Long,
+                                   lastTime: Long) {
     map += (Constant.LABEL_STAY_FIRSTTIME -> (firstTime).toString)
     map += (Constant.LABEL_STAY_LASTTIME -> (lastTime).toString)
   }
