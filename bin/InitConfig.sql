@@ -16,6 +16,7 @@ INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VAL
 /*
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("topic","topic1",1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("group","groupid1",1);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("receivernum",1,1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("zookeeper","zookeeper1",1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("brokerlist","brokerlist1",1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("serializerclass","serializerclass1",1);

@@ -40,11 +40,17 @@ abstract class RedisCacheManager extends CacheManager {
     override def initialValue = getResource
   }
 
+  private val currentKryoTool = new ThreadLocal[KryoSerializerStreamAppTool] {
+    override def initialValue = new KryoSerializerStreamAppTool
+  }
+
 //  private val currentJedis = getResource
 
   final def openConnection = currentJedis.set(getResource)
 
   final def getConnection = currentJedis.get()
+
+  final def getKryoTool = currentKryoTool.get()
 //final def getConnection = currentJedis
 
   final def closeConnection = {
@@ -104,7 +110,7 @@ abstract class RedisCacheManager extends CacheManager {
     while (it.hasNext){
       val elem = it.next()
       seqlist.add(elem.getBytes)
-      seqlist.add(KryoSerializerStreamAppTool.serialize(keysvalues(elem)).array())
+      seqlist.add(getKryoTool.serialize(keysvalues(elem)).array())
     }
     getConnection.mset(seqlist.toIndexedSeq: _*)
   }
@@ -114,7 +120,7 @@ abstract class RedisCacheManager extends CacheManager {
     val bytekeys = keys.map(x=> x.getBytes).toSeq
     val anyvalues = getConnection.mget(bytekeys: _*).map(x => {
       if(x != null) {
-        val data = KryoSerializerStreamAppTool.deserialize[Any](ByteBuffer.wrap(x))
+        val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
         data
       }
       else None

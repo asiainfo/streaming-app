@@ -62,12 +62,14 @@ class LocationStayRule extends MCLabelRule {
     val mcStayLabelsMap = Map[String, String]()
     // cache中所有区域的最大lastTime
     val cacheMaxLastTime = getCacheMaxLastTime(labelsPropMap)
+    println(" MAX LAST TIME : " + cacheMaxLastTime)
     // 取在siteRule（区域规则）中所打的area标签list
     val locationList = (mc.getLabels(Constant.LABEL_ONSITE)).keys
     locationList.map(location => {
       println(" Find Current site : " + location)
       // A.此用的所有区域在cache中的信息已经过期视为无效，标签打为“0”；重新设定cache;
       if (mc.time - cacheMaxLastTime > thresholdValue) {
+        println(" COME IN 1")
         // 1. 连续停留标签置“0”
         mcStayLabelsMap += (location -> Constant.LABEL_STAY_TIME_ZERO)
         // 2. 清除cache信息
@@ -78,10 +80,12 @@ class LocationStayRule extends MCLabelRule {
         cacheStayLabelsMap += (Constant.LABEL_STAY_LASTTIME -> mc.time.toString)
         labelsPropMap += (location -> cacheStayLabelsMap)
       } else if (cacheMaxLastTime - mc.time > thresholdValue) {
+        println(" COME IN 2")
         //B.此条数据为延迟到达的数据，已超过阈值视为无效，标签打为“0”；cache不做设定;
         // 1. 连续停留标签置“0”
         mcStayLabelsMap += (location -> Constant.LABEL_STAY_TIME_ZERO)
       } else {
+        println(" COME IN 3")
         //C.此条数据时间为[(maxLastTime-thresholdValue)~maxLastTime~(maxLastTime+thresholdValue)]之间
         labelAction(location, labelsPropMap, mcStayLabelsMap, mc.time)
       }
@@ -156,6 +160,7 @@ class LocationStayRule extends MCLabelRule {
       case Some(currentStatus) => {
         val first = getCacheStayTime(currentStatus).get("first").get
         val last = getCacheStayTime(currentStatus).get("last").get
+        println("FIRST TIME : " + first + " , LAST TIME : " + last + " , MCTIME : " + mcTime)
         if (first > last) {
           // 无效数据，丢弃，本条视为first
           mcStayLabelsMap += (location -> Constant.LABEL_STAY_DEFAULT_TIME)
@@ -181,8 +186,12 @@ class LocationStayRule extends MCLabelRule {
           updateCacheStayTime(currentStatus, mcTime, mcTime)
         } else {
           // 本条为正常新数据，更新cache后判定
+          println(" RIGHT DATA ")
           currentStatus.put(Constant.LABEL_STAY_LASTTIME, mcTime.toString)
-          mcStayLabelsMap.put(location, evaluateTime(last - first, mcTime - first))
+
+          val newtime = evaluateTime(last - first, mcTime - first)
+          println(" CURRTIME : " + newtime)
+          mcStayLabelsMap.put(location, newtime)
         }
       }
     }
