@@ -9,7 +9,7 @@ import org.objenesis.strategy.StdInstantiatorStrategy
 /**
  * Created by baishuo on 3/31/15.
  */
-object KryoSerializerStreamAppTool {
+class KryoSerializerStreamAppTool {
   private val bufferSize: Int =(0.064 * 1024 * 1024).toInt
   private val maxBufferSize = 64 * 1024 * 1024
   private val kryo = new Kryo()
@@ -40,7 +40,7 @@ object KryoSerializerStreamAppTool {
   }
 
   // 测试用
-  def main(args: Array[String]) {
+ /* def main(args: Array[String]) {
     val student = new EnglishStudent("aa", "male", 25)
     val buffer = KryoSerializerStreamAppTool.serialize(student)
     val student2 = KryoSerializerStreamAppTool.
@@ -51,7 +51,7 @@ object KryoSerializerStreamAppTool {
     val (s, regType) = KryoSerializerStreamAppTool.deserializeWithType(buffer2)
     println(s)
 
-  }
+  }*/
 
 
 }

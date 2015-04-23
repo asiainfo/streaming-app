@@ -14,7 +14,8 @@ object EventSourceReader extends org.apache.spark.Logging {
     if ("kafka".equals(sourceType)) {
       val zkQuorum = conf.get("zookeeper")
       val group = conf.get("group")
-      val topicMap = Map(conf.get("topic") -> 1)
+      val receiverNum = conf.getInt("receivernum")
+      val topicMap = Map(conf.get("topic") -> receiverNum)
       logInfo("Init Kafka Stream : zookeeper->"+zkQuorum+"; groupid->"+group+"; topic->"+topicMap+" ! ")
       KafkaUtils.createStream(ssc, zkQuorum, group, topicMap).map(_._2)
 
