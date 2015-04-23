@@ -90,7 +90,6 @@ class LocationStayRule extends MCLabelRule {
     mcStayLabelsMap.iterator.foreach(x => {
       println("area : " + x._1 + " , stay : " + x._2)
     })
-
     cacheInstance
   }
 
