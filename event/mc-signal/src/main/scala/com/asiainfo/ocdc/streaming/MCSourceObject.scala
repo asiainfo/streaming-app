@@ -19,6 +19,7 @@ case class MCSourceObject(
                            @BeanProperty val clearstatus: Int = 0,
                            @BeanProperty val relstatus: Int = 0,
                            @BeanProperty val xdrtype: Int = 0,
+                           @BeanProperty val issmsalone: Int = 0,
                            @BeanProperty val labels: Map[String, Map[String, String]] = Map[String, Map[String, String]]()
                            ) extends SourceObject(labels) {
 

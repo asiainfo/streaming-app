@@ -14,7 +14,7 @@ class MCEventSource() extends EventSource() {
       if (inputs(6) == "000000000000000" && inputs(7) == "000000000000000") {
         logError(" Emsi is wrong ! ")
         None
-      }else{
+      } else {
         val sdf = new SimpleDateFormat("yyyymmdd hh:mm:ss")
         val eventID = inputs(0).toInt
         val time = sdf.parse(inputs(1)).getTime
@@ -25,23 +25,28 @@ class MCEventSource() extends EventSource() {
         val lac = DataConvertTool.convertHex(inputs(2))
         val ci = DataConvertTool.convertHex(inputs(3))
 
-        val imei = inputs(4)
-
-        var imsi = ""
-        if (eventID == 3 || eventID == 5 || eventID == 7) {
-          imsi = inputs(7)
-        } else {
-          imsi = inputs(6)
-        }
-
         val eventresult = inputs(8).toInt
         val alertstatus = inputs(9).toInt
         val assstatus = inputs(10).toInt
         val clearstatus = inputs(11).toInt
         val relstatus = inputs(12).toInt
         val xdrtype = inputs(13).toInt
+        val issmsalone = inputs(14).toInt
 
-        Some(new MCSourceObject(eventID, time, lac, ci, imsi, imei, eventresult, alertstatus, assstatus, clearstatus, relstatus, xdrtype))
+        val imei = inputs(4)
+
+        var imsi = ""
+        if (eventID == 3 || eventID == 5 || eventID == 7) {
+          imsi = inputs(7)
+        } else if (eventID == 8 || eventID == 9 || eventID == 10 || eventID == 26) {
+          if (issmsalone == 1) imsi = inputs(6)
+          else if (issmsalone == 2) imsi = inputs(7)
+          else None
+        } else {
+          imsi = inputs(6)
+        }
+
+        Some(new MCSourceObject(eventID, time, lac, ci, imsi, imei, eventresult, alertstatus, assstatus, clearstatus, relstatus, xdrtype, issmsalone))
       }
     } catch {
       case e: Exception => {
