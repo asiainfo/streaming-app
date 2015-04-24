@@ -16,7 +16,7 @@ class LabelProps extends StreamingCache with Serializable {
 
 class LocationStayRule extends MCLabelRule {
   // 从配置文件读入 用户设定的各业务连续停留的时间坎(排序升序)
-  lazy val selfDefStayTimeList = conf.get(Constant.STAY_LIMITS).split(Constant.ITME_SPLIT_MARK)
+  lazy val selfDefStayTimeList = conf.get(Constant.STAY_LIMITS).split(Constant.ITME_SPLIT_MARK).map(_.trim)
   lazy val stayTimeOrderList = selfDefStayTimeList.map(_.toLong).sorted
   // 推送满足设置的数据坎的最大值:true;最小值：false
   lazy val userDefPushOrde = conf.getBoolean(Constant.STAY_MATCHMAX, true)
