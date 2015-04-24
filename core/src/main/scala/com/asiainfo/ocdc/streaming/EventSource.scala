@@ -77,7 +77,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
 
                 val minimap = mutable.Map[String, SourceObject]()
 
-                while (iter.hasNext && totalFetch < 20) {
+                while (iter.hasNext && totalFetch < conf.getInt("batchsize")) {
                   val currentLine = iter.next()
                   minimap += (currentLine.generateId -> currentLine)
                   totalFetch += 1
@@ -85,7 +85,9 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
                   result = true
                 }
 
+                val f1 = System.currentTimeMillis()
                 val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+                logDebug(" GET codis cache cost time : " + (System.currentTimeMillis() - f1) + " millis ! ")
 
                 val cachemap_new = minimap.map(x => {
                   val key = x._1
@@ -102,6 +104,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
                     }
                   }
 
+                  val f2 = System.currentTimeMillis()
                   labelRuleArray.foreach(labelRule => {
                     logInfo(" Exec label : " + labelRule.conf.getClassName())
                     val cacheOpt = rule_caches.get(labelRule.conf.get("id"))
@@ -112,11 +115,14 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
                     rule_caches = rule_caches.updated(labelRule.conf.get("id"), newcache)
                   })
                   currentArrayBuffer.append(value)
+                  logDebug(" Exec labels cost time : " + (System.currentTimeMillis() - f2) + " millis ! ")
                   (key -> rule_caches.asInstanceOf[Any])
                 })
 
                 //update caches to CacheManager
+                val f3 = System.currentTimeMillis()
                 CacheFactory.getManager.setMultiCache(cachemap_new)
+                logDebug(" Update codis cache cost time : " + (System.currentTimeMillis() - f3) + " millis ! ")
 
                 arrayBuffer = currentArrayBuffer.toArray
                 result

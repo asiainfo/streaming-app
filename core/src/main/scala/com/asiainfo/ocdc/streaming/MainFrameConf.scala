@@ -48,7 +48,7 @@ object MainFrameConf extends BaseConf {
    */
   def initEventSourceConf {
 
-    val sql = "select es.id,es.name as sourcename,es.type,es.delim,es.formatlength,es.classname,esp.name as pname,esp.pvalue from " + TableNameConstants.EventSourceTableName + " es left join " + TableNameConstants.EventSourcePropTableName + " esp on es.id = esp.esourceid "
+    val sql = "select es.id,es.name as sourcename,es.type,es.delim,es.formatlength,es.classname,es.batchsize,esp.name as pname,esp.pvalue from " + TableNameConstants.EventSourceTableName + " es left join " + TableNameConstants.EventSourcePropTableName + " esp on es.id = esp.esourceid "
     val events = JDBCUtils.query(sql)
     val sourcemap = Map[String, EventSourceConf]()
     events.map(x => {
@@ -63,6 +63,7 @@ object MainFrameConf extends BaseConf {
         esconf.set("delim", x.get("delim").get)
         esconf.set("formatlength", x.get("formatlength").get)
         esconf.set("classname", x.get("classname").get)
+        esconf.set("batchsize", x.get("batchsize").get)
         esconf.set(x.get("pname").get, x.get("pvalue").get)
         sourcemap += (sourceId -> esconf)
       }

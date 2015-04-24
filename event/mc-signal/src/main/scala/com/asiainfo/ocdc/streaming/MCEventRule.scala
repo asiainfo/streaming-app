@@ -14,15 +14,20 @@ class MCEventRule extends EventRule {
   def output_dir: String = conf.get("outputdir")
 
   override def output(data: DataFrame) {
-    transforEvent2Message(data).saveAsTextFile(output_dir)
+    val output_msg = transforEvent2Message(data)
+    if (output_msg.partitions.length > 0){
+      val f5 = System.currentTimeMillis()
+      output_msg.saveAsTextFile(output_dir + "/" + System.currentTimeMillis())
+      logDebug(" Write HDFS cost time : " + (System.currentTimeMillis() - f5) + " millis ! ")
+    }
   }
 
   override def transforEvent2Message(data: DataFrame): RDD[String] = {
     val selcol_size = selectExp.size
     data.map(row => {
       println(" every column values ")
-      for(i <- 0 to (row.length-1)){
-        println(" column "+ i + " : " + row.get(i))
+      for (i <- 0 to (row.length - 1)) {
+        println(" column " + i + " : " + row.get(i))
       }
       var message: String = ""
       for (i <- 0 to (selcol_size - 1)) {
@@ -36,7 +41,7 @@ class MCEventRule extends EventRule {
   override def transforMessage2Event(message: RDD[String]): RDD[Option[SourceObject]] = {
     message.map(x => {
       val inputArray = x.split(getDelim)
-      if(inputArray.length != inputLength) {
+      if (inputArray.length != inputLength) {
         None
       } else {
         formatSource(inputArray)
@@ -50,7 +55,7 @@ class MCEventRule extends EventRule {
       if (inputs(6) == "000000000000000" && inputs(7) == "000000000000000") {
         logError(" Emsi is wrong ! ")
         None
-      }else{
+      } else {
         val sdf = new SimpleDateFormat("yyyymmdd hh:mm:ss")
         val eventID = inputs(0).toInt
         val time = sdf.parse(inputs(1)).getTime

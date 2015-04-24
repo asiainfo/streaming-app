@@ -136,3 +136,12 @@ abstract class RedisCacheManager extends CacheManager {
     getConnection.hset(cacheName,key,value)
   }
 }
+
+object AAA{
+  def main(args: Array[String]) {
+    val aaa = "1234356456546"
+    val a1 = aaa.getBytes()
+    val a2 = aaa.getBytes()
+    println(a1.equals(a2))
+  }
+}

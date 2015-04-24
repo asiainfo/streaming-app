@@ -78,6 +78,7 @@ class MCEventSource() extends EventSource() {
       df.persist
       df.printSchema()
 
+      val f4 = System.currentTimeMillis()
       val eventRuleIter = eventRules.iterator
       while (eventRuleIter.hasNext) {
         val eventRule = eventRuleIter.next
@@ -90,8 +91,8 @@ class MCEventSource() extends EventSource() {
         val selectedData = filteredData.selectExpr(eventRule.selectExp: _*)
 
         eventRule.output(selectedData)
-
       }
+      logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
 
       df.unpersist()
     }

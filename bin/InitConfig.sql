@@ -9,7 +9,7 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMEM","600000");
 
 -- init EventSources
 --INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VALUES ("MC_Kafka","kafka",",","100","com.asiainfo.ocdc.streaming.MCEventSource");
-INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VALUES ("MC_HDFS","hdfs",",","8","com.asiainfo.ocdc.streaming.MCEventSource");
+INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`,`batchsize`) VALUES ("MC_HDFS","hdfs",",","8","com.asiainfo.ocdc.streaming.MCEventSource",100);
 
 -- init EventSourcesDetail
 -- kafka

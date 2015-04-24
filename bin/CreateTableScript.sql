@@ -16,6 +16,7 @@ CREATE TABLE `EventSource` (
   `delim` varchar(10) NOT NULL,
   `formatlength` int NOT NULL,
   `classname` varchar(200) NOT NULL,
+  `batchsize` int NOT NULL DEFAULT 10,
   PRIMARY KEY (`id`)
 );
 
