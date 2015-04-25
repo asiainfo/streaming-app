@@ -19,24 +19,11 @@ object Kafka2Hdfs {
 
   val logger = LoggerFactory.getLogger("Kafka2Hdfs")
 
-  def main(args: Array[String]): Unit ={
-    /*
+  def main(args: Array[String]): Unit = {
 
-    //    val zookeeperConnect = "localhost:2181"
-        val zookeeperConnect = "spark1:2181,spark2:2181"
-        val groupId = "group2"
-    //    val topic: String = "topic1-part1-repl1"
-        val topic: String = "topic_stream1"
-        val threadNum_consumer: Int = 3
-        val queue_capacity: Int = 100000000
-        val hadoop_output = "hdfs://spark1:9000/user/tsingfu/tmp/kafka2hdfs/tmp.txt"
-        val batchLimit = 10
-        val batchMaxMS = 30 * 1000
-        val batchSleep = 5 * 1000
-    */
-
-        val confFile = args(0)
-//    val confFile = "kafkaTest/conf/kafka2hdfs-test.xml"
+    //1 获取配置
+    val confFile = args(0)
+    //    val confFile = "kafkaTest/conf/kafka2hdfs-test.xml"
     val xml = XML.load(confFile)
     val zookeeperConnect = (xml \ "kafkaConsumer" \ "zookeeper.connect").text.trim
 
@@ -46,60 +33,93 @@ object Kafka2Hdfs {
 
     val buffer_capacity = (xml \ "buffer" \ "capacity").text.trim.toInt
     val hadoop_outputDir = (xml \ "hadoop" \ "outputDir").text.trim
-    val hadoop_outputFilePrefix = (xml \ "hadoop" \ "outputFilePrefix").text.trim
+    val hadoop_prefix = (xml \ "hadoop" \ "prefix").text.trim
+    val hadoop_parallelFlag = (xml \ "hadoop" \ "parallel").text.trim
     val batchLimit = (xml \ "hadoop" \ "batch.limit").text.trim.toInt
     val batchMaxMS = (xml \ "hadoop" \ "batch.max.ms").text.trim.toInt
-    val bufferCheckSleep = (xml \ "hadoop" \ "buffer.check.sleep").text.trim.toInt
+    val bufferCheckSleepMS = (xml \ "hadoop" \ "buffer.check.sleep.ms").text.trim.toInt
 
+    // 2 获取访问 hdfs 的 conf, fs, path
     val hadoopConf = new org.apache.hadoop.conf.Configuration()
-    hadoopConf.set("dfs.client.block.write.replace-datanode-on-failure.policy","NEVER")
-    hadoopConf.set("dfs.client.block.write.replace-datanode-on-failure.enable","true")
 
-    //    var fs = FileSystem.get(URI.create(hadoop_outputDir), hadoopConf)
+    val path = new Path(hadoop_prefix)
+    val hadoop_outputWithPrefix = hadoop_outputDir + "/" + hadoop_prefix
 
-    val path = new Path(hadoop_outputFilePrefix)
-    val hadoop_outputFile = hadoop_outputDir + "/" + hadoop_outputFilePrefix
-    var fs = FileSystem.get(URI.create(hadoop_outputFile), hadoopConf)
-    val fs2 = new ThreadLocal[FileSystem](){
-      override def initialValue(): FileSystem ={
-        FileSystem.get(URI.create(hadoop_outputFile), hadoopConf)
-      }
-    }
-    if(!fs.exists(path)){
-      fs.create(path,false)
-      fs.close()
-      fs = FileSystem.get(URI.create(hadoop_outputFile), hadoopConf)
-    }
+    val fs = FileSystem.get(URI.create(hadoop_outputDir), hadoopConf)
 
-    val processor: MessageProcessor = new MessagePrinter
+    // 3 初始化 buffer，存储从 kafka 读取的消息
     val queues = new Array[BlockingQueue[String]](threadNum_consumer)
-    val consumerConnector = Consumer.createJavaConsumerConnector(createConsumerConfig(zookeeperConnect, groupId))
 
+    // 4 获取访问 kafka 的 connector, 多线程的 streams
+    val consumerConnector = Consumer.createJavaConsumerConnector(createConsumerConfig(zookeeperConnect, groupId))
     import scala.collection.JavaConversions.mapAsJavaMap
     val topicThreadMap: mutable.Map[String, Integer] = new mutable.HashMap[String, Integer]
     topicThreadMap.put(topic, threadNum_consumer)
     val kafkaStreamMap = consumerConnector.createMessageStreams(topicThreadMap)
     val streams = kafkaStreamMap.get(topic)
 
-    val threadPool = Executors.newFixedThreadPool(threadNum_consumer * 2)
+    // 5 初始化线程池，启动 kafka 读线程， hdfs append 追加线程
+    val threadPool = if (hadoop_parallelFlag == "true") {
+      Executors.newFixedThreadPool(threadNum_consumer * 2)
+    } else {
+      Executors.newFixedThreadPool(threadNum_consumer + 1)
+    }
+
+    // 5.1 启动 kafka 读线程
     var threadIdx = 0
     for (stream <- streams.toArray) {
-
       queues(threadIdx) = new LinkedBlockingQueue[String](buffer_capacity)
-      val processor2: MessageProcessor = new MessageBuffer(queues(threadIdx))
-
-      //      threadPool.execute(new ConsumerThread(stream.asInstanceOf[KafkaStream[Array[Byte],Array[Byte]]], processor))
-      threadPool.execute(new ConsumerThread(stream.asInstanceOf[KafkaStream[Array[Byte],Array[Byte]]], queues(threadIdx), processor2))
-
-      //TODO:
-      //      val hadoop_outputFile = hadoop_outputDir + "/" + hadoop_outputFilePrefix +"_" + threadIdx
-
-      threadPool.execute(new HdfsAppendThread(queues(threadIdx), hadoop_outputFile, fs2.get(), batchLimit, batchMaxMS, bufferCheckSleep))
+      //      val processor: MessageProcessor = new MessagePrinter
+      val processor: MessageProcessor = new MessageBuffer(queues(threadIdx), threadIdx)
+      threadPool.execute(new ConsumerThread(stream.asInstanceOf[KafkaStream[Array[Byte], Array[Byte]]], queues(threadIdx), processor, threadIdx))
       threadIdx += 1
     }
 
+    // 5.2 启动 kakfa 写线程
+    if (hadoop_parallelFlag == "true") {
+      logger.info("Using multi HdfsAppend threads to append messages(from multi kafka buffer queues) into multi hdfs files")
+      for (i <- 0 until threadNum_consumer) {
+        val hadoop_output = hadoop_outputWithPrefix + "-part" + i
+        createHadoopFileIfNonExist(fs, hadoop_output, dirFlag = false)
+        logger.debug("Starting HdfsAppend thread to write messages from buffer queue No. "+ i +" to hadoop_output " + hadoop_output)
+        threadPool.execute(new HdfsAppendInMultiThread(queues(i), hadoop_output, batchLimit, batchMaxMS, bufferCheckSleepMS))
+      }
+
+    } else {
+      logger.info("Using single HdfsAppend thread to append messages (from multi kafka buffer queues) into single hdfs file " + hadoop_outputWithPrefix)
+      createHadoopFileIfNonExist(fs, hadoop_outputWithPrefix, dirFlag = false)
+      threadPool.execute(new HdfsAppendInSingleThread(queues, hadoop_outputWithPrefix, batchLimit, batchMaxMS, bufferCheckSleepMS))
+    }
+    fs.close()
+
     threadPool.shutdown()
     threadPool.awaitTermination(1, TimeUnit.SECONDS)
+  }
+
+  def createHadoopFileIfNonExist(fs: FileSystem, hadoopPath: String, dirFlag: Boolean): Unit = {
+    val path = new Path(hadoopPath)
+
+    if (!fs.exists(path)) {
+      val parent = path.getParent
+      if (!fs.exists(parent)) {
+        createHadoopFileIfNonExist(fs, parent.getName, dirFlag = true)
+      }
+
+      if (dirFlag) {
+        fs.mkdirs(path)
+        logger.info("dir " + hadoopPath + " created")
+      } else {
+        fs.create(path, false)
+        logger.info("file " + hadoopPath + " created")
+      }
+
+    } else {
+      if (dirFlag) {
+        logger.warn("dir " + hadoopPath + " exists already")
+      } else {
+        logger.warn("file " + hadoopPath + " exists already")
+      }
+    }
   }
 
   def createConsumerConfig(zookeeperConnect: String, groupId: String): ConsumerConfig = {
@@ -115,20 +135,22 @@ object Kafka2Hdfs {
 
 class ConsumerThread(stream: KafkaStream[Array[Byte], Array[Byte]],
                      queue: BlockingQueue[String],
-                     processor: MessageProcessor)
+                     processor: MessageProcessor,
+                     queueId: Int)
         extends Runnable {
 
   val logger = LoggerFactory.getLogger(classOf[ConsumerThread])
+
   def run() {
     val thread = Thread.currentThread()
-    logger.info("[ConsumerThread] running thread " + thread )
+    logger.info("Running thread " + thread +" to buffer msgs in queue Id = " + queueId)
     val it = stream.iterator()
     while (it.hasNext()) {
       val msg = new String(it.next().message())
-      logger.debug("[ConsumerThread] " + thread + ", message = " + msg)
+      //      logger.debug("msg = " + msg)
       processor.process(msg)
     }
-    logger.warn("[ConsumerThread] [WARN] exit thread " + thread)
+    logger.warn("Exit thread " + thread)
   }
 }
 
@@ -141,8 +163,8 @@ trait MessageProcessor {
 /**
  * MessageProcessor 简单实现类， 打印消息
  */
-class MessagePrinter extends MessageProcessor{
-  override def process(str: String){
+class MessagePrinter extends MessageProcessor {
+  override def process(str: String) {
     System.out.println(str)
   }
 }
@@ -151,81 +173,76 @@ class MessagePrinter extends MessageProcessor{
  * MessageProcessor 实现类，写消息到执行 buffer
  * @param queue
  */
-class MessageBuffer(queue: BlockingQueue[String]) extends MessageProcessor{
+class MessageBuffer(queue: BlockingQueue[String], queueId: Int) extends MessageProcessor {
   override def process(str: String): Unit = {
-    logger.debug("queue " + queue +" , add msg : " + str)
+    logger.debug("buffer queue id = " + queueId + ", add msg = " + str)
     queue.put(str)
   }
 }
 
 /**
- * 从指定 buffer 中读取消息，追加到 hdfs 文件
+ * 从指定 buffer 中读取消息，多线程，追加到 多个 hdfs 文件
  * @param queue
  * @param hadoop_output
- * @param fs
  * @param batchLimit
  * @param batchMaxMS
- * @param bufferCheckSleep
+ * @param bufferCheckSleepMS
  */
-class HdfsAppendThread(queue: BlockingQueue[String],
-                       hadoop_output: String,
-                       fs: FileSystem,
-                       batchLimit: Int, batchMaxMS: Int, bufferCheckSleep: Int)
+class HdfsAppendInMultiThread(queue: BlockingQueue[String],
+                              hadoop_output: String,
+                              batchLimit: Int, batchMaxMS: Int, bufferCheckSleepMS: Int)
         extends Runnable {
 
-  val logger = LoggerFactory.getLogger(classOf[HdfsAppendThread])
+  val logger = LoggerFactory.getLogger(classOf[HdfsAppendInMultiThread])
+
+  val hadoopConf = new org.apache.hadoop.conf.Configuration()
+  hadoopConf.set("dfs.client.block.write.replace-datanode-on-failure.policy", "NEVER")
+  hadoopConf.set("dfs.client.block.write.replace-datanode-on-failure.enable", "true")
+
+  val threadLocalFs = new ThreadLocal[FileSystem]() {
+    override def initialValue(): FileSystem = {
+      FileSystem.get(URI.create(hadoop_output), hadoopConf)
+    }
+  }
+
+  def fs: FileSystem = if (threadLocalFs.get() == null) {
+    threadLocalFs.set(FileSystem.get(URI.create(hadoop_output), hadoopConf)).asInstanceOf[FileSystem]
+  } else {
+    threadLocalFs.get()
+  }
 
   override def run() {
     val thread = Thread.currentThread()
-    //    println("[HdfsAppendThread] running thread " + thread)
-    logger.debug("[HdfsAppendThread] running thread " + thread)
+    logger.debug("Running thread " + thread)
     val sb: StringBuilder = new StringBuilder
     var startMS: Long = System.currentTimeMillis
     var elapsed: Long = 0L
     var batchNum: Int = 0
     while (true) {
       val line: String = queue.poll
-      //      println("[HdfsAppendThread] line = " + line + ", batchNum = " + batchNum)
-      logger.debug("[HdfsAppendThread] line = " + line + ", batchNum = " + batchNum)
-      var firstFlag = true
+      logger.debug("HdfsAppend got line from buffer queue " + queue.getClass +", line = " + line + ", batchNum = " + batchNum)
       if (line != null) {
-        //        if (!firstFlag) sb.append("\n")
-        //        sb.append(line)
         sb.append("\n" + line)
         batchNum += 1
 
-        firstFlag = false
         if (batchNum == batchLimit) {
-          //          println("[HdfsAppendThread] ================== appending msg for reach batchLimit = " + batchLimit)
-          logger.debug("[HdfsAppendThread] appending msg for reach batchLimit = " + batchLimit)
+          logger.info("HdfsAppend appending msg for reach batchLimit = " + batchLimit)
           appendStringToHdfs(sb.toString(), hadoop_output, fs)
           sb.setLength(0)
-          firstFlag = true
           batchNum = 0
           startMS = System.currentTimeMillis()
         }
+        elapsed = System.currentTimeMillis() - startMS
       } else {
-        //        println("[HdfsAppendThread] [debug] line = " + line + ", batchNum = " + batchNum + ", sleep "+ bufferCheckSleep +" s")
-        logger.debug("[HdfsAppendThread] [debug] line = " + line + ", batchNum = " + batchNum
-                + ", sleep "+ bufferCheckSleep +" s")
-        try {
-          Thread.sleep(bufferCheckSleep)
-        }
-        catch {
-          case e: InterruptedException =>
-            e.printStackTrace()
-        }
+        // line == null
+        logger.info("HdfsAppend sleeps " + bufferCheckSleepMS + " for got line = " + line + " and batchNum = " + batchNum)
+        Thread.sleep(bufferCheckSleepMS)
         elapsed = System.currentTimeMillis - startMS
 
-        //        println("[HdfsAppendThread] [debug] elapsed = " + elapsed)
-        logger.debug("[HdfsAppendThread] [debug] elapsed = " + elapsed)
-
         if (sb.length > 0 && elapsed > batchMaxMS) {
-          //          println("[HdfsAppendThread] appending msg for reach batchMaxMS = " + batchMaxMS)
-          logger.debug("[HdfsAppendThread] appending msg for reach batchMaxMS = " + batchMaxMS)
+          logger.info("HdfsAppend appending msg for reach batchMaxMS = " + batchMaxMS +", batchNum = " + batchNum)
           appendStringToHdfs(sb.toString(), hadoop_output, fs)
           sb.setLength(0)
-          firstFlag = true
           batchNum = 0
           startMS = System.currentTimeMillis()
         }
@@ -240,15 +257,100 @@ class HdfsAppendThread(queue: BlockingQueue[String],
    * @param fs
    */
   private def appendStringToHdfs(str: String, filename: String, fs: FileSystem) {
-    try {
-      val in: InputStream = new StringBufferInputStream(str)
-      val out: OutputStream = fs.append(new Path(filename))
-      org.apache.hadoop.io.IOUtils.copyBytes(in, out, 4096, true)
+
+    val in: InputStream = new StringBufferInputStream(str)
+    val out: OutputStream = fs.append(new Path(filename))
+    org.apache.hadoop.io.IOUtils.copyBytes(in, out, 4096, true)
+    out.close()
+  }
+}
+
+class HdfsAppendInSingleThread(queues: Array[BlockingQueue[String]],
+                               hadoop_output: String,
+                               batchLimit: Int, batchMaxMS: Int, bufferCheckSleepMS: Int)
+        extends Runnable {
+
+  val logger = LoggerFactory.getLogger(classOf[HdfsAppendInMultiThread])
+
+  val hadoopConf = new org.apache.hadoop.conf.Configuration()
+  hadoopConf.set("dfs.client.block.write.replace-datanode-on-failure.policy", "NEVER")
+  hadoopConf.set("dfs.client.block.write.replace-datanode-on-failure.enable", "true")
+
+  val threadLocalFs = new ThreadLocal[FileSystem]() {
+    override def initialValue(): FileSystem = {
+      FileSystem.get(URI.create(hadoop_output), hadoopConf)
     }
-    catch {
-      case e: IOException =>
-        if(fs != null) fs.close()
-        e.printStackTrace()
+  }
+
+  override def run() {
+    val thread = Thread.currentThread()
+    logger.debug("Running HdfsAppend Single thread " + thread)
+    val sb: StringBuilder = new StringBuilder
+    var startMS: Long = System.currentTimeMillis
+    var elapsed: Long = 0L
+    var batchNum: Int = 0
+    val queueSize = queues.length
+    var queueIdx = 0
+
+    while (true) {
+      var nextQueueFlag = "false"
+      logger.info("HdfsAppend scan queue No. " + queueIdx + " of " + queueSize)
+
+      val queue = queues(queueIdx)
+      while (nextQueueFlag == "false") {
+        val line: String = queue.poll
+        logger.debug("HdfsAppend thread got line = " + line + ", batchNum = " + batchNum)
+
+        if (line != null) {
+          sb.append("\n" + line)
+          batchNum += 1
+
+          if (batchNum == batchLimit) {
+            logger.info("HdfsAppend thread appending msgs for reach batchLimit = " + batchLimit)
+            appendStringToHdfs(sb.toString(), hadoop_output, threadLocalFs.get())
+            sb.setLength(0)
+            batchNum = 0
+            startMS = System.currentTimeMillis()
+
+          }
+          elapsed = System.currentTimeMillis() - startMS
+
+        } else {
+          // line == null
+          val queueCheckSleep = bufferCheckSleepMS / queueSize
+          logger.info("HdfsAppend sleeps " + queueCheckSleep + " ms for got line = null from queue No. " + queueIdx + " of " + queueSize + ", switch to next buffer queue No. " + (queueIdx + 1))
+          nextQueueFlag = "true"
+          Thread.sleep(queueCheckSleep)
+          elapsed = System.currentTimeMillis - startMS
+
+          queueIdx += 1
+          if (queueIdx == queueSize) queueIdx = 0
+
+          logger.debug("HdfsAppend thread does not append msg for " + elapsed + " ms")
+        }
+
+        //超过指定时间，如果有数据，执行一次 append
+        if (sb.length > 0 && elapsed > batchMaxMS) {
+          logger.info("HdfsAppend thread appending msg for reach batchMaxMS = " + batchMaxMS + ", batchNum = " + batchNum)
+          appendStringToHdfs(sb.toString(), hadoop_output, threadLocalFs.get())
+          sb.setLength(0)
+          batchNum = 0
+          startMS = System.currentTimeMillis()
+        }
+      }
     }
+  }
+
+  /**
+   * 追加 str 到 指定 hdfs 文件
+   * @param str
+   * @param filename
+   * @param fs
+   */
+  private def appendStringToHdfs(str: String, filename: String, fs: FileSystem) {
+    val in = new StringBufferInputStream(str)
+    val out = fs.append(new Path(filename))
+    org.apache.hadoop.io.IOUtils.copyBytes(in, out, 4096, true)
+    out.close()
   }
 }

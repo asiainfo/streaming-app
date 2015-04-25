@@ -5,18 +5,18 @@
         <group.id>cg2</group.id>
         <topic>topic2-part3-repl1</topic>
         <threadNum>3</threadNum>
-    </kafkaConsumer>
 
+    </kafkaConsumer>
     <buffer>
         <capacity>1000000</capacity>
     </buffer>
 
     <hadoop>
-        <outputDir>hdfs://spark1:9000/user/tsingfu/tmp/kafka2hdfs</outputDir>
-        <outputFilePrefix>tmp2</outputFilePrefix>
+        <outputDir>hdfs://spark1:9000/user/tsingfu/tmp/kafka2hdfs/mytest</outputDir>
+        <prefix>test-output</prefix>
+        <parallel>false</parallel>
         <batch.limit>10</batch.limit>
         <batch.max.ms>30000</batch.max.ms>
-        <buffer.check.sleep>5000</buffer.check.sleep>
+        <buffer.check.sleep.ms>15000</buffer.check.sleep.ms>
     </hadoop>
-
 </configuration>
