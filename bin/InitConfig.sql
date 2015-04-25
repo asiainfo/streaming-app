@@ -6,6 +6,8 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("DefaultCacheManager","Cod
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxIdle","300");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxTotal","1000");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMEM","600000");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("internal","4");
+
 
 -- init EventSources
 --INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VALUES ("MC_Kafka","kafka",",","100","com.asiainfo.ocdc.streaming.MCEventSource");
