@@ -35,8 +35,8 @@ object Kafka2Hdfs {
         val batchSleep = 5 * 1000
     */
 
-    //    val confFile = args(0)
-    val confFile = "kafkaTest/conf/kafka2hdfs-test.xml"
+        val confFile = args(0)
+//    val confFile = "kafkaTest/conf/kafka2hdfs-test.xml"
     val xml = XML.load(confFile)
     val zookeeperConnect = (xml \ "kafkaConsumer" \ "zookeeper.connect").text.trim
 
@@ -65,7 +65,6 @@ object Kafka2Hdfs {
         FileSystem.get(URI.create(hadoop_outputFile), hadoopConf)
       }
     }
-
     if(!fs.exists(path)){
       fs.create(path,false)
       fs.close()

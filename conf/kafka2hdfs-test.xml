@@ -4,18 +4,19 @@
         <zookeeper.connection>localhost:2181</zookeeper.connection>
         <group.id>cg2</group.id>
         <topic>topic2-part3-repl1</topic>
-        <threadNum>1</threadNum>
-
+        <threadNum>3</threadNum>
     </kafkaConsumer>
+
     <buffer>
         <capacity>1000000</capacity>
     </buffer>
 
     <hadoop>
         <outputDir>hdfs://spark1:9000/user/tsingfu/tmp/kafka2hdfs</outputDir>
-        <outputFilePrefix>tmp1</outputFilePrefix>
+        <outputFilePrefix>tmp2</outputFilePrefix>
         <batch.limit>10</batch.limit>
         <batch.max.ms>30000</batch.max.ms>
         <buffer.check.sleep>5000</buffer.check.sleep>
     </hadoop>
+
 </configuration>
