@@ -15,7 +15,7 @@ object LoadFile2Redis {
 
     cacheMgr = init_redis(serverPort)
 
-    for (line <- scala.io.Source.fromFile(filename).getLines()) {
+    for (line <- scala.io.Source.fromFile(filename, "UTF-8").getLines()) {
       val array = line.split(",")
       val lac_cell = array(2) + ":" + array(3)
       cacheMgr.setCommonCacheValue(key, lac_cell, "SchoolA")
@@ -32,6 +32,15 @@ object LoadFile2Redis {
     CacheFactory.getManager
   }
 
+  def hget(serverPort: String, hashName: String, key:String): String ={
+    val serverPortArray = serverPort.split(":")
+    val host = serverPortArray(0)
+    val port = serverPortArray(1).toInt
+
+    val jedis = new Jedis(host, port)
+
+    jedis.hget(hashName, key)
+  }
 
   def load2(filename: String, serverPort: String, key: String): Unit = {
 
@@ -41,7 +50,7 @@ object LoadFile2Redis {
 
     val jedis = new Jedis(host, port)
 
-    for (line <- scala.io.Source.fromFile(filename).getLines()) {
+    for (line <- scala.io.Source.fromFile(filename, "UTF-8").getLines()) {
       val array = line.split(",")
       val lac_cell = array(2) + ":" + array(3)
       jedis.hset(key, lac_cell, "SchoolA")
@@ -77,10 +86,9 @@ object LoadFile2Redis {
 
     val jedis = new Jedis(host, port)
 
-    for (line <- scala.io.Source.fromFile(filename).getLines()) {
+    for (line <- scala.io.Source.fromFile(filename, "UTF-8").getLines()) {
       val array = line.split(",")
       val lac_cell = array(lacColIdx) + ":" + array(cellColIdx)
-
 
       val areaFlag = array(areaColIdx)
       val newAreaName = if (formatType == 1) {
@@ -95,7 +103,7 @@ object LoadFile2Redis {
           fieldValue = newAreaName
           jedis.hset(key, lac_cell, fieldValue)
         } else {
-          if (!areaArray.contains(areaName)) {
+          if (!areaArray.contains(newAreaName)) {
             fieldValue += "," + newAreaName
             jedis.hset(key, lac_cell, fieldValue)
           }
@@ -109,7 +117,7 @@ object LoadFile2Redis {
 
   def main(args: Array[String]): Unit = {
 
-    if (args.length <= 7) {
+    if (args.length < 7) {
       println(
         """Invalid usage!
           |Usage: java -cp ... com.asiainfo.ocdc.streaming.tool.areaMapping.LoadFile2Redis
