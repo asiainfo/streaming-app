@@ -19,7 +19,7 @@ abstract class EventRule extends Serializable with org.apache.spark.Logging {
 
   def inputLength: Int = conf.getInt("inputLength")
 
-  def transforEvent2Message(data: DataFrame): RDD[String]
+  def transforEvent2Message(data: DataFrame): RDD[(String, String)]
 
   def transforMessage2Event(message: RDD[String]): RDD[Option[SourceObject]]
 

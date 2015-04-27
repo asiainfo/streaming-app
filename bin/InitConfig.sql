@@ -48,3 +48,9 @@ INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("filterExp","label
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("delim",",",2);
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("inputLength","4",2);
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("outputdir","/user/ochadoop/streaming/output",2);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("outputtype","kafka",2);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("kafkakeycol","2",2);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("output_topic","wlan_signal",2);
+
+
+

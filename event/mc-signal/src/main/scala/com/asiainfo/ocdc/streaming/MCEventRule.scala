@@ -11,30 +11,29 @@ import org.apache.spark.sql.DataFrame
  */
 class MCEventRule extends EventRule {
 
-  def output_dir: String = conf.get("outputdir")
-
   override def output(data: DataFrame) {
     val output_msg = transforEvent2Message(data)
-    if (output_msg.partitions.length > 0){
+    if (output_msg.partitions.length > 0) {
       val f5 = System.currentTimeMillis()
-      output_msg.saveAsTextFile(output_dir + "/" + System.currentTimeMillis())
+      EventWriter.writeData(output_msg, conf)
       logDebug(" Write HDFS cost time : " + (System.currentTimeMillis() - f5) + " millis ! ")
     }
   }
 
-  override def transforEvent2Message(data: DataFrame): RDD[String] = {
+  override def transforEvent2Message(data: DataFrame): RDD[(String, String)] = {
     val selcol_size = selectExp.size
+    val kafka_key = conf.getInt("kafkakeycol")
+    val delim = getDelim
     data.map(row => {
-      println(" every column values ")
-      for (i <- 0 to (row.length - 1)) {
-        println(" column " + i + " : " + row.get(i))
-      }
+      val key: String = row.get(kafka_key).toString
       var message: String = ""
       for (i <- 0 to (selcol_size - 1)) {
-        message += row.get(i).toString + getDelim
+        message += row.get(i).toString + delim
       }
+      message = message.substring(0, (message.length - delim.length))
+
       println("Output Message --> " + message)
-      message
+      (key, message)
     })
   }
 

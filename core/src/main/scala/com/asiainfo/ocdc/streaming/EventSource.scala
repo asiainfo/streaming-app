@@ -22,6 +22,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
   }
 
   def addLabelRule(rule: LabelRule): Unit = {
+    println(" add label " + rule.conf.getClassName())
     labelRules += rule
   }
 
@@ -52,6 +53,12 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
         sourceRDD.map(x => (x.generateId, x)).groupByKey()
 
         val labelRuleArray = labelRules.toArray
+
+        println(" Total label rules : ")
+        labelRuleArray.foreach(x => {
+          println(x.conf.getClassName())
+        })
+
         if (sourceRDD.partitions.length > 0) {
           val labeledRDD = sourceRDD.mapPartitions(iter => {
             new Iterator[SourceObject] {

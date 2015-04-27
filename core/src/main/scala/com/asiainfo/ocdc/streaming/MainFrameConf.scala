@@ -86,16 +86,14 @@ object MainFrameConf extends BaseConf {
       val pvalue = x.get("pvalue").get
       val classname = x.get("classname").get
       if (midmap.contains(esid)) {
-        if (name != null) {
-          if (midmap.get(esid).get.contains(lrid)) {
-            midmap.get(esid).get.get(lrid).get.set(name, pvalue)
-          } else {
-            val lrconf = new LabelRuleConf()
-            lrconf.set("id", lrid)
-            lrconf.set("classname", classname)
-            lrconf.set(name, pvalue)
-            midmap.get(esid).get += (lrid -> lrconf)
-          }
+        if (midmap.get(esid).get.contains(lrid)) {
+          if (name != null) midmap.get(esid).get.get(lrid).get.set(name, pvalue)
+        } else {
+          val lrconf = new LabelRuleConf()
+          lrconf.set("id", lrid)
+          lrconf.set("classname", classname)
+          if (name != null) lrconf.set(name, pvalue)
+          midmap.get(esid).get += (lrid -> lrconf)
         }
       } else {
         val lrconf = new LabelRuleConf()

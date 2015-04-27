@@ -15,7 +15,7 @@ object MainFrame {
     }
 
     // read config first
-    CacheFactory.getManager
+//    CacheFactory.getManager
 
     // init spark streaming context
     val sparkConf = new SparkConf()
