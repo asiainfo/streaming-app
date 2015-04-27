@@ -90,7 +90,6 @@ object LoadFile2Redis {
       val array = line.split(",")
       val lac_cell = array(lacColIdx) + ":" + array(cellColIdx)
 
-
       val areaFlag = array(areaColIdx)
       val newAreaName = if (formatType == 1) {
         if (areaFlag == "1" || areaFlag == "true") areaName else "non-" + areaName
@@ -99,12 +98,13 @@ object LoadFile2Redis {
       }
       if (newAreaName != null) {
         var fieldValue = jedis.hget(key, lac_cell)
+        println("[debug] oldValue = " + fieldValue)
         val areaArray = if (fieldValue != null) fieldValue.split(",") else Array[String]()
         if (fieldValue == null) {
           fieldValue = newAreaName
           jedis.hset(key, lac_cell, fieldValue)
         } else {
-          if (!areaArray.contains(areaName)) {
+          if (!areaArray.contains(newAreaName)) {
             fieldValue += "," + newAreaName
             jedis.hset(key, lac_cell, fieldValue)
           }
