@@ -34,7 +34,7 @@ class LoadFile2RedisSuite extends FunSuite with BeforeAndAfter {
     val mapKey="areaMap1"
     LoadFile2Redis.load(fileName, serverPort, mapKey, 2, 0, 1, 2)
 
-    println(LoadFile2Redis.hget(serverPort, mapKey, "25350:4882"))
+//    println(LoadFile2Redis.hget(serverPort, mapKey, "25350:4882"))
 //    assert(LoadFile2Redis.hget(serverPort, mapKey, "25350:4882")=="学校")
 
   }

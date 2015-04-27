@@ -15,7 +15,7 @@ object LoadFile2Redis {
 
     cacheMgr = init_redis(serverPort)
 
-    for (line <- scala.io.Source.fromFile(filename).getLines()) {
+    for (line <- scala.io.Source.fromFile(filename, "UTF-8").getLines()) {
       val array = line.split(",")
       val lac_cell = array(2) + ":" + array(3)
       cacheMgr.setCommonCacheValue(key, lac_cell, "SchoolA")
@@ -50,7 +50,7 @@ object LoadFile2Redis {
 
     val jedis = new Jedis(host, port)
 
-    for (line <- scala.io.Source.fromFile(filename).getLines()) {
+    for (line <- scala.io.Source.fromFile(filename, "UTF-8").getLines()) {
       val array = line.split(",")
       val lac_cell = array(2) + ":" + array(3)
       jedis.hset(key, lac_cell, "SchoolA")
@@ -86,7 +86,7 @@ object LoadFile2Redis {
 
     val jedis = new Jedis(host, port)
 
-    for (line <- scala.io.Source.fromFile(filename).getLines()) {
+    for (line <- scala.io.Source.fromFile(filename, "UTF-8").getLines()) {
       val array = line.split(",")
       val lac_cell = array(lacColIdx) + ":" + array(cellColIdx)
 
@@ -98,7 +98,6 @@ object LoadFile2Redis {
       }
       if (newAreaName != null) {
         var fieldValue = jedis.hget(key, lac_cell)
-        println("[debug] oldValue = " + fieldValue)
         val areaArray = if (fieldValue != null) fieldValue.split(",") else Array[String]()
         if (fieldValue == null) {
           fieldValue = newAreaName
