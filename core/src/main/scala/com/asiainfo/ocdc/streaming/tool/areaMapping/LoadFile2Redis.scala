@@ -32,6 +32,15 @@ object LoadFile2Redis {
     CacheFactory.getManager
   }
 
+  def hget(serverPort: String, hashName: String, key:String): String ={
+    val serverPortArray = serverPort.split(":")
+    val host = serverPortArray(0)
+    val port = serverPortArray(1).toInt
+
+    val jedis = new Jedis(host, port)
+
+    jedis.hget(hashName, key)
+  }
 
   def load2(filename: String, serverPort: String, key: String): Unit = {
 
@@ -109,7 +118,7 @@ object LoadFile2Redis {
 
   def main(args: Array[String]): Unit = {
 
-    if (args.length <= 7) {
+    if (args.length < 7) {
       println(
         """Invalid usage!
           |Usage: java -cp ... com.asiainfo.ocdc.streaming.tool.areaMapping.LoadFile2Redis
