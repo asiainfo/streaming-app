@@ -1,7 +1,6 @@
-package com.asiainfo.ocdc.streaming.tool.areaMapping
+package tools.redis.areaMapping
 
-import com.asiainfo.ocdc.streaming.{CacheManager, CacheFactory, MainFrameConf}
-
+import org.slf4j.LoggerFactory
 import redis.clients.jedis.Jedis
 
 /**
@@ -9,28 +8,7 @@ import redis.clients.jedis.Jedis
  */
 object LoadFile2Redis {
 
-  var cacheMgr: CacheManager = _
-
-  def init_redis(serverPort: String): CacheManager = {
-    //test with CodisCacherManager
-    MainFrameConf.set("DefaultCacheManager", "CodisCacheManager")
-    MainFrameConf.set("CodisProxy", serverPort)
-    MainFrameConf.set("JedisMEM", "10000")
-    MainFrameConf.set("JedisMaxActive", "100")
-    MainFrameConf.set("JedisMaxActive", "15")
-    CacheFactory.getManager
-  }
-
-  def hget(serverPort: String, hashName: String, key:String): String ={
-    val serverPortArray = serverPort.split(":")
-    val host = serverPortArray(0)
-    val port = serverPortArray(1).toInt
-
-    val jedis = new Jedis(host, port)
-
-    jedis.hget(hashName, key)
-  }
-
+  val logger = LoggerFactory.getLogger("LoadAreaMap")
   /**
    * 将基站与区域映射加载到指定 redis 中
    * 提供的文件支持2种格式：
@@ -59,6 +37,7 @@ object LoadFile2Redis {
     val jedis = new Jedis(host, port)
 
     for (line <- scala.io.Source.fromFile(filename, "UTF-8").getLines()) {
+      logger.debug("line = "+line)
       val array = line.split(",")
       val lac_cell = array(lacColIdx) + ":" + array(cellColIdx)
 
@@ -84,6 +63,16 @@ object LoadFile2Redis {
     }
 
     jedis.close()
+  }
+
+  def hget(serverPort: String, hashName: String, key:String): String ={
+    val serverPortArray = serverPort.split(":")
+    val host = serverPortArray(0)
+    val port = serverPortArray(1).toInt
+
+    val jedis = new Jedis(host, port)
+
+    jedis.hget(hashName, key)
   }
 
 

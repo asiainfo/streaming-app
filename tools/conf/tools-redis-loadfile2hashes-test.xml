@@ -1,0 +1,33 @@
+<configuration>
+    <redis>
+        <hostPort>redis1:6379</hostPort>
+        <database>0</database>
+        <timeout>10000</timeout>
+        <password></password>
+    </redis>
+
+    <jedisPool>
+        <maxIdel>15</maxIdel>
+        <maxTotal>100</maxTotal>
+        <minIdel>0</minIdel>
+    </jedisPool>
+
+    <load>
+        <from>file</from> <!-- file, db -->
+
+        <filename>tools/src/test/resources/tools-redis-loadfile2hashes-test1.data</filename>
+        <fileEncode>UTF-8</fileEncode>
+        <fieldSeperator>,</fieldSeperator>
+
+        <hashNamePrefix>userinfo:imsi</hashNamePrefix>
+        <hashIdxes>0</hashIdxes>
+        <hashSeperator>:</hashSeperator>
+
+        <valueIdxes>1,2</valueIdxes> <!-- 指定哪些列的数据作为value -->
+        <keyNames>phoneNo, areaId</keyNames> <!-- 指定加载数据的属性名，此处的key在 redis中的专业术语是 hash 的 field -->
+
+        <batchLimit>10000</batchLimit>
+
+    </load>
+
+</configuration>
