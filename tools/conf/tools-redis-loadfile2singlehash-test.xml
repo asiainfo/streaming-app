@@ -1,0 +1,32 @@
+<configuration>
+    <redis>
+        <hostPort>redis1:6379</hostPort>
+        <database>2</database>
+        <timeout>10000</timeout>
+        <password></password>
+    </redis>
+
+    <jedisPool>
+        <maxIdel>15</maxIdel>
+        <maxTotal>100</maxTotal>
+        <minIdel>0</minIdel>
+    </jedisPool>
+
+    <load>
+        <from>file</from> <!-- file, db -->
+        <batchLimit>10000</batchLimit>
+
+        <filename>tools/src/test/resources/tools-redis-loadareamap1.log</filename>
+        <fileEncode>UTF-8</fileEncode>
+        <fieldSeperator>,</fieldSeperator>
+
+        <hashName>singleHashTest</hashName>
+
+        <keyIdxes>1,2</keyIdxes> <!-- 设置哪几列作为 hash 的 fields, 支持写多个，会进行拼接 -->
+        <keySeperator>:</keySeperator>
+        <valueIdxes>3,4</valueIdxes> <!-- 设置哪几列作为 hash 的 values，支持写多个，会进行拼接 -->
+        <valueSeperator>,</valueSeperator>
+
+    </load>
+
+</configuration>

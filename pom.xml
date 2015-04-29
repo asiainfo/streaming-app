@@ -12,6 +12,7 @@
     <modules>
         <module>core</module>
         <module>event/mc-signal</module>
+        <module>tools</module>
     </modules>
 
     <properties>
