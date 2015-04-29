@@ -11,33 +11,32 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("internal","4");
 
 -- init EventSources
 --INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VALUES ("MC_Kafka","kafka",",","100","com.asiainfo.ocdc.streaming.MCEventSource");
-INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`,`batchsize`) VALUES ("MC_HDFS","hdfs",",","8","com.asiainfo.ocdc.streaming.MCEventSource",100);
+INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`,`batchsize`,`enabled`) VALUES ("MC_HDFS","hdfs",",","8","com.asiainfo.ocdc.streaming.MCEventSource",100,true);
 
 -- init EventSourcesDetail
 -- kafka
 /*
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("topic","topic1",1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("group","groupid1",1);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("receivernum",1,1);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("receivernum","1",1);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("zookeeper","zookeeper1",1);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("brokerlist","brokerlist1",1);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("serializerclass","serializerclass1",1);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("msgkey","msgkey1",1);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("autooffset","autooffset1",1);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("repartitionnum","1",1);
+
 */
 -- hdfs
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("path","hdfs://ochadoop94:9000/user/ochadoop/streaming",3);
 
 -- init LabelRules
+INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.UserBaseInfoRule",1);
 INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.SiteRule",1);
 INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.LocationStayRule",1);
-
 
 -- init LabelRulesProp
 INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.limits","10 * 60 * 1000, 5 * 60 * 1000, 3 * 60 * 1000",2);
 INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.matchMax","true",2);
 INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.outputThreshold","true",2);
 INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.timeout","30 * 60 * 1000",2);
+INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("user_info_cols","productNo,countryId,cityId",1);
 
 -- init EventRules
 INSERT INTO `EventRules` (`esourceid`,`classname`) VALUES (1,"com.asiainfo.ocdc.streaming.MCEventRule");
@@ -47,10 +46,14 @@ INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("selectExp","event
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("filterExp","labels['onsite']['AAAA']='true'",2);
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("delim",",",2);
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("inputLength","4",2);
-INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("outputdir","/user/ochadoop/streaming/output",2);
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("outputtype","kafka",2);
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("kafkakeycol","2",2);
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("output_topic","wlan_signal",2);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("brokerlist","spark10:9093",2);
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("serializerclass","kafka.serializer.StringEncoder",2);
+
+INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("outputdir","/user/ochadoop/streaming/output",2);
+
 
 
 

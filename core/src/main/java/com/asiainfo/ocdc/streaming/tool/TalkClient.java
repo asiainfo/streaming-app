@@ -3,7 +3,6 @@ package com.asiainfo.ocdc.streaming.tool;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
-
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,7 +72,7 @@ public class TalkClient {
 
     public static void main(String args[]) {
 
-        if (args.length < 9) {
+        if(args.length < 9){
             System.out.println("Usage: ./TalkClient zk brokers topic batchnum thread Shost Sport ctprint xdrprint");
             System.exit(0);
         }
@@ -89,23 +88,29 @@ public class TalkClient {
 
             Properties props = new Properties();
             props.put("zookeeper.connect", zk);
-            props.put("group.id", "test");
             props.put("metadata.broker.list", brokers);
             props.put("serializer.class", "kafka.serializer.StringEncoder");
-            props.put("zookeeper.session.timeout.ms", "400");
-            props.put("zookeeper.sync.time.ms", "200");
-            props.put("auto.commit.interval.ms", "1000");
+            props.put("zookeeper.session.timeout.ms", "10000");
+            props.put("zookeeper.sync.time.ms", "10000");
+            props.put("auto.commit.interval.ms", "10000");
+            props.put("request.timeout.ms", "60000");
+            props.put("producer.type", "async");
+            props.put("retry.backoff.ms", "3000");
+            props.put("queue.buffering.max.ms", "5000");
+            props.put("queue.buffering.max.messages", "50000");
+            props.put("queue.enqueue.timeout.ms", "0");
+
+
             // Producer producer = new Producer<String, String>(new ProducerConfig(props));
             final HashMap<Integer, Producer<String, String>> producerMap = new HashMap<Integer, Producer<String, String>>();
-            for (int t = 0; t < thread; t++) {
-                producerMap.put(t, new Producer<String, String>(new ProducerConfig(props)));
+            for(int t=0;t< thread;t++){
+                producerMap.put(t,new Producer<String, String>(new ProducerConfig(props)));
             }
             ExecutorService executor = Executors.newFixedThreadPool(thread);
             List<KeyedMessage<String, String>> message = new ArrayList<KeyedMessage<String, String>>();
-            int ret = 0;
-            ;
+            int ret = 0;;
 
-            if (ctprint.equals("yes")) {
+            if(ctprint.equals("yes")){
                 Timer timer = new Timer();
                 timer.schedule(new SocketCt(), 2000, 60000);
             }
@@ -172,6 +177,7 @@ public class TalkClient {
 
             ExecutorService exec = Executors.newCachedThreadPool();
             exec.execute(createTask(1));
+
             while (true) {
                 byte flag;
                 byte format;
@@ -199,10 +205,10 @@ public class TalkClient {
                 //System.out.println(Integer.toHexString(cmd[1])+" ");
 
                 msgType = bytesToInt(cmd);
-                if (msgType == 0x8003) {
-                    byte[] rep = new byte[msgLength - 2];
+                if(msgType == 0x8003){
+                    byte[] rep = new byte[msgLength-2];
                     ds.readFully(rep);
-                } else if (msgType == 0x0002) {
+                }else if(msgType == 0x0002){
                     ds.readFully(status);
                     msgStatus = bytesToInt(status);
                     ds.readFully(index);
@@ -211,7 +217,7 @@ public class TalkClient {
                     cmd = null;
                     status = null;
                     index = null;
-                    int count = 0;
+                    int count=0;
                     while (true) {
                         byte[] type = new byte[2];
                         byte[] varInfo = new byte[2];
@@ -224,41 +230,41 @@ public class TalkClient {
                         byte[] xdr = new byte[dataLen];
                         ds.readFully(xdr);
                         String xdrs = new String(xdr, "utf-8");
-                        String xdrsend = xdrs.substring(0, xdrs.length() - 2);
-                        if (xdrprint.equals("yes")) {
+                        String xdrsend = xdrs.substring(0,xdrs.length()-2);
+                        if(xdrprint.equals("yes")){
                             System.out.println("xdr:" + xdrsend);
                         }
                         // producer.send(new KeyedMessage<String, String>(topic, xdrsend));
                         //AppendToFile(new String(xdr, "utf-8"),"/bigdata/interface/signal/ceshi.txt");
 
                         String key = xdrsend.split(",")[2];
-                        message.add(new KeyedMessage<String, String>(topic, key, xdrsend));
-                        ret += 1;
+                        message.add(new KeyedMessage<String, String>(topic,key,xdrsend));
+                        ret+=1;
                         ct++;
-                        if (ret == batch) {
+                        if(ret == batch){
                             final List<KeyedMessage<String, String>> bm = message;
                             executor.submit(new Runnable() {
                                 public void run() {
                                     try {
                                         Producer<String, String> producer = producerMap.get((int) (Thread.currentThread().getId() % thread));
-                                        if (producer != null) {
+                                        if(producer !=null){
                                             producer.send(bm);
                                         }
-                                    } catch (Exception e) {
+                                    }catch(Exception e) {
                                         e.printStackTrace();
                                     }
                                 }
                             });
                             message = new ArrayList<KeyedMessage<String, String>>();
-                            ret = 0;
+                            ret=0;
                         }
 
                         type = null;
                         varInfo = null;
                         xdr = null;
-                        count = count + 10 + dataLen;
+                        count = count+10+dataLen;
 
-                        if (msgLength - 6 == count) {
+                        if(msgLength - 6 == count){
                             break;
                         }
                     }
@@ -299,10 +305,10 @@ public class TalkClient {
         };
     }
 
-    static class SocketCt extends TimerTask {
+    static class SocketCt extends TimerTask{
         @Override
         public void run() {
-            System.out.println(ct - oldct);
+            System.out.println(ct-oldct);
             oldct = ct;
         }
     }

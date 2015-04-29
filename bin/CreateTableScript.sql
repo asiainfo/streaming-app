@@ -17,6 +17,7 @@ CREATE TABLE `EventSource` (
   `formatlength` int NOT NULL,
   `classname` varchar(200) NOT NULL,
   `batchsize` int NOT NULL DEFAULT 10,
+  `enabled` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 );
 

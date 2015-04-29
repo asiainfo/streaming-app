@@ -16,10 +16,6 @@ class SiteRule extends MCLabelRule {
     val propMap = scala.collection.mutable.Map[String, String]()
     onsiteList.foreach(location => propMap += (location -> "true"))
     mcSourceObj.setLabel(Constant.LABEL_ONSITE, propMap)
-    println(" set site label !!! ")
-    propMap.iterator.foreach(x => {
-      println(" area : " + x._1 + " flag : " + x._2)
-    })
     cache
   }
 

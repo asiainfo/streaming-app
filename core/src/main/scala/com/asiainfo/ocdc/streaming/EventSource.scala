@@ -22,7 +22,6 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
   }
 
   def addLabelRule(rule: LabelRule): Unit = {
-    println(" add label " + rule.conf.getClassName())
     labelRules += rule
   }
 
@@ -44,21 +43,14 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
     val inputStream = readSource(ssc)
 
     inputStream.foreachRDD { rdd =>
-
       if (rdd.partitions.length > 0) {
-        val sourceRDD = rdd.map(transform).collect {
+        var sourceRDD = rdd.map(transform).collect {
           case Some(source: SourceObject) => source
         }
 
-        sourceRDD.map(x => (x.generateId, x)).groupByKey()
+        sourceRDD = sourceRDD.map(x => (x.generateId, x)).groupByKey().flatMap(_._2)
 
         val labelRuleArray = labelRules.toArray
-
-        println(" Total label rules : ")
-        labelRuleArray.foreach(x => {
-          println(x.conf.getClassName())
-        })
-
         if (sourceRDD.partitions.length > 0) {
           val labeledRDD = sourceRDD.mapPartitions(iter => {
             new Iterator[SourceObject] {
@@ -113,7 +105,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging{
 
                   val f2 = System.currentTimeMillis()
                   labelRuleArray.foreach(labelRule => {
-                    logInfo(" Exec label : " + labelRule.conf.getClassName())
+                    logDebug(" Exec label : " + labelRule.conf.getClassName())
                     val cacheOpt = rule_caches.get(labelRule.conf.get("id"))
                     var old_cache: StreamingCache = null
                     if (cacheOpt != None) old_cache = cacheOpt.get

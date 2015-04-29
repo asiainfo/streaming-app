@@ -11,17 +11,6 @@ object LoadFile2Redis {
 
   var cacheMgr: CacheManager = _
 
-  def load(filename: String, serverPort: String, key: String): Unit = {
-
-    cacheMgr = init_redis(serverPort)
-
-    for (line <- scala.io.Source.fromFile(filename, "UTF-8").getLines()) {
-      val array = line.split(",")
-      val lac_cell = array(2) + ":" + array(3)
-      cacheMgr.setCommonCacheValue(key, lac_cell, "SchoolA")
-    }
-  }
-
   def init_redis(serverPort: String): CacheManager = {
     //test with CodisCacherManager
     MainFrameConf.set("DefaultCacheManager", "CodisCacheManager")
@@ -40,23 +29,6 @@ object LoadFile2Redis {
     val jedis = new Jedis(host, port)
 
     jedis.hget(hashName, key)
-  }
-
-  def load2(filename: String, serverPort: String, key: String): Unit = {
-
-    val serverPortArray = serverPort.split(":")
-    val host = serverPortArray(0)
-    val port = serverPortArray(1).toInt
-
-    val jedis = new Jedis(host, port)
-
-    for (line <- scala.io.Source.fromFile(filename, "UTF-8").getLines()) {
-      val array = line.split(",")
-      val lac_cell = array(2) + ":" + array(3)
-      jedis.hset(key, lac_cell, "SchoolA")
-    }
-
-    jedis.close()
   }
 
   /**

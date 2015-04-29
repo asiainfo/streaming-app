@@ -48,13 +48,13 @@ object MainFrameConf extends BaseConf {
    */
   def initEventSourceConf {
 
-    val sql = "select es.id,es.name as sourcename,es.type,es.delim,es.formatlength,es.classname,es.batchsize,esp.name as pname,esp.pvalue from " + TableNameConstants.EventSourceTableName + " es left join " + TableNameConstants.EventSourcePropTableName + " esp on es.id = esp.esourceid "
+    val sql = "select es.id,es.name as sourcename,es.type,es.delim,es.formatlength,es.classname,es.batchsize,es.enabled,esp.name as pname,esp.pvalue from " + TableNameConstants.EventSourceTableName + " es left join " + TableNameConstants.EventSourcePropTableName + " esp on es.id = esp.esourceid where es.enabled=1 "
     val events = JDBCUtils.query(sql)
     val sourcemap = Map[String, EventSourceConf]()
     events.map(x => {
       val sourceId = x.get("id").get
       if (sourcemap.contains(sourceId)) {
-        sourcemap.get(sourceId).get.set(x.get("pname").get, x.get("pvalue").get)
+        if (x.get("pname").get != null) sourcemap.get(sourceId).get.set(x.get("pname").get, x.get("pvalue").get)
       } else {
         val esconf = new EventSourceConf()
         esconf.set("id", x.get("id").get)
@@ -64,7 +64,8 @@ object MainFrameConf extends BaseConf {
         esconf.set("formatlength", x.get("formatlength").get)
         esconf.set("classname", x.get("classname").get)
         esconf.set("batchsize", x.get("batchsize").get)
-        esconf.set(x.get("pname").get, x.get("pvalue").get)
+        esconf.set("enabled", x.get("enabled").get)
+        if (x.get("pname").get != null) esconf.set(x.get("pname").get, x.get("pvalue").get)
         sourcemap += (sourceId -> esconf)
       }
     })
@@ -76,7 +77,7 @@ object MainFrameConf extends BaseConf {
    * read label rule list and config
    */
   def initLabelRuleConf {
-    val sql = "select lrp.name,lrp.pvalue,lr.classname,lr.id as lrid,es.id as esid from LabelRulesProp lrp right join LabelRules lr on lrp.lrid = lr.id join EventSource es on lr.esourceid = es.id"
+    val sql = "select lrp.name,lrp.pvalue,lr.classname,lr.id as lrid,es.id as esid from LabelRulesProp lrp right join LabelRules lr on lrp.lrid = lr.id join EventSource es on lr.esourceid = es.id where es.enabled=1 "
     val labrules = JDBCUtils.query(sql)
     val midmap = Map[String, Map[String, LabelRuleConf]]()
     labrules.foreach(x => {
@@ -115,7 +116,7 @@ object MainFrameConf extends BaseConf {
    * read event rule list and config
    */
   def initEventRuleConf {
-    val sql = "select erp.name,erp.pvalue,er.classname,er.id as erid,es.id as esid from EventRulesProp erp right join EventRules er on erp.erid = er.id join EventSource es on er.esourceid = es.id"
+    val sql = "select erp.name,erp.pvalue,er.classname,er.id as erid,es.id as esid from EventRulesProp erp right join EventRules er on erp.erid = er.id join EventSource es on er.esourceid = es.id where es.enabled=1 "
     val eventrules = JDBCUtils.query(sql)
     val midmap2 = Map[String, Map[String, EventRuleConf]]()
     eventrules.foreach(x => {

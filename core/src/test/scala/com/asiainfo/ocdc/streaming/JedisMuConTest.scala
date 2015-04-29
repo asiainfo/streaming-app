@@ -1,4 +1,5 @@
 /*
+
 package com.asiainfo.ocdc.streaming
 
 import redis.clients.jedis.Jedis
@@ -17,8 +18,6 @@ object JedisMuConTest {
   val jedis = new Jedis("localhost", 6379)
 
   final def getJedis = jedis
-
-  import scala.actors.Actor._
 
   val a1 = actor {
     val jedis: Jedis = getJedis
@@ -101,4 +100,5 @@ object JedisMuConTest {
 
 
 }
+
 */

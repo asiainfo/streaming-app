@@ -9,6 +9,8 @@ import scala.beans.BeanProperty
  */
 object Constant {
   /**--------------------标签名称------------------------*/
+  // user static fields
+  val USER_BASE_INFO = "base_info"
   // 区域标签
   val LABEL_ONSITE = "onsite"
   // 持续停留标签
