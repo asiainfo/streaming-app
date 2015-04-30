@@ -11,7 +11,7 @@ import scala.xml.XML
 /**
  * Created by tsingfu on 15/4/23.
  */
-class Kafka2HdfsSuite extends FunSuite with BeforeAndAfter {
+class Kafka2hdfsSuite extends FunSuite with BeforeAndAfter {
 
   val confFile = "kafkaTest/conf/kafka2hdfs-test.xml"
   val xml = XML.load(confFile)
