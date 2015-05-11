@@ -7,10 +7,9 @@ package com.asiainfo.ocdc.streaming
 import com.asiainfo.ocdc.streaming.constant.TableNameConstants
 import com.asiainfo.ocdc.streaming.eventrule.EventRuleConf
 import com.asiainfo.ocdc.streaming.eventsource.EventSourceConf
-import com.asiainfo.ocdc.streaming.eventsubscribe.{BusinessEventConf, BusinessEvent}
 import com.asiainfo.ocdc.streaming.labelrule.LabelRuleConf
+import com.asiainfo.ocdc.streaming.subscribe.BusinessEventConf
 import com.asiainfo.ocdc.streaming.tool.JDBCUtils
-
 import scala.collection.mutable.Map
 
 object MainFrameConf extends BaseConf {

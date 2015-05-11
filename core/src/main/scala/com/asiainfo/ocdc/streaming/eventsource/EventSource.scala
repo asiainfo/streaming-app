@@ -2,8 +2,8 @@ package com.asiainfo.ocdc.streaming.eventsource
 
 import com.asiainfo.ocdc.streaming._
 import com.asiainfo.ocdc.streaming.eventrule.{StreamingCache, EventRule}
-import com.asiainfo.ocdc.streaming.eventsubscribe.BusinessEvent
 import com.asiainfo.ocdc.streaming.labelrule.LabelRule
+import com.asiainfo.ocdc.streaming.subscribe.BusinessEvent
 import com.asiainfo.ocdc.streaming.tool.CacheFactory
 import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.StreamingContext

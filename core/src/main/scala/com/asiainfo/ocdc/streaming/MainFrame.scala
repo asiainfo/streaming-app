@@ -2,10 +2,10 @@ package com.asiainfo.ocdc.streaming
 
 import com.asiainfo.ocdc.streaming.eventrule.EventRule
 import com.asiainfo.ocdc.streaming.eventsource.EventSource
-import com.asiainfo.ocdc.streaming.eventsubscribe.BusinessEvent
 import com.asiainfo.ocdc.streaming.labelrule.LabelRule
-import org.apache.spark.streaming.{Seconds, StreamingContext}
+import com.asiainfo.ocdc.streaming.subscribe.BusinessEvent
 import org.apache.spark.SparkConf
+import org.apache.spark.streaming.{Seconds, StreamingContext}
 
 /**
  * Created by tianyi on 3/26/15.
@@ -52,7 +52,7 @@ object MainFrame {
       MainFrameConf.getBsEventsBySource(eventSource.id).map(bsEvnetConf => {
         val bsEvent: BusinessEvent =
           Class.forName(bsEvnetConf.getClassName()).newInstance().asInstanceOf[BusinessEvent]
-        bsEvent.init(bsEvnetConf)
+        bsEvent.init(eventSource.id, bsEvnetConf)
         eventSource.addBsEvent(bsEvent)
       })
 
