@@ -1,7 +1,8 @@
-package com.asiainfo.ocdc.streaming
+package com.asiainfo.ocdc.streaming.tool
 
-import redis.clients.jedis.{Jedis, JedisPool, JedisPoolConfig}
+import com.asiainfo.ocdc.streaming.MainFrameConf
 import com.wandoulabs.jodis.{JedisResourcePool, RoundRobinJedisPool}
+import redis.clients.jedis.JedisPoolConfig
 
 class JodisCacheManager extends RedisCacheManager{
 

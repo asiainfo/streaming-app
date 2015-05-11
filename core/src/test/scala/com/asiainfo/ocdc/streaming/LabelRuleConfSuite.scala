@@ -1,5 +1,6 @@
 package com.asiainfo.ocdc.streaming
 
+import com.asiainfo.ocdc.streaming.labelrule.LabelRuleConf
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
 import scala.collection.immutable

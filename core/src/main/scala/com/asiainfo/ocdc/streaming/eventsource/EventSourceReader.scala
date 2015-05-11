@@ -1,4 +1,4 @@
-package com.asiainfo.ocdc.streaming
+package com.asiainfo.ocdc.streaming.eventsource
 
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream

@@ -1,5 +1,9 @@
 package com.asiainfo.ocdc.streaming
 
+import com.asiainfo.ocdc.streaming.eventrule.EventRule
+import com.asiainfo.ocdc.streaming.eventsource.EventSource
+import com.asiainfo.ocdc.streaming.eventsubscribe.BusinessEvent
+import com.asiainfo.ocdc.streaming.labelrule.LabelRule
 import org.apache.spark.streaming.{Seconds, StreamingContext}
 import org.apache.spark.SparkConf
 
@@ -15,7 +19,7 @@ object MainFrame {
     }
 
     // read config first
-//    CacheFactory.getManager
+    //    CacheFactory.getManager
 
     // init spark streaming context
     val sparkConf = new SparkConf()
@@ -43,6 +47,13 @@ object MainFrame {
           Class.forName(eventRuleConf.getClassName()).newInstance().asInstanceOf[EventRule]
         eventRule.init(eventRuleConf)
         eventSource.addEventRule(eventRule)
+      })
+
+      MainFrameConf.getBsEventsBySource(eventSource.id).map(bsEvnetConf => {
+        val bsEvent: BusinessEvent =
+          Class.forName(bsEvnetConf.getClassName()).newInstance().asInstanceOf[BusinessEvent]
+        bsEvent.init(bsEvnetConf)
+        eventSource.addBsEvent(bsEvent)
       })
 
       eventSource.process(ssc)

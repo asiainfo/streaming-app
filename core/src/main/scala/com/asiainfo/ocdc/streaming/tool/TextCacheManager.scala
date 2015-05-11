@@ -1,7 +1,7 @@
-package com.asiainfo.ocdc.streaming
+package com.asiainfo.ocdc.streaming.tool
 
-import scala.io.Source
 import scala.collection.mutable.Map
+import scala.io.Source
 
 class TextCacheManager extends CacheManager {
 

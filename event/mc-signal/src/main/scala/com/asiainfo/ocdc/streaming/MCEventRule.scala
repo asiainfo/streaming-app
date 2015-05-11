@@ -2,6 +2,7 @@ package com.asiainfo.ocdc.streaming
 
 import java.text.SimpleDateFormat
 
+import com.asiainfo.ocdc.streaming.eventrule.EventRule
 import com.asiainfo.ocdc.streaming.tool.DataConvertTool
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame

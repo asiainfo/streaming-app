@@ -1,4 +1,7 @@
-package com.asiainfo.ocdc.streaming
+package com.asiainfo.ocdc.streaming.labelrule
+
+import com.asiainfo.ocdc.streaming.SourceObject
+import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
 
 /**
  * Created by tianyi on 3/26/15.

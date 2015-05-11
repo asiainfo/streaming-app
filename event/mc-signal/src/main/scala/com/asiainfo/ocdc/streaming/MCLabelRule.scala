@@ -1,5 +1,8 @@
 package com.asiainfo.ocdc.streaming
 
+import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
+import com.asiainfo.ocdc.streaming.labelrule.LabelRule
+
 abstract class MCLabelRule extends LabelRule {
 
   override def attachLabel(source: SourceObject, cache: StreamingCache) = source match {

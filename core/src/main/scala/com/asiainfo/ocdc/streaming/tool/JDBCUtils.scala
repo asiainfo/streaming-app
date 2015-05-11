@@ -1,4 +1,4 @@
-package com.asiainfo.ocdc.streaming
+package com.asiainfo.ocdc.streaming.tool
 
 import java.sql.{Connection, DriverManager, ResultSet, Statement}
 

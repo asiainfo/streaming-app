@@ -78,3 +78,40 @@ CREATE TABLE `EventRulesProp` (
 );
 alter table EventRulesProp add foreign key (erid) references EventRules(id) ON
 DELETE CASCADE;
+
+-- 8 BusenessEvents
+DROP TABLE IF EXISTS `BusenessEvents`;
+CREATE TABLE `BusenessEvents` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `esourceid` int NOT NULL,
+  `classname` varchar(200) NOT NULL,
+  PRIMARY KEY (`id`)
+);
+
+-- 9 BusenessEventsMapEventRules
+DROP TABLE IF EXISTS `BusenessEventsMapEventRules`;
+CREATE TABLE `BusenessEventsMapEventRules` (
+  `beid` int NOT NULL,
+  `erid` int NOT NULL,
+  PRIMARY KEY (`beid`,`erid`)
+);
+
+-- 10 BusenessEventsProp
+DROP TABLE IF EXISTS `BusenessEventsProp`;
+CREATE TABLE `BusenessEventsProp` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(30) NOT NULL,
+  `pvalue` varchar(200) NOT NULL,
+  `beid` int NOT NULL,
+  PRIMARY KEY (`id`)
+);
+alter table BusenessEventsProp add foreign key (beid) references BusenessEvents(id) ON
+DELETE CASCADE;
+
+-- 11 BusenessEventsMapEventSources
+DROP TABLE IF EXISTS `BusenessEventsMapEventSources`;
+CREATE TABLE `BusenessEventsMapEventSources` (
+  `beid` int NOT NULL,
+  `esid` int NOT NULL,
+  PRIMARY KEY (`beid`,`esid`)
+);

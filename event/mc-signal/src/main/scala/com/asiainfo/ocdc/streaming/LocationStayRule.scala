@@ -1,5 +1,8 @@
 package com.asiainfo.ocdc.streaming
 
+import com.asiainfo.ocdc.streaming.constant.Constant
+import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
+
 import scala.collection.mutable.Map
 import scala.util.Sorting.quickSort
 

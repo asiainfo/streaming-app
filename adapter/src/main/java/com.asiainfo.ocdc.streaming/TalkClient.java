@@ -1,4 +1,4 @@
-package com.asiainfo.ocdc.streaming.tool;
+package com.asiainfo.ocdc.streaming;
 
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;

@@ -1,6 +1,4 @@
-package com.asiainfo.ocdc.streaming
-
-import scala.beans.BeanProperty
+package com.asiainfo.ocdc.streaming.constant
 
 /**
  * @author surq

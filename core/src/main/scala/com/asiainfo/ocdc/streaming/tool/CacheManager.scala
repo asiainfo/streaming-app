@@ -1,9 +1,8 @@
-package com.asiainfo.ocdc.streaming
+package com.asiainfo.ocdc.streaming.tool
 
 import java.nio.ByteBuffer
 import java.util.ArrayList
 
-import com.asiainfo.ocdc.streaming.tool.KryoSerializerStreamAppTool
 import redis.clients.jedis.Jedis
 
 import scala.collection.convert.wrapAsJava.mapAsJavaMap

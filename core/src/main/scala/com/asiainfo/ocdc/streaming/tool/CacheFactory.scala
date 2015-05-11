@@ -1,4 +1,6 @@
-package com.asiainfo.ocdc.streaming
+package com.asiainfo.ocdc.streaming.tool
+
+import com.asiainfo.ocdc.streaming._
 
 object CacheFactory {
 

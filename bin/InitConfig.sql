@@ -54,6 +54,11 @@ INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("serializerclass",
 
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("outputdir","/user/ochadoop/streaming/output",2);
 
+-- init BusenessEvents
+INSERT INTO `BusenessEvents` (`esourceid`,`classname`) VALUES (1,"com.asiainfo.ocdc.streaming.MCEventRule");
 
+-- init BusenessEventsMapEventRules
+INSERT INTO `BusenessEvents` (`beid`,`erid`) VALUES (1,1);
 
-
+-- init BusenessEventsProp
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("","",1);

@@ -1,7 +1,8 @@
-package com.asiainfo.ocdc.streaming
+package com.asiainfo.ocdc.streaming.tool
 
 import java.net.InetAddress
 
+import com.asiainfo.ocdc.streaming.MainFrameConf
 import redis.clients.jedis.{JedisPool, JedisPoolConfig}
 
 class CodisCacheManager extends RedisCacheManager {

@@ -1,6 +1,7 @@
 package com.asiainfo.ocdc.streaming
 
 import java.util.Properties
+import com.asiainfo.ocdc.streaming.eventrule.EventRuleConf
 import kafka.producer.{KeyedMessage, Producer, ProducerConfig}
 import org.apache.spark.rdd.RDD
 

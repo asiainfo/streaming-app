@@ -1,5 +1,6 @@
-package com.asiainfo.ocdc.streaming
+package com.asiainfo.ocdc.streaming.eventrule
 
+import com.asiainfo.ocdc.streaming.SourceObject
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 

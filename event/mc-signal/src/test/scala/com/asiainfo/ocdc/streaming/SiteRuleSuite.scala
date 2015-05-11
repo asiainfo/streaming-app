@@ -1,6 +1,10 @@
 package com.asiainfo.ocdc.streaming
 
 import java.text.SimpleDateFormat
+import com.asiainfo.ocdc.streaming.constant.Constant
+import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
+import com.asiainfo.ocdc.streaming.labelrule.LabelRuleConf
+import com.asiainfo.ocdc.streaming.tool.{CacheManager, CacheFactory}
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
 /**

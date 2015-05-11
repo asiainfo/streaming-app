@@ -5,6 +5,11 @@ package com.asiainfo.ocdc.streaming
  */
 
 import com.asiainfo.ocdc.streaming.constant.TableNameConstants
+import com.asiainfo.ocdc.streaming.eventrule.EventRuleConf
+import com.asiainfo.ocdc.streaming.eventsource.EventSourceConf
+import com.asiainfo.ocdc.streaming.eventsubscribe.{BusinessEventConf, BusinessEvent}
+import com.asiainfo.ocdc.streaming.labelrule.LabelRuleConf
+import com.asiainfo.ocdc.streaming.tool.JDBCUtils
 
 import scala.collection.mutable.Map
 
@@ -13,10 +18,20 @@ object MainFrameConf extends BaseConf {
   var sources: Array[EventSourceConf] = null
   var sourceLabelRules = Map[String, Seq[LabelRuleConf]]()
   var sourceEventRules = Map[String, Seq[EventRuleConf]]()
+  var businessEvents = Map[String, Seq[BusinessEventConf]]()
+
+  val bsevent2eventrules = Map[String, Seq[String]]()
+  val bsevent2eventsources = Map[String, Seq[String]]()
 
   def getEventRulesBySource(value: String) = sourceEventRules.getOrElse(value, Seq())
 
   def getLabelRulesBySource(value: String) = sourceLabelRules.getOrElse(value, Seq())
+
+  def getBsEventsBySource(value: String) = businessEvents.getOrElse(value, Seq())
+
+  def getEventRulesByBsEvent(value: String) = bsevent2eventrules.getOrElse(value, Seq())
+
+  def getEventSourcesByBsEvent(value: String) = bsevent2eventsources.getOrElse(value, Seq())
 
   def getInternal: Long = getLong("internal", 1)
 
@@ -28,6 +43,10 @@ object MainFrameConf extends BaseConf {
     initLabelRuleConf
 
     initEventRuleConf
+
+    initBusinessEventConf
+
+    initBsEvent2EventRules
   }
 
   init()
@@ -147,5 +166,85 @@ object MainFrameConf extends BaseConf {
       }).toSeq
     })
   }
+
+  /**
+   * read business event list and config
+   */
+  def initBusinessEventConf {
+    val sql = "select bep.name,bep.pvalue,be.classname,be.id as beid,es.id as esid from BusenessEventsProp bep join BusenessEvents be on bep.beid=be.id join EventSource es on be.esourceid = es.id where es.enabled=1 "
+    val busievents = JDBCUtils.query(sql)
+    val midmap2 = Map[String, Map[String, BusinessEventConf]]()
+    busievents.foreach(x => {
+      val esid = x.get("esid").get
+      val beid = x.get("beid").get
+      val name = x.get("name").get
+      val pvalue = x.get("pvalue").get
+      val classname = x.get("classname").get
+      if (midmap2.contains(esid)) {
+        if (midmap2.get(esid).get.contains(beid)) {
+          midmap2.get(esid).get.get(beid).get.set(name, pvalue)
+        } else {
+          val beconf = new BusinessEventConf()
+          beconf.set(name, pvalue)
+          beconf.set("classname", classname)
+          midmap2.get(esid).get += (beid -> beconf)
+        }
+      } else {
+        val beconf = new BusinessEventConf()
+        beconf.set(name, pvalue)
+        beconf.set("classname", classname)
+        midmap2 += (esid -> Map(beid -> beconf))
+      }
+    })
+    businessEvents = midmap2.map(x => {
+      x._1 -> x._2.map(y => {
+        y._2
+      }).toSeq
+    })
+  }
+
+
+  /**
+   * read business event map to event rules
+   */
+  def initBsEvent2EventRules {
+    val sql = "select be.id as beid,er.id as erid from BusenessEvents be join BusenessEventsMapEventRules map join EventRules er on be.id = map.beid and er.id=map.erid "
+    val be2er = JDBCUtils.query(sql)
+
+    be2er.foreach(x => {
+      val beid = x.get("beid").get
+      val erid = x.get("erid").get
+
+      if (bsevent2eventrules.contains(beid)) {
+        val newseq = bsevent2eventrules.get(beid).get ++ (erid)
+        bsevent2eventrules.update(beid, newseq.asInstanceOf[Seq[String]])
+      } else {
+        val ers = Seq(erid)
+        bsevent2eventrules += (beid -> ers)
+      }
+    })
+  }
+
+  /**
+   * read business event map to event sources
+   */
+  def initBsEvent2EventSources {
+    val sql = "select be.id as beid,es.id as esid from BusenessEvents be join BusenessEventsMapEventSources map join EventSources es on be.id = map.beid and es.id=map.esid "
+    val be2es = JDBCUtils.query(sql)
+
+    be2es.foreach(x => {
+      val beid = x.get("beid").get
+      val esid = x.get("esid").get
+
+      if (bsevent2eventsources.contains(beid)) {
+        val newseq = bsevent2eventsources.get(beid).get ++ (esid)
+        bsevent2eventsources.update(beid, newseq.asInstanceOf[Seq[String]])
+      } else {
+        val ess = Seq(esid)
+        bsevent2eventsources += (beid -> ess)
+      }
+    })
+  }
+
 
 }
