@@ -10,7 +10,6 @@ object CacheFactory {
       case "TextCacheManager" => new TextCacheManager
       case "CodisCacheManager" => new CodisCacheManager
       case "JodisCacheManager" => new JodisCacheManager
-      case "TestJodisCacheManager" => new TestCodisCacheManager
       case _ => throw new Exception("CacheFetchManager is not found!")
     }
   }
