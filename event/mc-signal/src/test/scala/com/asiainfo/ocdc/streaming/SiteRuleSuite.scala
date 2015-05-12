@@ -1,7 +1,7 @@
 package com.asiainfo.ocdc.streaming
 
 import java.text.SimpleDateFormat
-import com.asiainfo.ocdc.streaming.constant.Constant
+import com.asiainfo.ocdc.streaming.constant.LabelConstant
 import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
 import com.asiainfo.ocdc.streaming.labelrule.LabelRuleConf
 import com.asiainfo.ocdc.streaming.tool.{CacheManager, CacheFactory}
@@ -57,19 +57,19 @@ class SiteRuleSuite extends FunSuite with BeforeAndAfter {
     val mc3 = MCSourceObject(1, sdf.parse("20150401 08:00:00.000").getTime, "123", "1", "13900000003", "13910000003")
 
     rule.attachMCLabel(mc1, cache)
-    assert(mc1.getLabels(Constant.LABEL_ONSITE).size == 1)
-    assert(mc1.getLabels(Constant.LABEL_ONSITE).get("area1").get == "true")
+    assert(mc1.getLabels(LabelConstant.LABEL_ONSITE).size == 1)
+    assert(mc1.getLabels(LabelConstant.LABEL_ONSITE).get("area1").get == "true")
 
     rule.attachMCLabel(mc2, cache)
-    assert(mc2.getLabels(Constant.LABEL_ONSITE).size == 2)
-    assert(mc2.getLabels(Constant.LABEL_ONSITE).get("area1").get == "true")
-    assert(mc2.getLabels(Constant.LABEL_ONSITE).get("area2").get == "true")
+    assert(mc2.getLabels(LabelConstant.LABEL_ONSITE).size == 2)
+    assert(mc2.getLabels(LabelConstant.LABEL_ONSITE).get("area1").get == "true")
+    assert(mc2.getLabels(LabelConstant.LABEL_ONSITE).get("area2").get == "true")
 
     rule.attachMCLabel(mc3, cache)
-    assert(mc3.getLabels(Constant.LABEL_ONSITE).size == 3)
-    assert(mc3.getLabels(Constant.LABEL_ONSITE).get("area1").get == "true")
-    assert(mc3.getLabels(Constant.LABEL_ONSITE).get("area2").get == "true")
-    assert(mc3.getLabels(Constant.LABEL_ONSITE).get("area3").get == "true")
+    assert(mc3.getLabels(LabelConstant.LABEL_ONSITE).size == 3)
+    assert(mc3.getLabels(LabelConstant.LABEL_ONSITE).get("area1").get == "true")
+    assert(mc3.getLabels(LabelConstant.LABEL_ONSITE).get("area2").get == "true")
+    assert(mc3.getLabels(LabelConstant.LABEL_ONSITE).get("area3").get == "true")
 
   }
 

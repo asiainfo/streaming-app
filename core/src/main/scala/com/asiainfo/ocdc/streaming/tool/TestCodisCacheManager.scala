@@ -46,13 +46,9 @@ class TestCodisCacheManager extends TestRedisCacheManager {
 
 abstract class TestRedisCacheManager extends CacheManager {
 
-  private val currentKryoTool = new ThreadLocal[KryoSerializerStreamAppTool] {
-    override def initialValue = new KryoSerializerStreamAppTool
-  }
-
   final def getConnection = getResource
 
-  final def getKryoTool = currentKryoTool.get()
+  final def getKryoTool = new KryoSerializerStreamAppTool
 
   //final def getConnection = currentJedis
 

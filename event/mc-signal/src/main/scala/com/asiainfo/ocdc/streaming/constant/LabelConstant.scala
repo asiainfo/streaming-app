@@ -5,7 +5,7 @@ package com.asiainfo.ocdc.streaming.constant
  * @since 2015.4.2
  * @comment 全局常量定义列表
  */
-object Constant {
+object LabelConstant {
   /**--------------------标签名称------------------------*/
   // user static fields
   val USER_BASE_INFO = "base_info"

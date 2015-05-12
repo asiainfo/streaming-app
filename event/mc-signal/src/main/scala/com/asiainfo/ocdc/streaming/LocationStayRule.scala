@@ -1,6 +1,6 @@
 package com.asiainfo.ocdc.streaming
 
-import com.asiainfo.ocdc.streaming.constant.Constant
+import com.asiainfo.ocdc.streaming.constant.LabelConstant
 import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
 
 import scala.collection.mutable.Map
@@ -19,14 +19,14 @@ class LabelProps extends StreamingCache with Serializable {
 
 class LocationStayRule extends MCLabelRule {
   // 从配置文件读入 用户设定的各业务连续停留的时间坎(排序升序)
-  lazy val selfDefStayTimeList = conf.get(Constant.STAY_LIMITS).split(Constant.ITME_SPLIT_MARK).map(_.trim)
+  lazy val selfDefStayTimeList = conf.get(LabelConstant.STAY_LIMITS).split(LabelConstant.ITME_SPLIT_MARK).map(_.trim)
   lazy val stayTimeOrderList = selfDefStayTimeList.map(_.toLong).sorted
   // 推送满足设置的数据坎的最大值:true;最小值：false
-  lazy val userDefPushOrde = conf.getBoolean(Constant.STAY_MATCHMAX, true)
+  lazy val userDefPushOrde = conf.getBoolean(LabelConstant.STAY_MATCHMAX, true)
   // 推送满足设置的数据的限定值，还是真实的累计值.真实的累计值:false;限定值:true
-  lazy val pushLimitValue = conf.getBoolean(Constant.STAY_OUTPUTTHRESHOLD, true)
+  lazy val pushLimitValue = conf.getBoolean(LabelConstant.STAY_OUTPUTTHRESHOLD, true)
   // 无效数据阈值的设定
-  lazy val thresholdValue = conf.getLong(Constant.STAY_TIMEOUT, Constant.DEFAULT_TIMEOUT_VALUE)
+  lazy val thresholdValue = conf.getLong(LabelConstant.STAY_TIMEOUT, LabelConstant.DEFAULT_TIMEOUT_VALUE)
 
   /**
    * 根据本次以及前次的停留时间计算出标签停留时间的值
@@ -35,11 +35,11 @@ class LocationStayRule extends MCLabelRule {
     // 新状态未达到最小坎时或旧状态超过最大坎值时返回黙认值“0”
     if (newStayTime < stayTimeOrderList(0) ||
       oldStayTime > stayTimeOrderList(stayTimeOrderList.size - 1)) {
-      Constant.LABEL_STAY_DEFAULT_TIME
+      LabelConstant.LABEL_STAY_DEFAULT_TIME
     } else {
       val matchList = stayTimeOrderList.filter(limit => (oldStayTime <= limit && newStayTime >= limit))
       // 新旧停留时间在某坎区间内，返回黙认值“0”
-      if (matchList.isEmpty) Constant.LABEL_STAY_DEFAULT_TIME
+      if (matchList.isEmpty) LabelConstant.LABEL_STAY_DEFAULT_TIME
       // 新旧停留时间为跨坎区域时间，推送设置的数据坎的值
       else if (pushLimitValue) {
         val result = if (userDefPushOrde) matchList.map(_.toLong).max else matchList.map(_.toLong).min
@@ -67,26 +67,26 @@ class LocationStayRule extends MCLabelRule {
     val cacheMaxLastTime = getCacheMaxLastTime(labelsPropMap)
     println(" MAX LAST TIME : " + cacheMaxLastTime)
     // 取在siteRule（区域规则）中所打的area标签list
-    val locationList = (mc.getLabels(Constant.LABEL_ONSITE)).keys
+    val locationList = (mc.getLabels(LabelConstant.LABEL_ONSITE)).keys
     locationList.map(location => {
       println(" Find Current site : " + location)
       // A.此用的所有区域在cache中的信息已经过期视为无效，标签打为“0”；重新设定cache;
       if (mc.time - cacheMaxLastTime > thresholdValue) {
         println(" COME IN 1")
         // 1. 连续停留标签置“0”
-        mcStayLabelsMap += (location -> Constant.LABEL_STAY_TIME_ZERO)
+        mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_TIME_ZERO)
         // 2. 清除cache信息
         labelsPropMap.clear
         // 3. 重置cache信息
         val cacheStayLabelsMap = Map[String, String]()
-        cacheStayLabelsMap += (Constant.LABEL_STAY_FIRSTTIME -> mc.time.toString)
-        cacheStayLabelsMap += (Constant.LABEL_STAY_LASTTIME -> mc.time.toString)
+        cacheStayLabelsMap += (LabelConstant.LABEL_STAY_FIRSTTIME -> mc.time.toString)
+        cacheStayLabelsMap += (LabelConstant.LABEL_STAY_LASTTIME -> mc.time.toString)
         labelsPropMap += (location -> cacheStayLabelsMap)
       } else if (cacheMaxLastTime - mc.time > thresholdValue) {
         println(" COME IN 2")
         //B.此条数据为延迟到达的数据，已超过阈值视为无效，标签打为“0”；cache不做设定;
         // 1. 连续停留标签置“0”
-        mcStayLabelsMap += (location -> Constant.LABEL_STAY_TIME_ZERO)
+        mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_TIME_ZERO)
       } else {
         println(" COME IN 3")
         //C.此条数据时间为[(maxLastTime-thresholdValue)~maxLastTime~(maxLastTime+thresholdValue)]之间
@@ -94,8 +94,8 @@ class LocationStayRule extends MCLabelRule {
       }
     })
     // c. 给mcsoruce设定连续停留[LABEL_STAY]标签
-    mc.setLabel(Constant.LABEL_STAY, mcStayLabelsMap)
-    println(" Current site : " + mc.getLabels(Constant.LABEL_ONSITE))
+    mc.setLabel(LabelConstant.LABEL_STAY, mcStayLabelsMap)
+    println(" Current site : " + mc.getLabels(LabelConstant.LABEL_ONSITE))
     mcStayLabelsMap.iterator.foreach(x => {
       println("area : " + x._1 + " , stay : " + x._2)
     })
@@ -137,9 +137,9 @@ class LocationStayRule extends MCLabelRule {
     if (areaPropArray.isEmpty) 0L
     else {
       // 对用户cache中的区域列表按lastTime排序（升序）
-      quickSort(areaPropArray)(Ordering.by(_._2.get(Constant.LABEL_STAY_LASTTIME)))
+      quickSort(areaPropArray)(Ordering.by(_._2.get(LabelConstant.LABEL_STAY_LASTTIME)))
       // 取用户cache区域列表中的最大lastTime
-      areaPropArray.reverse(0)._2.get(Constant.LABEL_STAY_LASTTIME).get.toLong
+      areaPropArray.reverse(0)._2.get(LabelConstant.LABEL_STAY_LASTTIME).get.toLong
     }
   }
 
@@ -157,7 +157,7 @@ class LocationStayRule extends MCLabelRule {
     val area = labelsPropMap.get(location)
     area match {
       case None => {
-        mcStayLabelsMap += (location -> Constant.LABEL_STAY_TIME_ZERO)
+        mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_TIME_ZERO)
         addCacheAreaStayTime(labelsPropMap, location, mcTime, mcTime)
       }
       case Some(currentStatus) => {
@@ -166,31 +166,31 @@ class LocationStayRule extends MCLabelRule {
         println("FIRST TIME : " + first + " , LAST TIME : " + last + " , MCTIME : " + mcTime)
         if (first > last) {
           // 无效数据，丢弃，本条视为first
-          mcStayLabelsMap += (location -> Constant.LABEL_STAY_DEFAULT_TIME)
+          mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
           updateCacheStayTime(currentStatus, mcTime, mcTime)
         } else if (mcTime < first) {
           // 本条记录属于延迟到达，更新开始时间
-          currentStatus.put(Constant.LABEL_STAY_FIRSTTIME, mcTime.toString)
+          currentStatus.put(LabelConstant.LABEL_STAY_FIRSTTIME, mcTime.toString)
           mcStayLabelsMap.put(location, evaluateTime(last - first, last - mcTime))
           if (first - mcTime > thresholdValue) {
             // 本条记录无效，输出空标签，不更新cache
-            mcStayLabelsMap += (location -> Constant.LABEL_STAY_TIME_ZERO)
+            mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_TIME_ZERO)
           } else {
             // 本条记录属于延迟到达，更新开始时间
-            currentStatus.put(Constant.LABEL_STAY_FIRSTTIME, mcTime.toString)
+            currentStatus.put(LabelConstant.LABEL_STAY_FIRSTTIME, mcTime.toString)
             mcStayLabelsMap.put(location, evaluateTime(last - first, last - mcTime))
           }
         } else if (mcTime <= last) {
           // 本条属于延迟到达，不处理
-          mcStayLabelsMap += (location -> Constant.LABEL_STAY_DEFAULT_TIME)
+          mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
         } else if (mcTime - last > thresholdValue) {
           // 本条与上一条数据间隔过大，判定为不连续
-          mcStayLabelsMap += (location -> Constant.LABEL_STAY_DEFAULT_TIME)
+          mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
           updateCacheStayTime(currentStatus, mcTime, mcTime)
         } else {
           // 本条为正常新数据，更新cache后判定
           println(" RIGHT DATA ")
-          currentStatus.put(Constant.LABEL_STAY_LASTTIME, mcTime.toString)
+          currentStatus.put(LabelConstant.LABEL_STAY_LASTTIME, mcTime.toString)
 
           val newtime = evaluateTime(last - first, mcTime - first)
           println(" CURRTIME : " + newtime)
@@ -205,8 +205,8 @@ class LocationStayRule extends MCLabelRule {
    * 返回结果map,key:"first"和"last"<br>
    */
   private def getCacheStayTime(currentStatus: Map[String, String]) = {
-    val first = currentStatus.get(Constant.LABEL_STAY_FIRSTTIME)
-    val last = currentStatus.get(Constant.LABEL_STAY_LASTTIME)
+    val first = currentStatus.get(LabelConstant.LABEL_STAY_FIRSTTIME)
+    val last = currentStatus.get(LabelConstant.LABEL_STAY_LASTTIME)
     if (first == None || last == None) Map("first" -> 0l, "last" -> 0l)
     else Map("first" -> first.get.toLong, "last" -> last.get.toLong)
   }
@@ -231,7 +231,7 @@ class LocationStayRule extends MCLabelRule {
     map: Map[String, String],
     firstTime: Long,
     lastTime: Long) {
-    map += (Constant.LABEL_STAY_FIRSTTIME -> (firstTime).toString)
-    map += (Constant.LABEL_STAY_LASTTIME -> (lastTime).toString)
+    map += (LabelConstant.LABEL_STAY_FIRSTTIME -> (firstTime).toString)
+    map += (LabelConstant.LABEL_STAY_LASTTIME -> (lastTime).toString)
   }
 }

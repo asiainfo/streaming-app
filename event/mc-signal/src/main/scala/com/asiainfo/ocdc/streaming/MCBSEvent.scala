@@ -11,6 +11,10 @@ class MCBSEvent extends BusinessEvent {
 
   override def joinkey: String = "imsi"
 
+  override def getHashKey(row: Row): String = "MC_" + id + ":" + row.getString(2)
+
+  override def getTime(row: Row): String = row.getLong(3).toString
+
   override def output(data: RDD[Option[Row]]) {
     val output_msg = transforEvent2Message(data)
     if (output_msg.partitions.length > 0) {
@@ -29,7 +33,9 @@ class MCBSEvent extends BusinessEvent {
       val key: String = row.get(kafka_key).toString
       var message: String = ""
       for (i <- 0 to (selcol_size - 1)) {
-        message += row.get.get(i).toString + delim
+        var value = ""
+        if (row.get(i) != null) value = row.get(i).toString
+        message += value + delim
       }
       message = message.substring(0, (message.length - delim.length))
 
