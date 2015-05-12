@@ -1,18 +1,14 @@
 package com.asiainfo.ocdc.streaming.eventrule
 
-import com.asiainfo.ocdc.streaming.SourceObject
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.DataFrame
-
 abstract class EventRule extends Serializable with org.apache.spark.Logging {
 
   var conf: EventRuleConf = null
-  var selectExp: Seq[String] = null
+//  var selectExp: Seq[String] = null
   var filterExp: String = null
 
   def init(erconf: EventRuleConf) {
     conf = erconf
-    selectExp = conf.get("selectExp").split(",").toSeq
+//    selectExp = conf.get("selectExp").split(",").toSeq
     filterExp = conf.get("filterExp")
   }
 
@@ -20,9 +16,9 @@ abstract class EventRule extends Serializable with org.apache.spark.Logging {
 
   def inputLength: Int = conf.getInt("inputLength")
 
-  def transforEvent2Message(data: DataFrame): RDD[(String, String)]
+  /*def transforEvent2Message(data: DataFrame): RDD[(String, String)]
 
   def transforMessage2Event(message: RDD[String]): RDD[Option[SourceObject]]
 
-  def output(data: DataFrame)
+  def output(data: DataFrame)*/
 }

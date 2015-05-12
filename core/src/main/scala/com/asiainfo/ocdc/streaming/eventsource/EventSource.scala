@@ -91,7 +91,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   }
 
   def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) = {
-    val eventMap: Map[String, DataFrame] = null
+    val eventMap: Map[String, DataFrame] = Map[String, DataFrame]()
     if (labeledRDD.partitions.length > 0) {
       val df = transformDF(sqlContext, labeledRDD)
       // cache data
@@ -103,15 +103,13 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
       while (eventRuleIter.hasNext) {
         val eventRule = eventRuleIter.next
-        eventRule.selectExp.foreach(x => print(" " + x + ""))
 
         // handle filter first
         val filteredData = df.filter(eventRule.filterExp)
 
         // handle select
-        val selectedData = filteredData.selectExpr(eventRule.selectExp: _*)
-
-        eventMap += (eventRule.conf.get("id") -> selectedData)
+//        val selectedData = filteredData.selectExpr(eventRule.selectExp: _*)
+        eventMap += (eventRule.conf.get("id") -> filteredData)
       }
       logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
 
@@ -147,7 +145,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           var result = false
 
           val minimap = mutable.Map[String, SourceObject]()
-
+          println("111111111111111111111111")
           while (iter.hasNext && totalFetch < conf.getInt("batchsize")) {
             val currentLine = iter.next()
             minimap += (currentLine.generateId -> currentLine)
@@ -155,7 +153,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
             currentPos = 0
             result = true
           }
-
+          println("2222222222222222222222222")
           val f1 = System.currentTimeMillis()
           val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
           logDebug(" GET codis cache cost time : " + (System.currentTimeMillis() - f1) + " millis ! ")
@@ -189,7 +187,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
             logDebug(" Exec labels cost time : " + (System.currentTimeMillis() - f2) + " millis ! ")
             (key -> rule_caches.asInstanceOf[Any])
           })
-
+          println("33333333333333333333333333333")
           //update caches to CacheManager
           val f3 = System.currentTimeMillis()
           CacheFactory.getManager.setMultiCache(cachemap_new)

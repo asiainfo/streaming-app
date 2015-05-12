@@ -149,12 +149,14 @@ object MainFrameConf extends BaseConf {
         } else {
           val erconf = new EventRuleConf()
           erconf.set(name, pvalue)
+          erconf.set("id", erid)
           erconf.set("classname", classname)
           midmap2.get(esid).get += (erid -> erconf)
         }
       } else {
         val erconf = new EventRuleConf()
         erconf.set(name, pvalue)
+        erconf.set("id", erid)
         erconf.set("classname", classname)
         midmap2 += (esid -> Map(erid -> erconf))
       }
@@ -185,12 +187,14 @@ object MainFrameConf extends BaseConf {
         } else {
           val beconf = new BusinessEventConf()
           beconf.set(name, pvalue)
+          beconf.set("beid", beid)
           beconf.set("classname", classname)
           midmap2.get(esid).get += (beid -> beconf)
         }
       } else {
         val beconf = new BusinessEventConf()
         beconf.set(name, pvalue)
+        beconf.set("beid", beid)
         beconf.set("classname", classname)
         midmap2 += (esid -> Map(beid -> beconf))
       }

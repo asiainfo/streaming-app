@@ -6,7 +6,6 @@ import com.asiainfo.ocdc.streaming.eventsource.EventSource
 import com.asiainfo.ocdc.streaming.tool.DataConvertTool
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SQLContext}
-import scala.collection.mutable.Map
 
 class MCEventSource() extends EventSource() {
 
@@ -77,7 +76,7 @@ class MCEventSource() extends EventSource() {
     labeledRDD.map(_.asInstanceOf[MCSourceObject]).toDF()
   }
 
-  override def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) {
+  /*override def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) {
     import sqlContext.implicits.rddToDataFrameHolder
     val eventMap: Map[String, String] = null
     if (labeledRDD.partitions.length > 0) {
@@ -105,7 +104,7 @@ class MCEventSource() extends EventSource() {
 
       df.unpersist()
     }
-  }
+  }*/
 }
 
 
