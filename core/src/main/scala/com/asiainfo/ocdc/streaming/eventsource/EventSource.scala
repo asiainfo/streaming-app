@@ -9,7 +9,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.sql.{DataFrame, SQLContext}
-import scala.collection.mutable
+import scala.collection.{immutable, mutable}
 import scala.collection.mutable.{Map, ArrayBuffer}
 
 abstract class EventSource() extends Serializable with org.apache.spark.Logging {
@@ -19,8 +19,6 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   protected val labelRules = new ArrayBuffer[LabelRule]
   protected val eventRules = new ArrayBuffer[EventRule]
   protected val bsEvents = new ArrayBuffer[BusinessEvent]
-
-  def beanclass: String
 
   def addEventRule(rule: EventRule): Unit = {
     eventRules += rule
@@ -91,7 +89,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   }
 
   def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) = {
-    val eventMap: Map[String, DataFrame] = null
+    val eventMap: Map[String, DataFrame] = Map[String, DataFrame]()
     if (labeledRDD.partitions.length > 0) {
       val df = transformDF(sqlContext, labeledRDD)
       // cache data
@@ -103,15 +101,9 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
       while (eventRuleIter.hasNext) {
         val eventRule = eventRuleIter.next
-        eventRule.selectExp.foreach(x => print(" " + x + ""))
-
         // handle filter first
         val filteredData = df.filter(eventRule.filterExp)
-
-        // handle select
-        val selectedData = filteredData.selectExpr(eventRule.selectExp: _*)
-
-        eventMap += (eventRule.conf.get("id") -> selectedData)
+        eventMap += (eventRule.conf.get("id") -> filteredData)
       }
       logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
 
@@ -164,7 +156,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
             val key = x._1
             val value = x._2
             var rule_caches = cachemap_old.get(key).get match {
-              case cache: Map[String, StreamingCache] => cache
+              case cache: immutable.Map[String, StreamingCache] => cache
               case None => {
                 val cachemap = mutable.Map[String, StreamingCache]()
                 labelRuleArray.foreach(labelRule => {
@@ -187,7 +179,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
             })
             currentArrayBuffer.append(value)
             logDebug(" Exec labels cost time : " + (System.currentTimeMillis() - f2) + " millis ! ")
-            (key -> rule_caches.asInstanceOf[Any])
+            ("Label:" + key -> rule_caches.asInstanceOf[Any])
           })
 
           //update caches to CacheManager

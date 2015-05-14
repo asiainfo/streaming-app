@@ -1,6 +1,6 @@
 package com.asiainfo.ocdc.streaming
 
-import com.asiainfo.ocdc.streaming.constant.Constant
+import com.asiainfo.ocdc.streaming.constant.LabelConstant
 import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
 import com.asiainfo.ocdc.streaming.tool.CacheFactory
 
@@ -16,10 +16,11 @@ class SiteRule extends MCLabelRule {
     val ci = mcSourceObj.ci
 
     // 根据largeCell解析出所属区域
+    println(" MARK SITE LABEL !!!!!!!")
     val onsiteList = largeCellAnalysis(lac, ci)
     val propMap = scala.collection.mutable.Map[String, String]()
     onsiteList.foreach(location => propMap += (location -> "true"))
-    mcSourceObj.setLabel(Constant.LABEL_ONSITE, propMap)
+    mcSourceObj.setLabel(LabelConstant.LABEL_ONSITE, propMap)
     cache
   }
 

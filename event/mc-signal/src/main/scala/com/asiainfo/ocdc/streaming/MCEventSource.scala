@@ -6,7 +6,6 @@ import com.asiainfo.ocdc.streaming.eventsource.EventSource
 import com.asiainfo.ocdc.streaming.tool.DataConvertTool
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SQLContext}
-import scala.collection.mutable.Map
 
 class MCEventSource() extends EventSource() {
 
@@ -70,42 +69,11 @@ class MCEventSource() extends EventSource() {
     }
   }
 
-  override def beanclass: String = "com.asiainfo.ocdc.streaming.MCSourceObject"
-
   override def transformDF(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]): DataFrame = {
     import sqlContext.implicits.rddToDataFrameHolder
     labeledRDD.map(_.asInstanceOf[MCSourceObject]).toDF()
   }
 
-  override def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) {
-    import sqlContext.implicits.rddToDataFrameHolder
-    val eventMap: Map[String, String] = null
-    if (labeledRDD.partitions.length > 0) {
-      val df = labeledRDD.map(_.asInstanceOf[MCSourceObject]).toDF
-      // cache data
-      df.persist
-      df.printSchema()
-
-      val f4 = System.currentTimeMillis()
-      val eventRuleIter = eventRules.iterator
-
-      while (eventRuleIter.hasNext) {
-        val eventRule = eventRuleIter.next
-        eventRule.selectExp.foreach(x => print(" " + x + ""))
-
-        // handle filter first
-        val filteredData = df.filter(eventRule.filterExp)
-
-        // handle select
-        val selectedData = filteredData.selectExpr(eventRule.selectExp: _*)
-
-        eventRule.output(selectedData)
-      }
-      logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
-
-      df.unpersist()
-    }
-  }
 }
 
 

@@ -1,27 +1,22 @@
 package com.asiainfo.ocdc.streaming
 
-import java.text.SimpleDateFormat
-
 import com.asiainfo.ocdc.streaming.eventrule.EventRule
-import com.asiainfo.ocdc.streaming.tool.DataConvertTool
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.DataFrame
 
 /**
  * Created by leo on 4/9/15.
  */
 class MCEventRule extends EventRule {
 
-  override def output(data: DataFrame) {
+  /*override def output(data: DataFrame) {
     val output_msg = transforEvent2Message(data)
     if (output_msg.partitions.length > 0) {
       val f5 = System.currentTimeMillis()
-      EventWriter.writeData(output_msg, conf)
+//      EventWriter.writeData(output_msg, conf)
       logDebug(" Write HDFS cost time : " + (System.currentTimeMillis() - f5) + " millis ! ")
     }
-  }
+  }*/
 
-  override def transforEvent2Message(data: DataFrame): RDD[(String, String)] = {
+  /*override def transforEvent2Message(data: DataFrame): RDD[(String, String)] = {
     val selcol_size = selectExp.size
     val kafka_key = conf.getInt("kafkakeycol")
     val delim = getDelim
@@ -36,9 +31,9 @@ class MCEventRule extends EventRule {
       println("Output Message --> " + message)
       (key, message)
     })
-  }
+  }*/
 
-  override def transforMessage2Event(message: RDD[String]): RDD[Option[SourceObject]] = {
+  /*override def transforMessage2Event(message: RDD[String]): RDD[Option[SourceObject]] = {
     message.map(x => {
       val inputArray = x.split(getDelim)
       if (inputArray.length != inputLength) {
@@ -91,6 +86,6 @@ class MCEventRule extends EventRule {
         None
       }
     }
-  }
+  }*/
 
 }

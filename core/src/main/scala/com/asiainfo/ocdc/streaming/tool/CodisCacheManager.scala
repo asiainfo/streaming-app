@@ -35,3 +35,5 @@ class CodisCacheManager extends RedisCacheManager {
 
   override def getResource = jedisPool.getResource
 }
+
+

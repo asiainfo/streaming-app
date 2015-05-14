@@ -1,6 +1,6 @@
 package com.asiainfo.ocdc.streaming
 
-import com.asiainfo.ocdc.streaming.constant.Constant
+import com.asiainfo.ocdc.streaming.constant.LabelConstant
 import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
 import com.asiainfo.ocdc.streaming.tool.CacheFactory
 
@@ -28,7 +28,7 @@ class UserBaseInfoRule extends MCLabelRule {
       })
     }
 
-    mcSourceObj.setLabel(Constant.USER_BASE_INFO, propMap)
+    mcSourceObj.setLabel(LabelConstant.USER_BASE_INFO, propMap)
     cache
   }
 

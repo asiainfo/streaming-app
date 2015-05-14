@@ -1,7 +1,8 @@
 package com.asiainfo.ocdc.streaming
 
 import java.util.Properties
-import com.asiainfo.ocdc.streaming.eventrule.EventRuleConf
+
+import com.asiainfo.ocdc.streaming.subscribe.BusinessEventConf
 import kafka.producer.{KeyedMessage, Producer, ProducerConfig}
 import org.apache.spark.rdd.RDD
 
@@ -9,7 +10,7 @@ import org.apache.spark.rdd.RDD
  * Created by leo on 4/27/15.
  */
 object EventWriter {
-  def writeData(data: RDD[(String, String)], conf: EventRuleConf) {
+  def writeData(data: RDD[(String, String)], conf: BusinessEventConf) {
     val outputType = conf.get("outputtype")
     if ("kafka".equals(outputType)) {
       data.mapPartitions(p => {

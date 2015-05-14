@@ -1,71 +1,71 @@
 package com.asiainfo.ocdc.streaming.subscribe
 
 import com.asiainfo.ocdc.streaming.MainFrameConf
+import com.asiainfo.ocdc.streaming.constant.EventConstant
 import com.asiainfo.ocdc.streaming.tool.CacheFactory
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, Row}
 import scala.collection.mutable.Map
 
 /**
  * Created by leo on 5/11/15.
  */
-class BusinessEvent extends Serializable with org.apache.spark.Logging {
-  var id: String
-  var sourceId: String
-  var conf: BusinessEventConf
-  var eventSources: Seq[String]
-  var eventRules: Seq[String]
-  var selectExp: Seq[String]
-  var interval: Long
-  var delayTime: Long
-  val locktime: String = "locktime"
+abstract class BusinessEvent extends Serializable with org.apache.spark.Logging {
 
-  def joinkey: String = "imsi"
+  var id: String = null
+  var sourceId: String = null
+  var conf: BusinessEventConf = null
+  var eventSources: Seq[String] = null
+  var eventRules: Seq[String] = null
+  var selectExp: Seq[String] = null
+  var interval: Long = EventConstant.DEFAULTINTERVAL
+  var delayTime: Long = EventConstant.DEFAULTDELAYTIME
+  val locktime: String = EventConstant.LOCKTIMEFIELD
+
+  def joinkey: String
+
+  def getDelim: String = conf.get("delim")
+
+  def getHashKey(row: Row): String
+
+  def getTime(row: Row): String
 
   def init(sid: String, beconf: BusinessEventConf) {
     conf = beconf
-    id = conf.get("id")
+    id = conf.get("beid")
     sourceId = sid
     eventSources = MainFrameConf.getEventSourcesByBsEvent(id)
     eventRules = MainFrameConf.getEventRulesByBsEvent(id)
     selectExp = conf.get("selectExp").split(",").toSeq
-    interval = conf.getLong("interval")
-    delayTime = conf.getLong("delaytime")
+    interval = conf.getLong("interval", EventConstant.DEFAULTINTERVAL)
+    delayTime = conf.getLong("delaytime", EventConstant.DEFAULTDELAYTIME)
   }
 
   def execEvent(eventMap: Map[String, DataFrame]) {
     val filtevents = eventMap.filter(x => eventRules.contains(x._1))
-
-    val keys = filtevents.keys.toSeq
-    var currentEvent = filtevents.get(keys(0)).get
-    var i = 1
-    while (i < keys.size) {
-      val nextEvent = filtevents.get(keys(i)).get
-      currentEvent = currentEvent.join(nextEvent).where(currentEvent(joinkey) === nextEvent(joinkey))
-      i += 1
-    }
-
+    val currentEvent = filtevents.iterator.next()._2
     val selectedData = currentEvent.selectExpr(selectExp: _*)
 
     val checkedData = selectedData.map(row => {
-      var resultData: Option = None
+      var resultData: Option[Row] = None
       val currTime = System.currentTimeMillis()
-      val hashkey = "MC_" + id + ":" + row.getString(0)
-      val time = row.getString(1)
+      val hashkey = getHashKey(row)
+      val time = getTime(row)
       var status = CacheFactory.getManager.getHashCacheMap(hashkey)
       // muti event source
       if (eventSources.size > 1) {
-        if (status == null) {
+        if (status.size == 0) {
           status = Map(sourceId -> time)
           CacheFactory.getManager.setHashCacheMap(hashkey, status)
         } else {
-          val lt = status.get(locktime).get
+          //          val lt = status.get(locktime).get.toLong
+          val lt = status.get(locktime).getOrElse("0").toLong
           if (lt == null) {
             status += (sourceId -> time)
-            val maxTime = status.map(_._2).toSeq.sortBy(_).last
+            val maxTime = status.toList.sortBy(_._2).last._2
             status.filter(_._2 + delayTime >= maxTime)
 
-            if (status.size == eventSources.size) status += (locktime -> currTime)
+            if (status.size == eventSources.size) status += (locktime -> currTime.toString)
             CacheFactory.getManager.setHashCacheMap(hashkey, status)
             resultData = Some(row)
           } else {
@@ -79,16 +79,18 @@ class BusinessEvent extends Serializable with org.apache.spark.Logging {
       }
       // just single event source
       else {
-        if (status == null) {
+        if (status.size == 0) {
           status = Map(sourceId -> time)
-          status += (locktime -> currTime)
+          status += (locktime -> currTime.toString)
+          CacheFactory.getManager.setHashCacheMap(hashkey, status)
           resultData = Some(row)
         } else {
-          val lt = status.get(locktime).get
+          val lt = status.get(locktime).getOrElse("0").toLong
           if (lt + interval < currTime) {
             status.clear()
             status += (sourceId -> time)
-            status += (locktime -> currTime)
+            status += (locktime -> currTime.toString)
+            CacheFactory.getManager.setHashCacheMap(hashkey, status)
             resultData = Some(row)
           }
         }
@@ -101,6 +103,6 @@ class BusinessEvent extends Serializable with org.apache.spark.Logging {
 
   }
 
-  def output(data: RDD[Option])
+  def output(data: RDD[Option[Row]])
 
 }

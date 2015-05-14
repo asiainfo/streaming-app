@@ -16,11 +16,11 @@ INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`,`bat
 -- init EventSourcesDetail
 -- kafka
 /*
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("topic","topic1",1);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("group","groupid1",1);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("receivernum","1",1);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("zookeeper","zookeeper1",1);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("repartitionnum","1",1);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("topic","mc_signal",4);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("group","g1",4);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("receivernum","2",4);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("zookeeper","localhost:2181",4);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("repartitionnum","1",4);
 
 */
 -- hdfs
@@ -55,10 +55,20 @@ INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("serializerclass",
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("outputdir","/user/ochadoop/streaming/output",2);
 
 -- init BusenessEvents
-INSERT INTO `BusenessEvents` (`esourceid`,`classname`) VALUES (1,"com.asiainfo.ocdc.streaming.MCEventRule");
+INSERT INTO `BusenessEvents` (`esourceid`,`classname`) VALUES (1,"com.asiainfo.ocdc.streaming.WLANEvent");
+
+-- init BusenessEventsMapEventSources
+INSERT INTO `BusenessEventsMapEventSources` (`beid`,`esid`) VALUES (1,1);
 
 -- init BusenessEventsMapEventRules
-INSERT INTO `BusenessEvents` (`beid`,`erid`) VALUES (1,1);
+INSERT INTO `BusenessEventsMapEventRules` (`beid`,`erid`) VALUES (1,1);
 
 -- init BusenessEventsProp
-INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("","",1);
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("selectExp","eventID,imei,imsi,time,labels['onsite']['AAAA'],labels['stay']['AAAA']",1);
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("delim",",",1);
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("outputtype","kafka",1);
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("kafkakeycol","2",1);
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("output_topic","wlan_signal",1);
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("brokerlist","localhost:9092",1);
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("serializerclass","kafka.serializer.StringEncoder",1);
+
