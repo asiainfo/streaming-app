@@ -9,11 +9,11 @@ import java.util.TimerTask;
  * socket recever 单位时间内接收数据量<br>
  * @param msg
  */
-public class SocketReceiveCountTasker extends TimerTask{
+public class SocketReceiveCountTasker2 extends TimerTask{
 	private HashMap<String,Long> countMap = null;
 	private long interval = 0;
 	
-	public SocketReceiveCountTasker(HashMap<String,Long> countMap,long printInterval) {
+	public SocketReceiveCountTasker2(HashMap<String, Long> countMap, long printInterval) {
 		this.countMap = countMap;
 		this.interval = printInterval;
 	}

@@ -1,5 +1,6 @@
 package com.asiainfo.ocdc.streaming.source.socket;
 
+import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker2;
 import kafka.producer.KeyedMessage;
 
 import java.io.DataInputStream;
@@ -9,7 +10,6 @@ import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 
 import com.asiainfo.ocdc.streaming.producer.SendUtil;
-import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker;
 
 /**
  * @author surq<br>
@@ -34,10 +34,10 @@ public class AutoProducer {
 		long printInterval = Integer.parseInt(interval) * 1000;
 		String printflg = sendutil.prop.getProperty("socket.printCount.printflg").trim();
 		boolean blprintflg = Boolean.parseBoolean(printflg);
-		SocketReceiveCountTasker SRCountTasker = null;
+		SocketReceiveCountTasker2 SRCountTasker = null;
 		if (blprintflg) {
 			Timer timer = new Timer();
-			SRCountTasker = new SocketReceiveCountTasker(countMap,printInterval);
+			SRCountTasker = new SocketReceiveCountTasker2(countMap,printInterval);
 			timer.schedule(SRCountTasker, 0, printInterval);
 			SRCountTasker.countTool(countMap);
 		}
