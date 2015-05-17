@@ -30,7 +30,7 @@ class CodisCacheManager extends RedisCacheManager {
       }
       (rhost,rip)
     }
-    new JedisPool(JedisConfig,hp._1,hp._2.toInt)
+    new JedisPool(JedisConfig,hp._1,hp._2.toInt,MainFrameConf.getInt("JedisTimeOut"))
   }
 
   override def getResource = jedisPool.getResource

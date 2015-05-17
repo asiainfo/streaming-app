@@ -52,7 +52,6 @@ abstract class RedisCacheManager extends CacheManager {
   }
 
   //  private val currentJedis = getResource
-
   final def openConnection = currentJedis.set(getResource)
 
   final def getConnection = {
@@ -135,10 +134,9 @@ abstract class RedisCacheManager extends CacheManager {
         val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
         data
       }
-      else None
+      else null
     }).toList
     for (i <- 0 to keys.length - 1) {
-
       multimap += (keys(i) -> anyvalues(i))
     }
     multimap

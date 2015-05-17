@@ -12,21 +12,36 @@ import org.apache.spark.rdd.RDD
 object EventWriter {
   def writeData(data: RDD[(String, String)], conf: BusinessEventConf) {
     val outputType = conf.get("outputtype")
+    println("0 Output data ")
     if ("kafka".equals(outputType)) {
+      println("1 Output data to kafka ")
       data.mapPartitions(p => {
         val topic = conf.get("output_topic")
         val props = new Properties()
         props.put("metadata.broker.list", conf.get("brokerlist"))
         props.put("serializer.class", conf.get("serializerclass"))
         val producer = new Producer[String, String](new ProducerConfig(props))
-        p.map(x => {
+        println("3 Output data to kafka " + topic)
+        var message = List[KeyedMessage[String, String]]()
+        p.foreach(x => {
           val key = x._1
           val out = x._2
-          var message = List[KeyedMessage[String, String]]()
+          println("key : " + key + " value " + out)
           message = new KeyedMessage[String, String](topic, key, out) :: message
-          producer.send(message: _*)
           x
         })
+
+        message.foreach(x => {
+          println("1 Output data : " + x.message + " to kafka " + topic)
+        })
+
+        producer.send(message: _*)
+
+        message.foreach(x => {
+          println("Output data : " + x.message + " to kafka " + topic)
+        })
+
+        p
       }).count()
     } else if ("hdfs".equals(outputType)) {
       //      data.saveAsTextFile(conf.get("outputdir") + "/" + System.currentTimeMillis())

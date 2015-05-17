@@ -11,7 +11,10 @@ class MCBSEvent extends BusinessEvent {
 
   override def joinkey: String = "imsi"
 
-  override def getHashKey(row: Row): String = "MC_" + id + ":" + row.getString(2)
+  override def getHashKey(row: Row): String = {
+    val imsi = row.getString(2)
+    "MC_" + id + ":" + imsi
+  }
 
   override def getTime(row: Row): String = row.getLong(3).toString
 
@@ -29,7 +32,23 @@ class MCBSEvent extends BusinessEvent {
     val kafka_key = conf.getInt("kafkakeycol")
     val delim = getDelim
 
-    data.filter(_ != None).map(row => {
+    data.map(_ match {
+      case Some(row: Row) => {
+        val key: String = row.get(kafka_key).toString
+        var message: String = ""
+        for (i <- 0 to (selcol_size - 1)) {
+          var value = ""
+          if (row.get(i) != null) value = row.get(i).toString
+          message += value + delim
+        }
+        message = message.substring(0, (message.length - delim.length))
+
+        println("Output Message --> " + message)
+        (key, message)
+      }
+    })
+
+    /*data.filter(_ != None).map(row => {
       val key: String = row.get(kafka_key).toString
       var message: String = ""
       for (i <- 0 to (selcol_size - 1)) {
@@ -41,6 +60,6 @@ class MCBSEvent extends BusinessEvent {
 
       println("Output Message --> " + message)
       (key, message)
-    })
+    })*/
   }
 }
