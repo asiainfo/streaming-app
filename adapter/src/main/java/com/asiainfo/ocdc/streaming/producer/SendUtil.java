@@ -2,7 +2,9 @@ package com.asiainfo.ocdc.streaming.producer;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
@@ -12,12 +14,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import kafka.producer.KeyedMessage;
-//import com.asiainfo.ocdc.streaming.tool.AutoProducer;
 
 public class SendUtil {
 
 	// 用户配置相关参数
 	public Properties prop = null;
+	public ExecutorService executorPool = Executors.newCachedThreadPool();
 	// lbk:message List队列
 	LinkedBlockingQueue<ArrayList<KeyedMessage<String, String>>> lbk = 
 			new LinkedBlockingQueue<ArrayList<KeyedMessage<String, String>>>();
@@ -64,13 +66,10 @@ public class SendUtil {
 	 */
 	public void runThreadPoolTask() {
 		String pNum = prop.getProperty("kafka.producer.numbers");
-		int produceNum = 1;// 默认1个producer
-		if (!"".equals(pNum.trim()))
-			produceNum = Integer.parseInt(pNum.trim());
-
-		ExecutorService executor = Executors.newFixedThreadPool(produceNum);
-		for (int i = 0; i < produceNum; i++)
-			executor.submit(new ProducerSendTask(lbk, prop));
+		// 默认1个producer
+		int produceNum = 1;
+		if (!"".equals(pNum.trim())) produceNum = Integer.parseInt(pNum.trim());
+		for (int i = 0; i < produceNum; i++) executorPool.submit(new ProducerSendTask(lbk, prop));
 	}
 	
 	/**
@@ -82,7 +81,8 @@ public class SendUtil {
 			String msg, ArrayList<KeyedMessage<String, String>> msgList){
 		
 		String msgSize = prop.getProperty("kafka.producer.sendmsg.size");
-		int msgListSize = 1; // 默认1条
+		// 默认1条
+		int msgListSize = 1;
 		if (!"".equals(msgSize.trim())) msgListSize = Integer.parseInt(msgSize.trim());
 		String topic = prop.getProperty("kafka.topic");
 		
@@ -96,11 +96,19 @@ public class SendUtil {
 			if (msgList == null) {
 				msgList = new ArrayList<KeyedMessage<String, String>>();
 			}
-			// TODO
-//			String key = msg.split(",")[2];
-			String key = msg.split(":")[0];
+			String key = msg.split(",")[2];
 			msgList.add(new KeyedMessage<String, String>(topic, key, msg));
 		}
 		return msgList;
+	}
+	
+	/**
+	 * 日期格式化工具<br>
+	 * @param time
+	 * @return
+	 */
+	public static String timeFormat(long time) {
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
+	return format.format(new Date(time));
 	}
 }
