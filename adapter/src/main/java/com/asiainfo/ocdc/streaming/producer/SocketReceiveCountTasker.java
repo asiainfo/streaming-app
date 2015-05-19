@@ -20,21 +20,26 @@ public class SocketReceiveCountTasker extends TimerTask{
     @Override
     public void run() {
     	
-    	long thicCount = countMap.get("thisCount");
+    	long thisCount = countMap.get("thisCount");
     	long lastCount = countMap.get("lastCount");
-    	long receiveCount = thicCount - lastCount;
-    	countMap.put("lastCount", thicCount);
+    	long receiveCount = 0l;
+    	if (thisCount < lastCount){
+    		receiveCount = Long.MAX_VALUE - lastCount + thisCount;
+    	}else {
+    		receiveCount = thisCount - lastCount;
+    	}
+    	countMap.put("lastCount", thisCount);
     	System.out.println(SendUtil.timeFormat(System.currentTimeMillis()) +
-    			":socket receiver 接收速度："+receiveCount+"/"+interval +"s");
+    			":socket receiver 接收速度："+receiveCount+"/"+interval/1000 +"s");
     }
-    
+	
 	/**
-	 * 初始化统计用map<br>
-	 * @param countMap
+	 * countMap 初始化<br>
+	 * limt_flg => 0l: 表示正常存储； －1：表示已达到long的上限值，需要从1开始计数；<br>
 	 */
-	public void countTool(HashMap<String,Long> countMap){
+	public void init () {
 		// 统记指标用的map
 		countMap.put("lastCount", 0l);
-		countMap.put("thicCount", 0l);
+		countMap.put("thisCount", 0l);
 	}
 }

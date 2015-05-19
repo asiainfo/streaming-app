@@ -1,6 +1,5 @@
 package com.asiainfo.ocdc.streaming.producer;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -19,7 +18,8 @@ public class SendUtil {
 
 	// 用户配置相关参数
 	public Properties prop = null;
-	public ExecutorService executorPool = Executors.newCachedThreadPool();
+	private ExecutorService executorPool = Executors.newCachedThreadPool();
+
 	// lbk:message List队列
 	LinkedBlockingQueue<ArrayList<KeyedMessage<String, String>>> lbk = 
 			new LinkedBlockingQueue<ArrayList<KeyedMessage<String, String>>>();
@@ -110,5 +110,12 @@ public class SendUtil {
 	public static String timeFormat(long time) {
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
 	return format.format(new Date(time));
+	}
+	/**
+	 * 获取线程池
+	 * @return
+	 */
+	public ExecutorService getExecutorPool() {
+		return executorPool;
 	}
 }

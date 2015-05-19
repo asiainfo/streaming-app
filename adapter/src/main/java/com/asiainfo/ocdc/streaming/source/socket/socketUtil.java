@@ -1,5 +1,10 @@
 package com.asiainfo.ocdc.streaming.source.socket;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
+
 /**
  * @author surq<br>
  * @since 2015.5.11<br>
@@ -7,30 +12,6 @@ package com.asiainfo.ocdc.streaming.source.socket;
  * @param msg
  */
 public class socketUtil {
-
-	public static void main(String[] args) {
-
-	}
-
-
-    public static int toInt(byte[] bArr) {
-        int iout = 0;
-        byte bLoop;
-        for (int i = 0; i < 2; i++) {
-            bLoop = bArr[i];
-            iout += (bLoop & 0xFF) << (8 * i);
-        }
-        return iout;
-    }
-
-    public static String negativeIntToHex(int i) {
-        // 负整数时，前面输入了多余的 FF ，没有去掉前面多余的 FF，按并双字节形式输出
-        return Integer.toHexString(i);// FFFFFFFE
-    }
-
-    public static int HexToNegativeInt(String hex) {
-        return Integer.valueOf(hex, 16);
-    }
 
 	/**
 	 * byte[] to int<br>
@@ -42,7 +23,6 @@ public class socketUtil {
         num |= ((bytes[0] << 8) & 0xFF00);
         return num;
     }
-    
 
 	/**
 	 * socket请求信息<br>
@@ -98,6 +78,45 @@ public class socketUtil {
 		msgConnect[44] = (byte) 0x01;
 		msgConnect[45] = (byte) 0x42;
 		msgConnect[46] = (byte) 0x69;
+		return msgConnect;
+	}
+	
+	/**
+	 * 发送请求信号，返回socket的InputStream<br>
+	 * @return
+	 */
+	public static DataInputStream sendHeadMsg(Socket socket) {
+		OutputStream outputstream = null;
+		DataInputStream ds = null;
+		try {
+			outputstream = socket.getOutputStream();
+			outputstream.write(socketUtil.getMsgConnect());
+			outputstream.flush();
+			ds = new DataInputStream(socket.getInputStream());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return ds;
+	}
+	
+	/**
+	 * 获取heartBeat 信息<br>
+	 * 
+	 * @return
+	 */
+	public static byte[] getHeartBeatInfo() {
+		byte[] msgConnect = new byte[11];
+		msgConnect[0] = (byte) 0x9e;
+		msgConnect[1] = (byte) 0x62;
+		msgConnect[2] = (byte) 0x00;
+		msgConnect[3] = (byte) 0x06;
+		msgConnect[4] = (byte) 0x00;
+		msgConnect[5] = (byte) 0x00;
+		msgConnect[6] = (byte) 0x03;
+		msgConnect[7] = (byte) 0x00;
+		msgConnect[8] = (byte) 0x00;
+		msgConnect[9] = (byte) 0x00;
+		msgConnect[10] = (byte) 0x00;
 		return msgConnect;
 	}
 }
