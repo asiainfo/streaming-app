@@ -1,6 +1,6 @@
 package com.asiainfo.ocdc.streaming.source.socket;
 
-import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker2;
+import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker;
 import kafka.producer.KeyedMessage;
 
 import java.io.DataInputStream;
@@ -29,15 +29,15 @@ public class AutoProducer {
 		String socketPort = sendutil.prop.getProperty("socket.server.port").trim();
 		int port = Integer.parseInt(socketPort);
 		// 根据socket.printCount.printflg判断是否启动打印单位时间内接收的数据条数
-		HashMap<String,Long> countMap = new HashMap<String,Long>();;
+		HashMap<String,Long> countMap = new HashMap<String,Long>();
 		String interval = sendutil.prop.getProperty("socket.printCount.interval").trim();
 		long printInterval = Integer.parseInt(interval) * 1000;
 		String printflg = sendutil.prop.getProperty("socket.printCount.printflg").trim();
 		boolean blprintflg = Boolean.parseBoolean(printflg);
-		SocketReceiveCountTasker2 SRCountTasker = null;
+		SocketReceiveCountTasker SRCountTasker = null;
 		if (blprintflg) {
 			Timer timer = new Timer();
-			SRCountTasker = new SocketReceiveCountTasker2(countMap,printInterval);
+			SRCountTasker = new SocketReceiveCountTasker(countMap,printInterval);
 			timer.schedule(SRCountTasker, 0, printInterval);
 			SRCountTasker.countTool(countMap);
 		}

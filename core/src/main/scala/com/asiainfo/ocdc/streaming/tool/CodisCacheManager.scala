@@ -25,8 +25,10 @@ class CodisCacheManager extends RedisCacheManager {
       proxymap.get(localip) match {
         case Some(value) =>  rhost = localip
           rip = value
-        case None => rhost = proxylist(0).split(":")(0)
+        case None => {
+          rhost = proxylist(0).split(":")(0)
           rip = proxylist(0).split(":")(1)
+        }
       }
       (rhost,rip)
     }
