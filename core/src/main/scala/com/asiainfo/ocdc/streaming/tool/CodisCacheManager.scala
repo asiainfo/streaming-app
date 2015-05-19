@@ -25,12 +25,14 @@ class CodisCacheManager extends RedisCacheManager {
       proxymap.get(localip) match {
         case Some(value) =>  rhost = localip
           rip = value
-        case None => rhost = proxylist(0).split(":")(0)
-          rip = proxylist(0).split(":")(1)
+        case None =>
+          val proxyid = (Math.random()*(proxylist.length)).toInt
+          rhost = proxylist(proxyid).split(":")(0)
+          rip = proxylist(proxyid).split(":")(1)
       }
       (rhost,rip)
     }
-    new JedisPool(JedisConfig,hp._1,hp._2.toInt)
+    new JedisPool(JedisConfig,hp._1,hp._2.toInt,MainFrameConf.getInt("JedisTimeOut"))
   }
 
   override def getResource = jedisPool.getResource

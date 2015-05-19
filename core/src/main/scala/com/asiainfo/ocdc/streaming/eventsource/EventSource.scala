@@ -1,20 +1,22 @@
 package com.asiainfo.ocdc.streaming.eventsource
 
 import com.asiainfo.ocdc.streaming._
-import com.asiainfo.ocdc.streaming.eventrule.{StreamingCache, EventRule}
+import com.asiainfo.ocdc.streaming.eventrule.{EventRule, StreamingCache}
 import com.asiainfo.ocdc.streaming.labelrule.LabelRule
 import com.asiainfo.ocdc.streaming.subscribe.BusinessEvent
 import com.asiainfo.ocdc.streaming.tool.CacheFactory
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
-import org.apache.spark.sql.{DataFrame, SQLContext}
+
 import scala.collection.{immutable, mutable}
-import scala.collection.mutable.{Map, ArrayBuffer}
+import scala.collection.mutable.{ArrayBuffer, Map}
 
 abstract class EventSource() extends Serializable with org.apache.spark.Logging {
   var id: String = null
   var conf: EventSourceConf = null
+  var shuffleNum: Int = 0
 
   protected val labelRules = new ArrayBuffer[LabelRule]
   protected val eventRules = new ArrayBuffer[EventRule]
@@ -35,6 +37,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   def init(conf: EventSourceConf): Unit = {
     this.conf = conf
     id = this.conf.get("id")
+    shuffleNum = conf.getInt("shufflenum")
   }
 
   def readSource(ssc: StreamingContext): DStream[String] = {
@@ -54,7 +57,8 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           case Some(source: SourceObject) => source
         }
 
-        sourceRDD = sourceRDD.map(x => (x.generateId, x)).groupByKey().flatMap(_._2)
+        if (shuffleNum > 0) sourceRDD = sourceRDD.map(x => (x.generateId, x)).groupByKey(shuffleNum).flatMap(_._2)
+        else sourceRDD = sourceRDD.map(x => (x.generateId, x)).groupByKey().flatMap(_._2)
 
         if (sourceRDD.partitions.length > 0) {
           val labeledRDD = execLabelRule(sourceRDD: RDD[SourceObject])
@@ -69,6 +73,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   }
 
   def subscribeEvents(eventMap: Map[String, DataFrame]) {
+    println(" Begin subscribe events : " + System.currentTimeMillis())
     if (eventMap.size > 0) {
 
       eventMap.foreach(x => {
@@ -91,6 +96,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) = {
     val eventMap: Map[String, DataFrame] = Map[String, DataFrame]()
     if (labeledRDD.partitions.length > 0) {
+      println(" Begin exec evets : " + System.currentTimeMillis())
       val df = transformDF(sqlContext, labeledRDD)
       // cache data
       df.persist
@@ -113,6 +119,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   }
 
   def execLabelRule(sourceRDD: RDD[SourceObject]) = {
+    println(" Begin exec labes : " + System.currentTimeMillis())
 
     val labelRuleArray = labelRules.toArray
 
@@ -142,7 +149,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
           while (iter.hasNext && totalFetch < conf.getInt("batchsize")) {
             val currentLine = iter.next()
-            minimap += (currentLine.generateId -> currentLine)
+            minimap += ("Label:" + currentLine.generateId -> currentLine)
             totalFetch += 1
             currentPos = 0
             result = true
@@ -155,9 +162,10 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           val cachemap_new = minimap.map(x => {
             val key = x._1
             val value = x._2
+
             var rule_caches = cachemap_old.get(key).get match {
               case cache: immutable.Map[String, StreamingCache] => cache
-              case None => {
+              case null => {
                 val cachemap = mutable.Map[String, StreamingCache]()
                 labelRuleArray.foreach(labelRule => {
                   cachemap += (labelRule.conf.get("id") -> null)
@@ -179,7 +187,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
             })
             currentArrayBuffer.append(value)
             logDebug(" Exec labels cost time : " + (System.currentTimeMillis() - f2) + " millis ! ")
-            ("Label:" + key -> rule_caches.asInstanceOf[Any])
+            (key -> rule_caches.asInstanceOf[Any])
           })
 
           //update caches to CacheManager

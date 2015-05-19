@@ -7,6 +7,7 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxIdle","300");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxTotal","1000");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMEM","600000");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("internal","4");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisTimeOut",10000);
 
 
 -- init EventSources
@@ -20,7 +21,7 @@ INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("topic","mc_
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("group","g1",4);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("receivernum","2",4);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("zookeeper","localhost:2181",4);
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("repartitionnum","1",4);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("shufflenum","1",4);
 
 */
 -- hdfs
@@ -71,4 +72,7 @@ INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("kafkakeycol",
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("output_topic","wlan_signal",1);
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("brokerlist","localhost:9092",1);
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("serializerclass","kafka.serializer.StringEncoder",1);
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("interval","1 * 60 * 1000",1);
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("delaytime","30 * 60 * 1000",1);
+
 

@@ -16,7 +16,6 @@ class SiteRule extends MCLabelRule {
     val ci = mcSourceObj.ci
 
     // 根据largeCell解析出所属区域
-    println(" MARK SITE LABEL !!!!!!!")
     val onsiteList = largeCellAnalysis(lac, ci)
     val propMap = scala.collection.mutable.Map[String, String]()
     onsiteList.foreach(location => propMap += (location -> "true"))
