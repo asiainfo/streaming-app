@@ -2,9 +2,9 @@ package com.asiainfo.ocdc.streaming.subscribe
 
 import com.asiainfo.ocdc.streaming.MainFrameConf
 import com.asiainfo.ocdc.streaming.constant.EventConstant
-import com.asiainfo.ocdc.streaming.tool.CacheFactory
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
+
 import scala.collection.mutable.Map
 
 /**
@@ -46,7 +46,7 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     val currentEvent = filtevents.iterator.next()._2
     val selectedData = currentEvent.selectExpr(selectExp: _*)
 
-    val checkedData = selectedData.map(row => {
+    /*val checkedData = selectedData.map(row => {
       var resultData: Option[Row] = None
       val currTime = System.currentTimeMillis()
       val hashkey = getHashKey(row)
@@ -97,7 +97,9 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
       }
 
       resultData
-    })
+    })*/
+
+    val checkedData = selectedData.map(row => Option(row))
 
     output(checkedData)
 

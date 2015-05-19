@@ -116,6 +116,7 @@ abstract class RedisCacheManager extends CacheManager {
   }
 
   override def setMultiCache(keysvalues: Map[String, Any]) {
+    val t1 = System.currentTimeMillis()
     val seqlist = new ArrayList[Array[Byte]]()
     val it = keysvalues.keySet.iterator
     while (it.hasNext) {
@@ -123,14 +124,27 @@ abstract class RedisCacheManager extends CacheManager {
       seqlist.add(elem.getBytes)
       seqlist.add(getKryoTool.serialize(keysvalues(elem)).array())
     }
-    getConnection.mset(seqlist.toIndexedSeq: _*)
+    val r = getConnection.mset(seqlist.toIndexedSeq: _*)
+    System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
+    r
   }
 
   override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
+    val t1 = System.currentTimeMillis()
     val multimap = Map[String, Any]()
     val bytekeys = keys.map(x => x.getBytes).toSeq
-    val anyvalues = getConnection.mget(bytekeys: _*).map(x => {
+    var i = 0
+    val cachedata = getConnection.mget(bytekeys: _*)
+
+    val t2 = System.currentTimeMillis()
+    System.out.println("MGET " + keys.size + " key cost " + (t2 - t1))
+
+    val anyvalues = cachedata.map(x => {
       if (x != null) {
+        if(i==0){
+          println(" data size : " + x.length)
+          i = i + 1
+        }
         val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
         data
       }
@@ -139,6 +153,9 @@ abstract class RedisCacheManager extends CacheManager {
     for (i <- 0 to keys.length - 1) {
       multimap += (keys(i) -> anyvalues(i))
     }
+
+    System.out.println("DESERIALIZED " + keys.size + " key cost " + (System.currentTimeMillis() - t2))
+
     multimap
   }
 
