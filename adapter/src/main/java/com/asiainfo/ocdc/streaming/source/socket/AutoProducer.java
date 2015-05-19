@@ -1,9 +1,10 @@
 package com.asiainfo.ocdc.streaming.source.socket;
 
-import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker;
+import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker2;
 import kafka.producer.KeyedMessage;
 
 import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Timer;
@@ -19,120 +20,152 @@ import com.asiainfo.ocdc.streaming.producer.SendUtil;
  */
 public class AutoProducer {
 	
+	// 是否要逐条打印接收的socket数据flg
+	private static boolean xdrprint = false;
+	private static ArrayList<KeyedMessage<String, String>> msgList = null;
+	private static SendUtil sendutil = null;
+	private static boolean blprintflg = false;
+	// 根据socket.printCount.printflg判断是否启动打印单位时间内接收的数据条数
+	private static HashMap<String,Long> countMap = new HashMap<String,Long>();
+	
 	@SuppressWarnings("static-access")
 	public static void main(String args[]) {
 		
-		SendUtil sendutil = new SendUtil();
-		String print_flg = sendutil.prop.getProperty("socket.receiver.print").trim();
-		boolean xdrprint = Boolean.parseBoolean(print_flg);
+		sendutil = new SendUtil();
+		// 配置文件参数解析
+		// soceke server联接配置
 		String socketIp = sendutil.prop.getProperty("socket.server.ip").trim();
 		String socketPort = sendutil.prop.getProperty("socket.server.port").trim();
 		int port = Integer.parseInt(socketPort);
-		// 根据socket.printCount.printflg判断是否启动打印单位时间内接收的数据条数
-		HashMap<String,Long> countMap = new HashMap<String,Long>();
-		String interval = sendutil.prop.getProperty("socket.printCount.interval").trim();
-		long printInterval = Integer.parseInt(interval) * 1000;
+		// 是否要逐条打印接收的socket数据
+		String print_flg = sendutil.prop.getProperty("socket.receiver.print").trim();
+		xdrprint = Boolean.parseBoolean(print_flg);
+		// 是否要打印socket接收的速度
 		String printflg = sendutil.prop.getProperty("socket.printCount.printflg").trim();
-		boolean blprintflg = Boolean.parseBoolean(printflg);
+<<<<<<< HEAD
+		blprintflg = Boolean.parseBoolean(printflg);
+		// 打印socket接收速度周期单位（秒）
+		long printInterval = 0l;
+		if (blprintflg){
+			String interval = sendutil.prop.getProperty("socket.printCount.interval").trim();
+			printInterval = Integer.parseInt(interval) * 1000;
+		}
+		
+		// 打印socket接收速度任务
 		SocketReceiveCountTasker SRCountTasker = null;
 		if (blprintflg) {
 			Timer timer = new Timer();
 			SRCountTasker = new SocketReceiveCountTasker(countMap,printInterval);
+			SRCountTasker.init();
+			timer.schedule(SRCountTasker, 10, printInterval);
+=======
+		boolean blprintflg = Boolean.parseBoolean(printflg);
+		SocketReceiveCountTasker2 SRCountTasker = null;
+		if (blprintflg) {
+			Timer timer = new Timer();
+			SRCountTasker = new SocketReceiveCountTasker2(countMap,printInterval);
 			timer.schedule(SRCountTasker, 0, printInterval);
 			SRCountTasker.countTool(countMap);
+>>>>>>> 3ca1a505541a59724729b0b0fac49db34247aea7
 		}
 		// 开启producer线程池执等待执行任务
 		sendutil.runThreadPoolTask();
-		ArrayList<KeyedMessage<String, String>> msgList = null;
 		
-		// 开启SocketHeartBeat
-		ExecutorService executor = sendutil.executorPool;
+		// 开启SocketHeartBeat 任务
+		ExecutorService executor = sendutil.getExecutorPool();
+		
 		SocketHeartBeatTask socketHeartBeat = new SocketHeartBeatTask(socketIp, port);
 		executor.submit(socketHeartBeat);
 		try {
 			while (true) {
-				int msgLength = 0;
-				int msgType = 0;
-				int dataLen = 0;
-				byte[] len = new byte[2];
-				byte[] cmd = new byte[2];
-				byte[] status = new byte[2];
-				byte[] index = new byte[2];
-
-				if (!socketHeartBeat.isInterrupted()){
-					
-					DataInputStream ds = socketHeartBeat.getDataInputStream();
-					// flag
-					ds.readByte();
-					// format
-					ds.readByte();
-					// System.out.println(Integer.toHexString(format)+" ");
-					ds.readFully(len);
-					msgLength = socketUtil.bytesToInt(len);
-					// System.out.println(Integer.toHexString(len[0])+" ");
-					// System.out.println(Integer.toHexString(len[1])+" ");
-					ds.readByte();
-					ds.readFully(cmd);
-					// System.out.println(Integer.toHexString(cmd[0])+" ");
-					// System.out.println(Integer.toHexString(cmd[1])+" ");
-					
-					msgType = socketUtil.bytesToInt(cmd);
-					if (msgType == 0x8003) {
-						byte[] rep = new byte[msgLength - 2];
-						ds.readFully(rep);
-					} else if (msgType == 0x0002) {
-						ds.readFully(status);
-						// int msgStatus = socketUtil.bytesToInt(status);
-						ds.readFully(index);
-						// int msgIndex = socketUtil.bytesToInt(index);
-						len = null;
-						cmd = null;
-						status = null;
-						index = null;
-						int count = 0;
-						while (true) {
-							byte[] type = new byte[2];
-							byte[] varInfo = new byte[2];
-							// flag
-							ds.readByte();
-							ds.readFully(type);
-							ds.readFully(varInfo);
-							// format
-							ds.readByte();
-							dataLen = ds.readInt();
-							
-							byte[] xdr = new byte[dataLen];
-							ds.readFully(xdr);
-							String xdrs = new String(xdr, "utf-8");
-							String xdrsend = xdrs.substring(0, xdrs.length() - 2);
-							// added by surq 2015.5.12 start------
-							if (xdrprint) System.out.println("xdr:" + xdrsend);
-					
-							// 成功接收一条数据，统计值加1
-							long receiveCount = countMap.get("thisCount");
-							receiveCount += 1;
-							countMap.put("thisCount", receiveCount);
-							
-							msgList = sendutil.packageMsg(xdrsend, msgList);
-							// added by surq 2015.5.12 end------
-							type = null;
-							varInfo = null;
-							xdr = null;
-							count = count + 10 + dataLen;
-							if (msgLength - 6 == count) {
-								break;
-							}
-						}
-					}
+				// socket server未中断联接并且能够获取socket数据流的情况下做如下处理：
+				if (!socketHeartBeat.isInterrupted() && socketHeartBeat.isConnected()){
+					// socket数据的抽取和封装
+					msgAction(socketHeartBeat.getDataInputStream());
 				} else {
+					// socket server关闭联接等待1s钟继续试探获取联接
 					Thread.currentThread().sleep(1000);
 					if (blprintflg) {
-						SRCountTasker.countTool(countMap);
+						// socket传输速度变量重置
+						SRCountTasker.init();
 					}
 				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * 对socket流中的数据抽取和封装<br>
+	 * @param ds
+	 * @throws IOException 
+	 */
+	private static void msgAction(DataInputStream ds) throws IOException {
+		int msgLength = 0;
+		int msgType = 0;
+		int dataLen = 0;
+		byte[] len = new byte[2];
+		byte[] cmd = new byte[2];
+		byte[] status = new byte[2];
+		byte[] index = new byte[2];
+		ds.readByte();
+		ds.readByte();
+		ds.readFully(len);
+		msgLength = socketUtil.bytesToInt(len);
+		ds.readByte();
+		ds.readFully(cmd);
+		
+		msgType = socketUtil.bytesToInt(cmd);
+		if (msgType == 0x8003) {
+			byte[] rep = new byte[msgLength - 2];
+			ds.readFully(rep);
+		} else if (msgType == 0x0002) {
+			ds.readFully(status);
+			ds.readFully(index);
+			len = null;
+			cmd = null;
+			status = null;
+			index = null;
+			int count = 0;
+			while (true) {
+				byte[] type = new byte[2];
+				byte[] varInfo = new byte[2];
+				// flag
+				ds.readByte();
+				ds.readFully(type);
+				ds.readFully(varInfo);
+				// format
+				ds.readByte();
+				dataLen = ds.readInt();
+				
+				byte[] xdr = new byte[dataLen];
+				ds.readFully(xdr);
+				String xdrs = new String(xdr, "utf-8");
+				String xdrsend = xdrs.substring(0, xdrs.length() - 2);
+				// added by surq 2015.5.12 start------
+				// 打印socket接收到的每条数据
+				if (xdrprint) System.out.println("xdr:" + xdrsend);
+				// 打印socket接收数据的速度处理
+				if (blprintflg){
+					// 成功接收一条数据，统计值加1
+					long receiveCount = countMap.get("thisCount");
+					receiveCount += 1;
+					if (receiveCount ==Long.MAX_VALUE){
+						receiveCount = 0;
+					}
+					countMap.put("thisCount", receiveCount);
+				}
+				msgList = sendutil.packageMsg(xdrsend, msgList);
+				// added by surq 2015.5.12 end------
+				type = null;
+				varInfo = null;
+				xdr = null;
+				count = count + 10 + dataLen;
+				if (msgLength - 6 == count) {
+					break;
+				}
+			}
 		}
 	}
 }

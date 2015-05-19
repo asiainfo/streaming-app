@@ -14,15 +14,15 @@ import com.asiainfo.ocdc.streaming.producer.SendUtil;
  * 向socket的outputStream中发送心跳数据<br>
  * @param msg
  */
-public class SocketHeartBeatTask implements Callable<String> {
+public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExceptionHandler{
 
 	private String socketIp;
 	private int port;
-	// true: socket连通状态，false:socket中断状态
+	private boolean connected = false;
 	private boolean interrupted = false;
+
 	// 共享数据流
 	public DataInputStream dataInputStream = null;
-	
 	/**
 	 * constructor 
 	 * @param socketIp
@@ -34,42 +34,57 @@ public class SocketHeartBeatTask implements Callable<String> {
 	}
 	
 	@Override
-	public String call() throws Exception {
-		Socket socket = getSocket(socketIp, port);
-		// 创建socket失败,退出心跳机制
-		if (socket == null) return "1";
-		DataInputStream ds = new DataInputStream(socket.getInputStream());
-		// bindReq 去除请求信息头
-		ds.readFully(new byte[11]);
-		setDataInputStream(ds);
-		while (true) {
-			try {
-				if (isInterrupted()) {
-					System.out.println(SendUtil.timeFormat(System.currentTimeMillis()) + ":Socket 异常重新试探...");
-					socket = getSocket(socketIp, port);
-					// 创建socket失败,退出心跳机制
-					if (socket == null) break;
-					ds = new DataInputStream(socket.getInputStream());
-					// bindReq 去除请求信息头
-					ds.readFully(new byte[11]);
-					setDataInputStream(ds);
-				}
-				
-				OutputStream outputStream = socket.getOutputStream();
-				outputStream.write(getHeartBeatInfo());
-				outputStream.flush();
-				Thread.sleep(15000);
-				// 设定socket连通状态
-				setInterrupted(false);
-			} catch (SocketException e) {
-				// 设定socket中断状态
-				setInterrupted(true);
-				e.printStackTrace();
+	public String call() {
+		try{
+			System.out.println("SocketHeartBeatTask start!! "+ Thread.currentThread().getId());
+			Socket socket = getSocket();
+			// 创建socket失败,退出心跳机制
+			if (socket == null) {
+				System.out.println("socket["+socketIp+":"+port +"] 创建失败！");
+				return "1";
 			}
+			// 发送SOCKET请求信号，并返加socket的InputStream
+			DataInputStream ds = socketUtil.sendHeadMsg(socket);
+			// bindReq 去除请求信息头
+			ds.readFully( new byte[11]);
+			setDataInputStream(ds);
+			setConnected(true);
+			while (true) {
+				try {
+					if (isInterrupted()) {
+						System.out.println(SendUtil.timeFormat(System.currentTimeMillis()) + ":Socket 异常重新试探...");
+						socket = getSocket();
+						// 创建socket失败,退出心跳机制
+						if (socket == null){
+							System.out.println("socket["+socketIp+":"+port +"] 创建失败！");
+							 continue;
+						}
+						// 发送请求信号，并返加socket的InputStream
+						ds = socketUtil.sendHeadMsg(socket);
+						// bindReq 去除请求信息头
+						ds.readFully(new byte[11]);
+						setDataInputStream(ds);
+						setConnected(true);
+					}
+					OutputStream outputStream = socket.getOutputStream();
+					outputStream.write(socketUtil.getHeartBeatInfo());
+					outputStream.flush();
+					Thread.sleep(15000);
+					// 设定socket连通状态
+					setInterrupted(false);
+				} catch (SocketException e) {
+					// 设定socket中断状态
+					setInterrupted(false);
+					e.printStackTrace();
+				}
+			}
+	
+		}catch(Exception e){
+			uncaughtException(Thread.currentThread(),e);
 		}
 		return "1";
 	}
-
+	
 	/**
 	 * 创建socket并发送注册请求<br>
 	 * 
@@ -77,7 +92,7 @@ public class SocketHeartBeatTask implements Callable<String> {
 	 * @param port
 	 * @return
 	 */
-	private Socket getSocket(String socketIp, int port) {
+	private Socket getSocket() {
 		try {
 			return new Socket(socketIp, port);
 		} catch (Exception e) {
@@ -85,28 +100,7 @@ public class SocketHeartBeatTask implements Callable<String> {
 			return null;
 		}
 	}
-
-	/**
-	 * 获取heartBeat 信息<br>
-	 * 
-	 * @return
-	 */
-	private byte[] getHeartBeatInfo() {
-		byte[] msgConnect = new byte[11];
-		msgConnect[0] = (byte) 0x9e;
-		msgConnect[1] = (byte) 0x62;
-		msgConnect[2] = (byte) 0x00;
-		msgConnect[3] = (byte) 0x06;
-		msgConnect[4] = (byte) 0x00;
-		msgConnect[5] = (byte) 0x00;
-		msgConnect[6] = (byte) 0x03;
-		msgConnect[7] = (byte) 0x00;
-		msgConnect[8] = (byte) 0x00;
-		msgConnect[9] = (byte) 0x00;
-		msgConnect[10] = (byte) 0x00;
-		return msgConnect;
-	}
-
+	
 	/**
 	 * 取socket连接状态
 	 */
@@ -136,5 +130,24 @@ public class SocketHeartBeatTask implements Callable<String> {
 	 */
 	private void setDataInputStream(DataInputStream dataInputStream) {
 		this.dataInputStream = dataInputStream;
+	}
+	
+	/**
+	 * 获取socket dataStream的联接状态<br>
+	 */
+	public Boolean isConnected() {
+		return connected;
+	}
+	/**
+	 * 获取socket dataStream数据时为true,否则为false<br>
+	 * @param connected
+	 */
+	private void setConnected(Boolean connected) {
+		this.connected = connected;
+	}
+
+	@Override
+	public void uncaughtException(Thread t, Throwable e) {
+		e.printStackTrace();
 	}
 }
