@@ -1,6 +1,5 @@
 package com.asiainfo.ocdc.streaming.source.socket;
 
-import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker2;
 import kafka.producer.KeyedMessage;
 
 import java.io.DataInputStream;
@@ -11,6 +10,7 @@ import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 
 import com.asiainfo.ocdc.streaming.producer.SendUtil;
+import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker;
 
 /**
  * @author surq<br>
@@ -42,7 +42,6 @@ public class AutoProducer {
 		xdrprint = Boolean.parseBoolean(print_flg);
 		// 是否要打印socket接收的速度
 		String printflg = sendutil.prop.getProperty("socket.printCount.printflg").trim();
-<<<<<<< HEAD
 		blprintflg = Boolean.parseBoolean(printflg);
 		// 打印socket接收速度周期单位（秒）
 		long printInterval = 0l;
@@ -58,15 +57,6 @@ public class AutoProducer {
 			SRCountTasker = new SocketReceiveCountTasker(countMap,printInterval);
 			SRCountTasker.init();
 			timer.schedule(SRCountTasker, 10, printInterval);
-=======
-		boolean blprintflg = Boolean.parseBoolean(printflg);
-		SocketReceiveCountTasker2 SRCountTasker = null;
-		if (blprintflg) {
-			Timer timer = new Timer();
-			SRCountTasker = new SocketReceiveCountTasker2(countMap,printInterval);
-			timer.schedule(SRCountTasker, 0, printInterval);
-			SRCountTasker.countTool(countMap);
->>>>>>> 3ca1a505541a59724729b0b0fac49db34247aea7
 		}
 		// 开启producer线程池执等待执行任务
 		sendutil.runThreadPoolTask();
