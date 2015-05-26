@@ -9,6 +9,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.ArrayList;
 import java.util.Properties;
 
+import org.apache.log4j.Logger;
+
 /**
  * @author surq<br>
  * @since 2015.5.11<br>
@@ -16,9 +18,11 @@ import java.util.Properties;
  * @param msg
  */
 public class ProducerSendTask implements Callable<String> ,Thread.UncaughtExceptionHandler{
+	
+	private  Logger logger = Logger.getLogger(this.getClass());
 	private LinkedBlockingQueue<ArrayList<KeyedMessage<String, String>>> lbk = null;
 	Properties props = null;
-
+	
 	public ProducerSendTask(
 			LinkedBlockingQueue<ArrayList<KeyedMessage<String, String>>> lbk, Properties props) {
 		this.lbk = lbk;
@@ -28,14 +32,13 @@ public class ProducerSendTask implements Callable<String> ,Thread.UncaughtExcept
 	public String call() {
 		
 		try {
-			System.out.println("ProducerSendTask start!! "+ Thread.currentThread().getId());
+			logger.info("ProducerSendTask start! "+ Thread.currentThread().getId());
 			// 设置配置属性
 			ProducerConfig config = new ProducerConfig(props);
 			// 创建producer
 			Producer<String, String> producer = new Producer<String, String>(config);
 			while (true) {
 				ArrayList<KeyedMessage<String, String>> msgList = lbk.take();
-				System.out.println("msgList size:"+msgList.size());
 				producer.send(msgList);
 			}
 		}catch(Exception e){

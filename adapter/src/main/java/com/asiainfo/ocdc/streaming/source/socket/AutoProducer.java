@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.log4j.Logger;
+
 import com.asiainfo.ocdc.streaming.producer.SendUtil;
 import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker;
 
@@ -20,6 +22,7 @@ import com.asiainfo.ocdc.streaming.producer.SocketReceiveCountTasker;
  */
 public class AutoProducer {
 	
+	private static Logger logger = Logger.getLogger(AutoProducer.class);  
 	// 是否要逐条打印接收的socket数据flg
 	private static boolean xdrprint = false;
 	private static ArrayList<KeyedMessage<String, String>> msgList = null;
@@ -69,7 +72,7 @@ public class AutoProducer {
 		try {
 			while (true) {
 				// socket server未中断联接并且能够获取socket数据流的情况下做如下处理：
-				if (!socketHeartBeat.isInterrupted() && socketHeartBeat.isConnected()){
+				if (socketHeartBeat.isConnected() && !socketHeartBeat.isInterrupted()){
 					// socket数据的抽取和封装
 					msgAction(socketHeartBeat.getDataInputStream());
 				} else {
@@ -134,8 +137,10 @@ public class AutoProducer {
 				String xdrs = new String(xdr, "utf-8");
 				String xdrsend = xdrs.substring(0, xdrs.length() - 2);
 				// added by surq 2015.5.12 start------
+				// 追加从socket接收数据的时间戳“yyyy-MM-dd HH:mm:ss:SSS”
+				xdrsend = xdrsend + "," +SendUtil.timeFormat(System.currentTimeMillis());
 				// 打印socket接收到的每条数据
-				if (xdrprint) System.out.println("xdr:" + xdrsend);
+				if (xdrprint) logger.info(xdrsend);
 				// 打印socket接收数据的速度处理
 				if (blprintflg){
 					// 成功接收一条数据，统计值加1

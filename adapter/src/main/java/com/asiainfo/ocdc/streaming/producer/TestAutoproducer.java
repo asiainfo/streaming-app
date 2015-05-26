@@ -5,17 +5,18 @@ import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Timer;
+import java.util.logging.Logger;
 
 import kafka.producer.KeyedMessage;
 
-public class TestAutoproducer {
+public class TestAutoproducer{
 
 	@SuppressWarnings("static-access")
 	public static void main(String args[]) {
 
-//		 producerSendTest();
+		 producerSendTest();
 		 
-		 timerTest();		 
+//		 timerTest();		 
 		
 	}
 @SuppressWarnings("static-access")
@@ -33,7 +34,6 @@ private static void timerTest() {
 
 	long receiveCount = countMap.get("thisCount");
 	receiveCount += 1;
-	
 	countMap.put("thisCount", receiveCount);
 	
 	try {
@@ -42,8 +42,6 @@ private static void timerTest() {
 		e.printStackTrace();
 	}
 }
-	
-	
 	
 	/**
 	 * kafka producer test<br>

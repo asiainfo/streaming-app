@@ -3,6 +3,8 @@ package com.asiainfo.ocdc.streaming.producer;
 import java.util.HashMap;
 import java.util.TimerTask;
 
+import org.apache.log4j.Logger;
+
 /**
  * @author surq<br>
  * @since 2015.5.11<br>
@@ -10,6 +12,8 @@ import java.util.TimerTask;
  * @param msg
  */
 public class SocketReceiveCountTasker extends TimerTask{
+	
+	private  Logger logger = Logger.getLogger(this.getClass());
 	private HashMap<String,Long> countMap = null;
 	private long interval = 0;
 	
@@ -29,7 +33,7 @@ public class SocketReceiveCountTasker extends TimerTask{
     		receiveCount = thisCount - lastCount;
     	}
     	countMap.put("lastCount", thisCount);
-    	System.out.println(SendUtil.timeFormat(System.currentTimeMillis()) +
+    	logger.info(SendUtil.timeFormat(System.currentTimeMillis()) +
     			":socket receiver 接收速度："+receiveCount+"/"+interval/1000 +"s");
     }
 	

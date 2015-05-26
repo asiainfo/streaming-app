@@ -12,10 +12,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.log4j.Logger;
+
 import kafka.producer.KeyedMessage;
 
 public class SendUtil {
-
+	
+	private  Logger logger = Logger.getLogger(this.getClass());
 	// 用户配置相关参数
 	public Properties prop = null;
 	private ExecutorService executorPool = Executors.newCachedThreadPool();
@@ -37,11 +40,10 @@ public class SendUtil {
 		Properties prop = getPropConfig();
 		Set<Entry<Object, Object>> entrySet = prop.entrySet();
 		Iterator<Entry<Object, Object>> it = entrySet.iterator();
-		System.out.println("kafka-producer.properties 属性配置一览：");
+		logger.info("kafka-producer.properties 属性配置一览：");
 		while (it.hasNext()) {
 			Entry<Object, Object> kvEntry = it.next();
-			System.out.print(kvEntry.getKey() + "-----");
-			System.out.println(kvEntry.getValue());
+			logger.info(kvEntry.getKey() + " --> "+ kvEntry.getValue());
 		}
 	}
 
@@ -104,13 +106,15 @@ public class SendUtil {
 	
 	/**
 	 * 日期格式化工具<br>
+	 * 格式：yyyy-MM-dd HH:mm:ss<br>
 	 * @param time
 	 * @return
 	 */
 	public static String timeFormat(long time) {
-		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss"); 
-	return format.format(new Date(time));
+		SimpleDateFormat formatObj = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS"); 
+	return formatObj.format(new Date(time));
 	}
+	
 	/**
 	 * 获取线程池
 	 * @return
