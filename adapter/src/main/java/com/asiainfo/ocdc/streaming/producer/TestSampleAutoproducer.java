@@ -4,44 +4,21 @@ import java.io.FileReader;
 import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Timer;
-import java.util.logging.Logger;
 
 import kafka.producer.KeyedMessage;
 
-public class TestAutoproducer{
+/**
+ * @author 宿荣全<br>
+ * @since 2015.5.11<br>
+ * send kafka 消息<br>
+ * @param msg
+ */
+public class TestSampleAutoproducer{
 
-	@SuppressWarnings("static-access")
 	public static void main(String args[]) {
 
 		 producerSendTest();
-		 
-//		 timerTest();		 
-		
 	}
-@SuppressWarnings("static-access")
-private static void timerTest() {
-	HashMap<String,Long> countMap = new HashMap<String,Long>();
-	long printInterval = 1*1000;
-	
-	
-	SocketReceiveCountTasker SRCountTasker = null;
-
-	Timer timer = new Timer();
-	SRCountTasker = new SocketReceiveCountTasker(countMap,printInterval);
-	SRCountTasker.init();
-	timer.schedule(SRCountTasker, 0, printInterval);
-
-	long receiveCount = countMap.get("thisCount");
-	receiveCount += 1;
-	countMap.put("thisCount", receiveCount);
-	
-	try {
-		Thread.currentThread().sleep(1000);
-	} catch (InterruptedException e) {
-		e.printStackTrace();
-	}
-}
 	
 	/**
 	 * kafka producer test<br>
@@ -53,6 +30,14 @@ private static void timerTest() {
 		SendUtil sendutil = new SendUtil();
 		sendutil.runThreadPoolTask();
 		ArrayList<KeyedMessage<String, String>> msgList = null;
+		// 根据socket.printCount.printflg判断是否启动打印单位时间内接收的数据条数
+		HashMap<String,Long> countMap = new HashMap<String,Long>();
+		
+		// 统计接收速度
+		SpeedCompute speedCompute = new SpeedCompute(countMap,10);
+		speedCompute.startTask();
+	
+		
 		// 代码测试部分end－－－－－
 		LineNumberReader reader;
 		try {
@@ -63,6 +48,8 @@ private static void timerTest() {
 				while ((line = reader.readLine()) != null) {
 					String xdrsend = reader.getLineNumber() + ":" + line;
 					// 代码测试部分start－－－－－
+					speedCompute.counter(1);
+					// 发送msg
 					msgList = sendutil.packageMsg(xdrsend, msgList);
 					// 代码测试部分end－－－－－
 				}

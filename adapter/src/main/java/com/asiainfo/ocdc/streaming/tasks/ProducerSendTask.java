@@ -1,4 +1,4 @@
-package com.asiainfo.ocdc.streaming.producer;
+package com.asiainfo.ocdc.streaming.tasks;
 
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
@@ -12,7 +12,7 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 
 /**
- * @author surq<br>
+ * @author 宿荣全<br>
  * @since 2015.5.11<br>
  * send kafka 消息<br>
  * @param msg

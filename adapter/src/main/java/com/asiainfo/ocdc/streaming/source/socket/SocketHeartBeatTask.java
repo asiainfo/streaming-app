@@ -11,7 +11,7 @@ import org.apache.log4j.Logger;
 import com.asiainfo.ocdc.streaming.producer.SendUtil;
 
 /**
- * @author surq<br>
+ * @author 宿荣全<br>
  * @since 2015.5.11<br>
  * 向socket的outputStream中发送心跳数据<br>
  * @param msg

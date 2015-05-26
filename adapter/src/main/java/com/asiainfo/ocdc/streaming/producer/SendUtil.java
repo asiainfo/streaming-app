@@ -14,8 +14,16 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.log4j.Logger;
 
+import com.asiainfo.ocdc.streaming.tasks.ProducerSendTask;
+
 import kafka.producer.KeyedMessage;
 
+/**
+ * @author 宿荣全<br>
+ * @since 2015.5.11<br>
+ * send kafka 消息<br>
+ * @param msg
+ */
 public class SendUtil {
 	
 	private  Logger logger = Logger.getLogger(this.getClass());
