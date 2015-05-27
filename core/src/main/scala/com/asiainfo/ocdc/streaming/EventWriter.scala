@@ -28,7 +28,7 @@ object EventWriter {
           x
         })
 
-//        producer.send(message: _*)
+        producer.send(message: _*)
 
         /*message.foreach(x => {
           println("Output data : " + x.message + " to kafka " + topic)

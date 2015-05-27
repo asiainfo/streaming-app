@@ -26,7 +26,6 @@ public class ProducerSendTask implements Callable<String> ,Thread.UncaughtExcept
 	}
 
 	public String call() {
-		
 		try {
 			System.out.println("ProducerSendTask start!! "+ Thread.currentThread().getId());
 			// 设置配置属性
@@ -35,7 +34,6 @@ public class ProducerSendTask implements Callable<String> ,Thread.UncaughtExcept
 			Producer<String, String> producer = new Producer<String, String>(config);
 			while (true) {
 				ArrayList<KeyedMessage<String, String>> msgList = lbk.take();
-				System.out.println("msgList size:"+msgList.size());
 				producer.send(msgList);
 			}
 		}catch(Exception e){

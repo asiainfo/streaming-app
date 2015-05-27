@@ -28,7 +28,7 @@ class CodisCacheManager extends RedisCacheManager {
         case None =>
           //          val proxyid = (Math.random()*(proxylist.length)).toInt
           //          val proxyid = Random.nextInt(proxylist.length)
-          val proxyid = localip.split("\\.")(3).toInt % 2
+          val proxyid = localip.split("\\.")(3).toInt % proxymap.size
           rhost = proxylist(proxyid).split(":")(0)
           rip = proxylist(proxyid).split(":")(1)
       }
