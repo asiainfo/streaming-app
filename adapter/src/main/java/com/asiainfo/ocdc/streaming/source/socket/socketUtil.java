@@ -6,7 +6,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 
 /**
- * @author surq<br>
+ * @author 宿荣全<br>
  * @since 2015.5.11<br>
  * 接收socket数据工具类<br>
  * @param msg

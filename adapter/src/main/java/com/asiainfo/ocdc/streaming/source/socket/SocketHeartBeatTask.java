@@ -6,20 +6,23 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.concurrent.Callable;
 
+import org.apache.log4j.Logger;
+
 import com.asiainfo.ocdc.streaming.producer.SendUtil;
 
 /**
- * @author surq<br>
+ * @author 宿荣全<br>
  * @since 2015.5.11<br>
  * 向socket的outputStream中发送心跳数据<br>
  * @param msg
  */
 public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExceptionHandler{
 
+	private  Logger logger = Logger.getLogger(this.getClass());
 	private String socketIp;
 	private int port;
-	private boolean connected = false;
 	private boolean interrupted = false;
+	private boolean connected = false;
 
 	// 共享数据流
 	public DataInputStream dataInputStream = null;
@@ -36,11 +39,11 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 	@Override
 	public String call() {
 		try{
-			System.out.println("SocketHeartBeatTask start!! "+ Thread.currentThread().getId());
+			logger.info("SocketHeartBeatTask start! "+ Thread.currentThread().getId());
 			Socket socket = getSocket();
 			// 创建socket失败,退出心跳机制
 			if (socket == null) {
-				System.out.println("socket["+socketIp+":"+port +"] 创建失败！");
+				logger.error("socket["+socketIp+":"+port +"] 创建失败！");
 				return "1";
 			}
 			// 发送SOCKET请求信号，并返加socket的InputStream
@@ -52,11 +55,11 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 			while (true) {
 				try {
 					if (isInterrupted()) {
-						System.out.println(SendUtil.timeFormat(System.currentTimeMillis()) + ":Socket 异常重新试探...");
+						logger.warn(SendUtil.timeFormat(System.currentTimeMillis()) + ":Socket 异常重新试探...");
 						socket = getSocket();
 						// 创建socket失败,退出心跳机制
 						if (socket == null){
-							System.out.println("socket["+socketIp+":"+port +"] 创建失败！");
+							logger.error("socket["+socketIp+":"+port +"] 创建失败！");
 							 continue;
 						}
 						// 发送请求信号，并返加socket的InputStream
@@ -64,7 +67,6 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 						// bindReq 去除请求信息头
 						ds.readFully(new byte[11]);
 						setDataInputStream(ds);
-						setConnected(true);
 					}
 					OutputStream outputStream = socket.getOutputStream();
 					outputStream.write(socketUtil.getHeartBeatInfo());
@@ -74,7 +76,7 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 					setInterrupted(false);
 				} catch (SocketException e) {
 					// 设定socket中断状态
-					setInterrupted(false);
+					setInterrupted(true);
 					e.printStackTrace();
 				}
 			}
@@ -117,6 +119,18 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 	}
 	
 	/**
+	 * 第一次连接用，启动后让共享资源处于false,确定heartbeat连接成功后设为false<br>
+	 * @return
+	 */
+	public boolean isConnected() {
+		return connected;
+	}
+
+	public void setConnected(boolean connected) {
+		this.connected = connected;
+	}
+	
+	/**
 	 * 取数据流操作
 	 * @param dataInputStream
 	 */
@@ -130,20 +144,6 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 	 */
 	private void setDataInputStream(DataInputStream dataInputStream) {
 		this.dataInputStream = dataInputStream;
-	}
-	
-	/**
-	 * 获取socket dataStream的联接状态<br>
-	 */
-	public Boolean isConnected() {
-		return connected;
-	}
-	/**
-	 * 获取socket dataStream数据时为true,否则为false<br>
-	 * @param connected
-	 */
-	private void setConnected(Boolean connected) {
-		this.connected = connected;
 	}
 
 	@Override
