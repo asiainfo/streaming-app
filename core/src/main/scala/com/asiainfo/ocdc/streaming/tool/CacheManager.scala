@@ -29,9 +29,9 @@ trait CacheManager extends org.apache.spark.Logging {
 
   def getCommonCacheValue(cacheName: String, key: String): String
 
-  def setByteCacheString(key: String, value: String)
+  def setByteCacheString(key: String, value: Any)
 
-  def getByteCacheString(key: String): List[String]
+  def getByteCacheString(key: String): Any
 
   def setMultiCache(keysvalues: Map[String, Any])
 
@@ -76,7 +76,10 @@ abstract class RedisCacheManager extends CacheManager {
   }
 
   override def getHashCacheMap(key: String): Map[String, String] = {
-    getConnection.hgetAll(key)
+    val t1 = System.currentTimeMillis()
+    val value = getConnection.hgetAll(key)
+    System.out.println("GET 1 key from userinfo cost " + (System.currentTimeMillis() - t1))
+    value
   }
 
   override def setHashCacheString(key: String, value: String): Unit = {
@@ -84,7 +87,10 @@ abstract class RedisCacheManager extends CacheManager {
   }
 
   override def getCommonCacheValue(cacheName: String, key: String): String = {
-    getConnection.hget(cacheName, key)
+    val t1 = System.currentTimeMillis()
+    val value = getConnection.hget(cacheName, key)
+    System.out.println("GET 1 key from lacci cost " + (System.currentTimeMillis() - t1))
+    value
   }
 
   override def getHashCacheString(key: String): String = {
@@ -100,19 +106,34 @@ abstract class RedisCacheManager extends CacheManager {
   }
 
   override def setHashCacheMap(key: String, value: Map[String, String]): Unit = {
+    val t1 = System.currentTimeMillis()
     getConnection.hmset(key, mapAsJavaMap(value))
+    System.out.println("SET 1 key cost " + (System.currentTimeMillis() - t1))
   }
 
   override def setHashCacheList(key: String, value: List[String]): Unit = {
     value.map { x => getConnection.rpush(key, x)}
   }
 
-  override def setByteCacheString(key: String, value: String) {
-    //TODO
+  override def setByteCacheString(key: String, value: Any) {
+    val t1 = System.currentTimeMillis()
+    val r = getConnection.set(key.getBytes, getKryoTool.serialize(value).array())
+    System.out.println("SET 1 key cost " + (System.currentTimeMillis() - t1))
   }
 
-  override def getByteCacheString(key: String): List[String] = {
-    null
+  override def getByteCacheString(key: String): Any = {
+    val t1 = System.currentTimeMillis()
+    val bytekey = key.getBytes
+    val cachedata = getConnection.get(bytekey)
+
+    val t2 = System.currentTimeMillis()
+    System.out.println("GET 1 key cost " + (t2 - t1))
+
+    if (cachedata != null) {
+      getKryoTool.deserialize[Any](ByteBuffer.wrap(cachedata))
+    }
+    else null
+
   }
 
   override def setMultiCache(keysvalues: Map[String, Any]) {
@@ -140,16 +161,13 @@ abstract class RedisCacheManager extends CacheManager {
     System.out.println("MGET " + keys.size + " key cost " + (t2 - t1))
 
     val anyvalues = cachedata.map(x => {
-      if (x != null) {
-        if(i==0){
-          println(" data size : " + x.length)
-          i = i + 1
-        }
+      if (x != null && x.length > 0) {
         val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
         data
       }
       else null
     }).toList
+
     for (i <- 0 to keys.length - 1) {
       multimap += (keys(i) -> anyvalues(i))
     }

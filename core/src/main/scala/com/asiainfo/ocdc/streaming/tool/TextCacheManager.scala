@@ -107,11 +107,11 @@ class TextCacheManager extends CacheManager {
     CommonCacheValue += cacheName -> temp
   }
 
-  override def setByteCacheString(key: String, value: String) {
+  override def setByteCacheString(key: String, value: Any) {
     //TODO
   }
 
-  override def getByteCacheString(key: String): List[String] = {
+  override def getByteCacheString(key: String): Any = {
     //TODO
     null
   }

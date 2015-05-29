@@ -156,14 +156,27 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           }
 
           val f1 = System.currentTimeMillis()
-          val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+//          val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+          val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)
           logDebug(" GET codis cache cost time : " + (System.currentTimeMillis() - f1) + " millis ! ")
 
           val cachemap_new = minimap.map(x => {
             val key = x._1
             val value = x._2
 
-            var rule_caches = cachemap_old.get(key).get match {
+            /*var rule_caches = cachemap_old.get(key).get match {
+              case cache: immutable.Map[String, StreamingCache] => cache
+              case null => {
+                val cachemap = mutable.Map[String, StreamingCache]()
+                labelRuleArray.foreach(labelRule => {
+                  cachemap += (labelRule.conf.get("id") -> null)
+                })
+
+                cachemap.toMap
+              }
+            }*/
+
+            var rule_caches = cachemap_old match {
               case cache: immutable.Map[String, StreamingCache] => cache
               case null => {
                 val cachemap = mutable.Map[String, StreamingCache]()
@@ -192,7 +205,8 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
           //update caches to CacheManager
           val f3 = System.currentTimeMillis()
-          CacheFactory.getManager.setMultiCache(cachemap_new)
+//          CacheFactory.getManager.setMultiCache(cachemap_new)
+          CacheFactory.getManager.setByteCacheString(cachemap_new.head._1,cachemap_new.head._2)
           logDebug(" Update codis cache cost time : " + (System.currentTimeMillis() - f3) + " millis ! ")
 
           arrayBuffer = currentArrayBuffer.toArray
