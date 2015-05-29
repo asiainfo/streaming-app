@@ -150,6 +150,19 @@ abstract class RedisCacheManager extends CacheManager {
     r
   }
 
+//  override def setMultiCache(keysvalues: Map[String, Any]) {
+//    val t1 = System.currentTimeMillis()
+//    val it = keysvalues.keySet.iterator
+//    while (it.hasNext) {
+//      val elem = it.next()
+//      new Thread() {
+//        override def run() {
+//          getConnection.set(elem.getBytes,getKryoTool.serialize(keysvalues(elem)).array())
+//        }}.start()
+//    }
+//    System.out.println("MSETTest " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
+//  }
+
   override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
     val t1 = System.currentTimeMillis()
     val multimap = Map[String, Any]()
