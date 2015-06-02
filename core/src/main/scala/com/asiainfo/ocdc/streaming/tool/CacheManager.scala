@@ -164,7 +164,6 @@ abstract class RedisCacheManager extends CacheManager {
     }
     pl.sync()
     System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
-    r
   }
 
 //  override def setMultiCache(keysvalues: Map[String, Any]) {
@@ -182,12 +181,12 @@ abstract class RedisCacheManager extends CacheManager {
 
 
   //old method
-/*  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
+  /*override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
     val t1 = System.currentTimeMillis()
     val multimap = Map[String, Any]()
     val bytekeys = keys.map(x => x.getBytes).toSeq
     var i = 0
-    val cachedata = getConnection.mget(bytekeys: _*)
+    val cachedata: util.List[Array[Byte]] = getConnection.mget(bytekeys: _*)
 
     val t2 = System.currentTimeMillis()
     System.out.println("MGET " + keys.size + " key cost " + (t2 - t1))
@@ -217,7 +216,7 @@ abstract class RedisCacheManager extends CacheManager {
 
     val pgl = getConnection.pipelined()
     bytekeys.foreach(x => pgl.get(x))
-    val cachedata = pgl.syncAndReturnAll()
+    val cachedata = pgl.syncAndReturnAll().asInstanceOf[util.List[Array[Byte]]]
 
     val t2 = System.currentTimeMillis()
     System.out.println("MGET " + keys.size + " key cost " + (t2 - t1))
