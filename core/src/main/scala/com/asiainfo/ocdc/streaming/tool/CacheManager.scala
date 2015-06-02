@@ -138,7 +138,8 @@ abstract class RedisCacheManager extends CacheManager {
 
   }
 
-  override def setMultiCache(keysvalues: Map[String, Any]) {
+  //old method
+/*  override def setMultiCache(keysvalues: Map[String, Any]) {
     val t1 = System.currentTimeMillis()
     val seqlist = new ArrayList[Array[Byte]]()
     val it = keysvalues.keySet.iterator
@@ -150,20 +151,21 @@ abstract class RedisCacheManager extends CacheManager {
     val r = getConnection.mset(seqlist.toIndexedSeq: _*)
     System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
     r
-  }
+  }*/
 
-//  override def setMultiCache(keysvalues: Map[String, Any]) {
-//    val t1 = System.currentTimeMillis()
-//    val it = keysvalues.keySet.iterator
-//    val pl = getConnection.pipelined()
-//    while (it.hasNext) {
-//      val elem = it.next()
-//      pl.set(elem.getBytes,getKryoTool.serialize(keysvalues(elem)).array())
-//    }
-//    pl.sync()
-//    System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
-//    r
-//  }
+  //new method for pipeline
+  override def setMultiCache(keysvalues: Map[String, Any]) {
+    val t1 = System.currentTimeMillis()
+    val it = keysvalues.keySet.iterator
+    val pl = getConnection.pipelined()
+    while (it.hasNext) {
+      val elem = it.next()
+      pl.set(elem.getBytes,getKryoTool.serialize(keysvalues(elem)).array())
+    }
+    pl.sync()
+    System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
+    r
+  }
 
 //  override def setMultiCache(keysvalues: Map[String, Any]) {
 //    val t1 = System.currentTimeMillis()
@@ -178,7 +180,9 @@ abstract class RedisCacheManager extends CacheManager {
 //    System.out.println("MSETTest " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
 //  }
 
-  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
+
+  //old method
+/*  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
     val t1 = System.currentTimeMillis()
     val multimap = Map[String, Any]()
     val bytekeys = keys.map(x => x.getBytes).toSeq
@@ -203,37 +207,37 @@ abstract class RedisCacheManager extends CacheManager {
     System.out.println("DESERIALIZED " + keys.size + " key cost " + (System.currentTimeMillis() - t2))
 
     multimap
+  }*/
+
+  //new method for pipeline
+  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
+    val t1 = System.currentTimeMillis()
+    val multimap = Map[String, Any]()
+    val bytekeys = keys.map(x => x.getBytes).toSeq
+
+    val pgl = getConnection.pipelined()
+    bytekeys.foreach(x => pgl.get(x))
+    val cachedata = pgl.syncAndReturnAll()
+
+    val t2 = System.currentTimeMillis()
+    System.out.println("MGET " + keys.size + " key cost " + (t2 - t1))
+
+    val anyvalues = cachedata.map(x => {
+      if (x != null && x.length > 0) {
+        val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
+        data
+      }
+      else null
+    }).toList
+
+    for (i <- 0 to keys.length - 1) {
+      multimap += (keys(i) -> anyvalues(i))
+    }
+
+    System.out.println("DESERIALIZED " + keys.size + " key cost " + (System.currentTimeMillis() - t2))
+
+    multimap
   }
-
-
-//  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
-//    val t1 = System.currentTimeMillis()
-//    val multimap = Map[String, Any]()
-//    val bytekeys = keys.map(x => x.getBytes).toSeq
-//
-//    val pgl = getConnection.pipelined()
-//    bytekeys.foreach(x => pgl.get(x))
-//    val cachedata = pgl.syncAndReturnAll()
-//
-//    val t2 = System.currentTimeMillis()
-//    System.out.println("MGET " + keys.size + " key cost " + (t2 - t1))
-//
-//    val anyvalues = cachedata.map(x => {
-//      if (x != null && x.length > 0) {
-//        val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
-//        data
-//      }
-//      else null
-//    }).toList
-//
-//    for (i <- 0 to keys.length - 1) {
-//      multimap += (keys(i) -> anyvalues(i))
-//    }
-//
-//    System.out.println("DESERIALIZED " + keys.size + " key cost " + (System.currentTimeMillis() - t2))
-//
-//    multimap
-//  }
 
   override def setCommonCacheValue(cacheName: String, key: String, value: String) = {
     getConnection.hset(cacheName, key, value)
