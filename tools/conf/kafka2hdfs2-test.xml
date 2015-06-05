@@ -1,0 +1,33 @@
+<configuration>
+    <kafkaConsumer>
+        <!--<zookeeper.connection>spark1:2181</zookeeper.connection>-->
+        <zookeeper.connect>localhost:2181</zookeeper.connect>
+        <group.id>cg2</group.id>
+        <topics>topic2-part3-repl1</topics>
+        <threadNum>1</threadNum>    <!--consumer线程数，可以多线程消费topic的消息 -->
+
+        <!--
+        true,写到所有 consumer 获取消息后写到各自的 blockingQueue；
+            此情况下，可以启动多个 hdfsAppend 线程，写到多个 hdfs 文件(multiOutputFlag=true)， hdfs 文件名字在 hadoop-prefix后加后缀
+            也可以启动 1 个 hdfsAppend 线程，写到 1个 hdfs 文件(multiOutputFlag=false)，hdfs 文件名字是 hadoop-prefix
+        false,写到所有 consumer 获取消息后写到 1 个 blockingQueue ，这种情况，目前只支持启动 1个 hdfsAppend 写 1 个 hdfs文件
+        -->
+    </kafkaConsumer>
+
+    <buffer>
+        <multi.flag>true</multi.flag>
+        <capacity>1000000</capacity>
+        <check.sleep.ms>15000</check.sleep.ms>
+        <switch.threshold>5</switch.threshold>
+    </buffer>
+
+    <hadoop>
+        <outputDir>hdfs://spark1:9000/user/tsingfu/tmp/kafka2hdfs2/mytest</outputDir>
+        <prefix>test-output</prefix>
+        <outputMultiFlag>true</outputMultiFlag>
+        <batch.limit>10</batch.limit>
+        <batch.max.ms>30000</batch.max.ms>
+
+    </hadoop>
+
+</configuration>

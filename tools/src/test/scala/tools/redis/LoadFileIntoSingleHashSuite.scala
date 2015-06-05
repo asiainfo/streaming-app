@@ -13,7 +13,6 @@ class LoadFileIntoSingleHashSuite extends FunSuite{
     val confXmlFile = "tools/conf/tools-redis-loadfile2singlehash-test.xml"
     LoadFileIntoSingleHash.loadfile2singlehash(confXmlFile)
 
-
     val conf = XML.load(confXmlFile)
     val serverPort = (conf \ "redis" \ "hostPort").text.trim
 

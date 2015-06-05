@@ -1,0 +1,17 @@
+<configuration>
+    <kafkaConsumer>
+        <!--<zookeeper.connection>spark1:2181</zookeeper.connection>-->
+        <zookeeper.connect>localhost:2181</zookeeper.connect>
+        <group.id>cg2</group.id>
+        <topics>topic2-part3-repl1</topics>
+        <numThreads>3</numThreads>
+    </kafkaConsumer>
+
+    <streaming.batchDurationSec>30</streaming.batchDurationSec>
+    <!--<streaming.blockInterval.ms>200</streaming.blockInterval.ms>-->
+    <streaming.blockInterval.ms>1000</streaming.blockInterval.ms>
+    <hadoop.output.dir>hdfs://spark1:9000/user/tsingfu/tmp/kafka2hdfs-new/test</hadoop.output.dir>
+    <hadoop.output.prefix>test</hadoop.output.prefix>
+    <hadoop.output.suffix></hadoop.output.suffix>
+
+</configuration>
