@@ -73,7 +73,7 @@ object LoadAreaMap {
     val conversion10to16Idxes = props.getProperty("load.conversion10to16.idxes").trim.split(",").map(_.trim.toInt)
 
     val valueIdx = props.getProperty("load.valueIdx").trim.toInt
-    val valueMapEnabled = props.getProperty("load.valueMap.enabled").trim
+    val valueMapEnabled = props.getProperty("load.valueMapEnabled").trim
     val valueMap = props.getProperty("load.valueMap")
 
     val overwrite = props.getProperty("load.overwrite").trim
@@ -335,7 +335,7 @@ object LoadAreaMap {
 
     val valueIdx = (conf \ "load" \ "valueIdx").text.trim
 
-    val valueMapEnabled = (conf \ "load" \ "valueMap.enabled").text.trim
+    val valueMapEnabled = (conf \ "load" \ "valueMapEnabled").text.trim
     val valueMap = (conf \ "load" \ "valueMap").text
 
     val overwrite = (conf \ "load" \ "overwrite").text.trim
@@ -369,7 +369,7 @@ object LoadAreaMap {
 
     props.put("load.valueIdx", valueIdx)
 
-    props.put("load.valueMap.enabled", valueMapEnabled)
+    props.put("load.valueMapEnabled", valueMapEnabled)
     props.put("load.valueMap", valueMap)
     props.put("load.overwrite", overwrite)
     props.put("load.valueSeperator", valueSeperator)

@@ -75,7 +75,7 @@ object LoadFileIntoHashes {
     var positionIdx = 0
     var numInBatch = 0
     var numBatches = 0
-    var jedisPoolId = 0
+    def jedisPoolId = numBatches % numPools
 
     for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
       val lineArray = line.split(columnSeperator).map(_.trim)
@@ -85,8 +85,6 @@ object LoadFileIntoHashes {
                 hashNamePrefix
               }
               ) + (for (idx <- hashIdxes) yield lineArray(idx)).mkString(hashSeperator)
-
-      jedisPoolId = numBatches % numPools
 
       val hashKVs = fieldNames.zip(valueIdxes).map(kv => {
         val (k, i) = kv

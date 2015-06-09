@@ -54,7 +54,6 @@ object RedisUtils {
     }
   }
 
-
   def init_jedisPool(host: String,
                      port: Int,
                      timeout: Int,
@@ -228,4 +227,15 @@ object RedisUtils {
     })
   }
 
+
+  /**
+   * 10进制字符串转换为16进制字符串
+   * @param decimalStr
+   * @return
+   */
+  def convertDecimaltoHex(decimalStr: String):String ={
+    var hexStr = Integer.toHexString(decimalStr.toInt).toUpperCase
+    while(hexStr.length<4){hexStr = "0" + hexStr}
+    hexStr
+  }
 }

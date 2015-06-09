@@ -15,8 +15,9 @@
     <load>
         <from>file</from> <!-- 目前仅支持file, 后期扩展支持 db -->
 
-        <filename>tools/src/test/resources/tools-redis-loadfile2hashes-test1.data</filename> <!-- 设置数据文件的路径 -->
+        <!--<filename>tools/src/test/resources/tools-redis-loadfile2hashes-test1.data</filename> &lt;!&ndash; 设置数据文件的路径 &ndash;&gt;-->
         <!--<filename>hdfs://spark1:9000/user/xxx/test/userinfo-test.txt</filename> -->
+        <filename>tools/src/test/resources/load2hashes-thread-test.data</filename>
         <fileEncode>UTF-8</fileEncode> <!-- 设置数据文件的编码格式 -->
         <columnSeperator>,</columnSeperator> <!-- 设置数据文件字段分隔符 -->
 
@@ -27,11 +28,16 @@
         <valueIdxes>1,2</valueIdxes> <!-- 设置加载列的索引，可以加载多个列数据，使用逗号分隔 -->
         <fieldNames>phoneNo, areaId</fieldNames> <!-- 设置加载数据对应的的属性名 -->
 
-        <batchLimit>1000</batchLimit> <!-- 设置批量加载(pipeline_hset, hmset)的批次数量 -->
+        <batchLimit>30</batchLimit> <!-- 设置批量加载(pipeline_hset, hmset)的批次数量 -->
+        <batchLimit.redis>6</batchLimit.redis> <!-- 设置批量加载(pipeline_hset, hmset)的批次数量 -->
 
-        <numThreads>5</numThreads>
-        <method>hmset</method> <!-- 设置加载方法 hset, hmset, pipeline_hset  -->
+        <numThreads>2</numThreads>
+        <method>hset</method> <!-- 设置加载方法 hset, hmset, pipeline_hset  -->
         <!--<method>pipeline_hset</method> -->
+
+        <overwrite>true</overwrite>
+        <appendSeperator>,</appendSeperator>
+
     </load>
 
 </configuration>
