@@ -8,6 +8,10 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMaxTotal","1000");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisMEM","600000");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("internal","4");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("JedisTimeOut",10000);
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("cache_update_interval", 24 * 60 * 60 * 1000);
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("checkpoint_dir","streaming/checkpoint");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("morning8time","8:00:01");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("afternoon8time","23:30:00");
 
 
 -- init EventSources

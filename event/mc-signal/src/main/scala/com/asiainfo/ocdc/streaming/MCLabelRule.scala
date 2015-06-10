@@ -11,4 +11,6 @@ abstract class MCLabelRule extends LabelRule {
   }
 
   def attachMCLabel(mc: MCSourceObject, cache: StreamingCache): StreamingCache
+
+//  def getQueKeys(mc: MCSourceObject): Seq[String] = Seq()
 }

@@ -15,4 +15,6 @@ trait LabelRule extends Serializable {
   }
 
   def attachLabel(source: SourceObject, cache: StreamingCache): StreamingCache
+
+//  def getQueKeys(source: SourceObject): Seq[String] = Seq()
 }

@@ -59,7 +59,7 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
         } else {
           //          val lt = status.get(locktime).get.toLong
           val lt = status.get(locktime).getOrElse("0").toLong
-          if (lt == null) {
+          if (lt == 0) {
             status += (sourceId -> time)
             val maxTime = status.toList.sortBy(_._2).last._2
             status.filter(_._2 + delayTime >= maxTime)

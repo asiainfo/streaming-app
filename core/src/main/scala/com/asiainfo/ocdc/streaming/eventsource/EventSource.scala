@@ -1,5 +1,7 @@
 package com.asiainfo.ocdc.streaming.eventsource
 
+import java.text.SimpleDateFormat
+
 import com.asiainfo.ocdc.streaming._
 import com.asiainfo.ocdc.streaming.eventrule.{EventRule, StreamingCache}
 import com.asiainfo.ocdc.streaming.labelrule.LabelRule
@@ -17,6 +19,14 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   var id: String = null
   var conf: EventSourceConf = null
   var shuffleNum: Int = 0
+
+  var beginTime = MainFrameConf.get("morning8time")
+  var endTime = MainFrameConf.get("afternoon8time")
+
+  val timesdf = new SimpleDateFormat("HH:mm:ss")
+
+  val morning8Time = timesdf.parse(beginTime).getTime
+  val afternoon8Time = timesdf.parse(endTime).getTime
 
   protected val labelRules = new ArrayBuffer[LabelRule]
   protected val eventRules = new ArrayBuffer[EventRule]
@@ -52,7 +62,9 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     val sqlContext = new SQLContext(ssc.sparkContext)
     val inputStream = readSource(ssc)
     inputStream.foreachRDD { rdd =>
-      if (rdd.partitions.length > 0) {
+      val currtime = timesdf.parse(timesdf.format(System.currentTimeMillis())).getTime
+
+      if (currtime > morning8Time && currtime < afternoon8Time && rdd.partitions.length > 0) {
         var sourceRDD = rdd.map(transform).collect {
           case Some(source: SourceObject) => source
         }
@@ -155,28 +167,15 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
             result = true
           }
 
-          val f1 = System.currentTimeMillis()
-//          val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
-          val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)
-          logDebug(" GET codis cache cost time : " + (System.currentTimeMillis() - f1) + " millis ! ")
+          val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+          //          val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)
 
+          val f2 = System.currentTimeMillis()
           val cachemap_new = minimap.map(x => {
             val key = x._1
             val value = x._2
 
-            /*var rule_caches = cachemap_old.get(key).get match {
-              case cache: immutable.Map[String, StreamingCache] => cache
-              case null => {
-                val cachemap = mutable.Map[String, StreamingCache]()
-                labelRuleArray.foreach(labelRule => {
-                  cachemap += (labelRule.conf.get("id") -> null)
-                })
-
-                cachemap.toMap
-              }
-            }*/
-
-            var rule_caches = cachemap_old match {
+            var rule_caches = cachemap_old.get(key).get match {
               case cache: immutable.Map[String, StreamingCache] => cache
               case null => {
                 val cachemap = mutable.Map[String, StreamingCache]()
@@ -188,26 +187,37 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
               }
             }
 
-            val f2 = System.currentTimeMillis()
+            /*var rule_caches = cachemap_old match {
+              case cache: immutable.Map[String, StreamingCache] => cache
+              case null => {
+                val cachemap = mutable.Map[String, StreamingCache]()
+                labelRuleArray.foreach(labelRule => {
+                  cachemap += (labelRule.conf.get("id") -> null)
+                })
+
+                cachemap.toMap
+              }
+            }*/
+
             labelRuleArray.foreach(labelRule => {
-              logDebug(" Exec label : " + labelRule.conf.getClassName())
+
               val cacheOpt = rule_caches.get(labelRule.conf.get("id"))
               var old_cache: StreamingCache = null
               if (cacheOpt != None) old_cache = cacheOpt.get
 
               val newcache = labelRule.attachLabel(value, old_cache)
               rule_caches = rule_caches.updated(labelRule.conf.get("id"), newcache)
+
             })
             currentArrayBuffer.append(value)
-            logDebug(" Exec labels cost time : " + (System.currentTimeMillis() - f2) + " millis ! ")
+
             (key -> rule_caches.asInstanceOf[Any])
           })
+          println(" Exec labels cost time : " + (System.currentTimeMillis() - f2) + " millis ! ")
 
           //update caches to CacheManager
-          val f3 = System.currentTimeMillis()
-//          CacheFactory.getManager.setMultiCache(cachemap_new)
-          CacheFactory.getManager.setByteCacheString(cachemap_new.head._1,cachemap_new.head._2)
-          logDebug(" Update codis cache cost time : " + (System.currentTimeMillis() - f3) + " millis ! ")
+          CacheFactory.getManager.setMultiCache(cachemap_new)
+          //          CacheFactory.getManager.setByteCacheString(cachemap_new.head._1,cachemap_new.head._2)
 
           arrayBuffer = currentArrayBuffer.toArray
           result

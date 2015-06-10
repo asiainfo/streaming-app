@@ -1,15 +1,13 @@
 package com.asiainfo.ocdc.streaming.tool
 
 import java.nio.ByteBuffer
-import java.util.ArrayList
+import java.util
 
 import redis.clients.jedis.Jedis
 
 import scala.collection.convert.wrapAsJava.mapAsJavaMap
 import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
-import java.util
-import scala.collection.immutable.Seq
 
 trait CacheManager extends org.apache.spark.Logging {
 
@@ -58,7 +56,6 @@ abstract class RedisCacheManager extends CacheManager {
 
   final def getConnection = {
     val curr_jedis = currentJedis.get()
-    logInfo(" Current Jedis : " + curr_jedis)
     curr_jedis
   }
 

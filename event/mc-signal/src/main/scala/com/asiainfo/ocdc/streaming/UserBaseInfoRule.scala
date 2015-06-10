@@ -13,6 +13,7 @@ class UserBaseInfoRule extends MCLabelRule {
 
     // get user base info by imsi
     val user_info_map = CacheFactory.getManager.getHashCacheMap("userinfo:" + imsi)
+//    val user_info_map = CacheCenter.getValue("userinfo:" + imsi, null).asInstanceOf[mutable.Map[String, String]]
 
     val info_cols = conf.get("user_info_cols").split(",")
 
