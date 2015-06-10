@@ -1,21 +1,19 @@
-package tools.redis
+package tools.redis.load
 
-import java.text.SimpleDateFormat
-import java.util.{Date, Properties}
+import java.util.Properties
+import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
 
-import org.slf4j.LoggerFactory
+import tools.redis.RedisUtils
 
+import scala.collection.mutable.ArrayBuffer
 import scala.xml.XML
 
 /**
- * Created by tsingfu on 15/4/28.
+ * Created by tsingfu on 15/6/7.
  */
-object LoadFileIntoSingleHash {
+object File2SingleHash {
 
-  val logger = LoggerFactory.getLogger("tools.redis.LoadFileIntoSingleHash")
-  val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit ={
 
     if (args.length != 1) {
       println("WARN: args.length = " + args.length + "\n" + "You should specify a confXmlFile")
@@ -23,11 +21,12 @@ object LoadFileIntoSingleHash {
     }
 
     val confXmlFile = args(0)
-    loadfile2singlehash(confXmlFile)
+
+    load2SingleHash(confXmlFile)
+
   }
 
-  def loadfile2singlehash(confXmlFile: String): Unit ={
-
+  def load2SingleHash(confXmlFile: String): Unit ={
     val props = init_props_fromXml(confXmlFile)
 
     val servers = props.getProperty("redis.servers").trim
@@ -53,12 +52,13 @@ object LoadFileIntoSingleHash {
     val valueSeperator = props.getProperty("load.valueSeperator").trim
 
     val batchLimit = props.getProperty("load.batchLimit").trim.toInt
-//    val numThreads = props.getProperty("load.numThreads").trim.toInt
+    val batchLimitForRedis = props.getProperty("load.batchLimit.redis").trim.toInt
+
+    val numThreads = props.getProperty("load.numThreads").trim.toInt
     val loadMethod = props.getProperty("load.method").trim
 
-
-    val startMS = System.currentTimeMillis()
-    var runningTime: Long = -1
+    val overwrite = props.getProperty("load.overwrite").trim.toBoolean
+    val appendSeperator = props.getProperty("load.appendSeperator").trim
 
     // 初始化 jedisPool, jedis, pipeline
     val jedisPools = servers.split(",").map(server=>{
@@ -75,70 +75,58 @@ object LoadFileIntoSingleHash {
     //获取文件记录数
     val fileRecordsNum = scala.io.Source.fromFile(filename, fileEncode).getLines().length
 
+    // 初始化线程池
+    val threadPool: ExecutorService = Executors.newFixedThreadPool(numThreads)
+
     var numProcessed = 0
     var numInBatch = 0
     var numBatches = 0
     def jedisPoolId = numBatches % numPools
+    var batchArrayBuffer: ArrayBuffer[String] = null
 
     for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
-      val lineArray = line.split(columnSeperator).map(_.trim)
+      if(numInBatch == 0){
+        batchArrayBuffer = new ArrayBuffer[String]()
+      }
+      batchArrayBuffer.append(line)
 
-      val field = (for(idx <- fieldIdxes) yield lineArray(idx)).mkString(fieldSeperator)
-      val value = (for(idx <- valueIdxes) yield lineArray(idx)).mkString(valueSeperator)
-
-      pipelines(jedisPoolId).hset(hashName, field, value)
-      numProcessed += 1
       numInBatch += 1
 
       if(numInBatch == batchLimit){
-        try{
-          pipelines(jedisPoolId).sync()
-        }catch {
-          case ex:Exception =>
-            println(sdf.format(new Date()) + "\n" + ex.printStackTrace())
+        println("[INFO] [numProcessed = " + numProcessed + "numBatches = " + numBatches + ", numInBatch = " + numInBatch +"]" )
+        threadPool.submit(new Load2SingleHashThread(batchArrayBuffer.toArray, columnSeperator,
+          hashName,
+          fieldIdxes, fieldSeperator,
+          valueIdxes, valueSeperator,
+          jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator))
 
-            //中途出现异常，并不退出
-            println(sdf.format(new Date()) + " retry with new jedis after sleep 30 s ...")
-            jedisPools(jedisPoolId).returnResourceObject(jedises(jedisPoolId))
-            Thread.sleep(30 * 000)
-
-            jedises(jedisPoolId) = jedisPools(jedisPoolId).getResource
-            pipelines(jedisPoolId) = jedises(jedisPoolId).pipelined
-        }
-
-        runningTime = System.currentTimeMillis() - startMS
-        println(sdf.format(new Date()) + " [info] loading file " + filename +
-                ", status : numProcessed = " + numProcessed + ", progress percent = " + (numProcessed * 100.0 / fileRecordsNum) +" %" +
-                ", runningTime = " + runningTime +", speed = " + numProcessed / (runningTime / 1000.0) +" records/s")
-
-        numInBatch = 0
         numBatches += 1
+        numInBatch = 0
       }
+      numProcessed += 1
     }
 
-    try{
-      pipelines(jedisPoolId).sync()
-    } catch { // 捕获最后一次执行异常，退出
-      case ex:Exception =>
-        println("=" * 30 + " " + sdf.format(new Date()) + "\n" + ex.printStackTrace())
-//        jedisPools(jedisPoolId).returnResourceObject(jedises(jedisPoolId))
+    if(numInBatch > 0){
+      println("[INFO] [numBatches = " + numBatches + ", numInBatch = " + numInBatch +"]" )
+      threadPool.submit(new Load2SingleHashThread(batchArrayBuffer.toArray, columnSeperator,
+        hashName,
+        fieldIdxes, fieldSeperator,
+        valueIdxes, valueSeperator,
+        jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator))
+      numBatches += 1
+      numInBatch = 0
     }
 
-    //打印统计信息
-    val elapsedMS = System.currentTimeMillis() - startMS
-    println(sdf.format(new Date()) + " [info] load file " + filename + " finished. " +
-            "records = "+numProcessed+
-            ", elspsed = " + elapsedMS + " ms, " + elapsedMS / 1000.0 + " s, " + elapsedMS / 1000.0 / 60.0 + " min" +
-            ", speed = " + numProcessed / (elapsedMS / 1000.0) +" records/s" )
+//    Thread.sleep(1 * 1000)
+    threadPool.shutdown()
+    threadPool.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
 
     //释放资源
-    for(i<- 0 until numPools){
+    for(i <- 0 until numPools){
       jedisPools(i).returnResourceObject(jedises(i))
     }
     jedisPools.foreach(_.close())
-
   }
-
 
   /**
    * 从xml文件中初始化配置
@@ -171,8 +159,12 @@ object LoadFileIntoSingleHash {
     val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
 
     val batchLimit = (conf \ "load" \ "batchLimit").text.trim
-//    val numThreads = (conf \ "load" \ "numThreads").text.trim
+    val batchLimitForRedis = (conf \ "load" \ "batchLimit.redis").text.trim
+    val numThreads = (conf \ "load" \ "numThreads").text.trim
     val loadMethod = (conf \ "load" \ "method").text.trim
+
+    val overwrite = (conf \ "load" \ "overwrite").text.trim
+    val appendSeperator = (conf \ "load" \ "appendSeperator").text.trim
 
     val props = new Properties()
     props.put("redis.servers", servers)
@@ -197,8 +189,13 @@ object LoadFileIntoSingleHash {
     props.put("load.valueSeperator", valueSeperator)
 
     props.put("load.batchLimit", batchLimit)
-//    props.put("load.numThreads", numThreads)
+    props.put("load.batchLimit.redis", batchLimitForRedis)
+
+    props.put("load.numThreads", numThreads)
     props.put("load.method", loadMethod)
+
+    props.put("load.overwrite", overwrite)
+    props.put("load.appendSeperator", appendSeperator)
 
     println("="*80)
     props.list(System.out)
@@ -206,7 +203,4 @@ object LoadFileIntoSingleHash {
 
     props
   }
-
-
-
 }
