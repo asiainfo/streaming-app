@@ -65,12 +65,12 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
       val currtime = timesdf.parse(timesdf.format(System.currentTimeMillis())).getTime
 
       if (currtime > morning8Time && currtime < afternoon8Time && rdd.partitions.length > 0) {
-        var sourceRDD = rdd.map(transform).collect {
+        val sourceRDD = rdd.map(transform).collect {
           case Some(source: SourceObject) => source
         }
 
-        if (shuffleNum > 0) sourceRDD = sourceRDD.map(x => (x.generateId, x)).groupByKey(shuffleNum).flatMap(_._2)
-        else sourceRDD = sourceRDD.map(x => (x.generateId, x)).groupByKey().flatMap(_._2)
+        /*if (shuffleNum > 0) sourceRDD = sourceRDD.map(x => (x.generateId, x)).groupByKey(shuffleNum).flatMap(_._2)
+        else sourceRDD = sourceRDD.map(x => (x.generateId, x)).groupByKey().flatMap(_._2)*/
 
         if (sourceRDD.partitions.length > 0) {
           val labeledRDD = execLabelRule(sourceRDD: RDD[SourceObject])

@@ -1,5 +1,6 @@
 package com.asiainfo.ocdc.streaming.eventsource
 
+import kafka.serializer.StringDecoder
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.kafka.KafkaUtils
@@ -16,8 +17,16 @@ object EventSourceReader extends org.apache.spark.Logging {
       val group = conf.get("group")
       val receiverNum = conf.getInt("receivernum")
       val topicMap = Map(conf.get("topic") -> receiverNum)
-      logInfo("Init Kafka Stream : zookeeper->"+zkQuorum+"; groupid->"+group+"; topic->"+topicMap+" ! ")
+      logInfo("Init Kafka Stream : zookeeper->" + zkQuorum + "; groupid->" + group + "; topic->" + topicMap + " ! ")
       KafkaUtils.createStream(ssc, zkQuorum, group, topicMap).map(_._2)
+
+    } else if ("kafka_direct".equals(sourceType)) {
+      val topicsSet = conf.get("topic").split(",").toSet
+      val brokers = conf.get("brokers")
+      val kafkaParams = Map[String, String]("metadata.broker.list" -> brokers)
+      logInfo("Init Direct Kafka Stream : brokers->" + brokers + "; topic->" + topicsSet + " ! ")
+      KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](
+        ssc, kafkaParams, topicsSet).map(_._2)
 
     } else if ("hdfs".equals(sourceType)) {
       ssc.textFileStream(conf.get("path"))
