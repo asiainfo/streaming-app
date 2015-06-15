@@ -17,10 +17,13 @@ class SiteRule extends MCLabelRule {
     val ci = mcSourceObj.ci
 
     // 根据largeCell解析出所属区域
-    val onsiteList = largeCellAnalysis(lac, ci)
+    val cachedArea = CacheFactory.getManager.getHashCacheMap("lacci2area:" + lac + ":" + ci)
+
+    /*val onsiteList = largeCellAnalysis(lac, ci)
     val propMap = scala.collection.mutable.Map[String, String]()
     onsiteList.foreach(location => propMap += (location -> "true"))
-    mcSourceObj.setLabel(LabelConstant.LABEL_ONSITE, propMap)
+    mcSourceObj.setLabel(LabelConstant.LABEL_ONSITE, propMap)*/
+    mcSourceObj.setLabel(LabelConstant.LABEL_ONSITE, cachedArea)
     cache
   }
 
@@ -31,9 +34,10 @@ class SiteRule extends MCLabelRule {
    * @return 所属区域列表
    */
   def largeCellAnalysis(lac: String, ci: String): List[String] = {
-    val cachedArea = CacheFactory.getManager.getCommonCacheValue("lacci2area", lac+":"+ci)
-//    val cachedArea = CacheCenter.getValue("lacci2area", lac + ":" + ci).asInstanceOf[String]
-    if(cachedArea == null || cachedArea.isEmpty)  List[String]() else cachedArea.split(",").toList
+    //    val cachedArea = CacheFactory.getManager.getCommonCacheValue("lacci2area", lac+":"+ci)
+    val cachedArea = CacheFactory.getManager.getHashCacheMap("lacci2area", lac + ":" + ci)
+    //    val cachedArea = CacheCenter.getValue("lacci2area", lac + ":" + ci).asInstanceOf[String]
+    if (cachedArea == null || cachedArea.isEmpty) List[String]() else cachedArea.split(",").toList
   }
 
   def getQueKeys(mc: MCSourceObject): Seq[String] = Seq()
