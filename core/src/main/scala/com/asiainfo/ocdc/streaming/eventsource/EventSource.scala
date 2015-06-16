@@ -159,13 +159,27 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
           val minimap = mutable.Map[String, SourceObject]()
 
+//          val labelQryMap = mutable.Map[String, mutable.Set[String]]()
+
           while (iter.hasNext && totalFetch < conf.getInt("batchsize")) {
             val currentLine = iter.next()
             minimap += ("Label:" + currentLine.generateId -> currentLine)
             totalFetch += 1
             currentPos = 0
             result = true
+
+            /*labelRuleArray.foreach(labelRule => {
+              val labelId = labelRule.conf.get("id")
+              val qryKey = labelRule.getQryKey(currentLine)
+              labelQryMap.get(labelId) match {
+                case Some(v) => v += (qryKey)
+                case None => labelQryMap += (labelId -> (mutable.Set[String]() += (qryKey)))
+              }
+            })*/
+
           }
+
+          println(" partition data size = " + totalFetch)
 
           val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
           //          val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)

@@ -26,6 +26,8 @@ INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("group","g1"
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("receivernum","2",4);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("zookeeper","localhost:2181",4);
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("shufflenum","1",4);
+INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("brokers","spark3:9092,spark4:9092,spark5:9092,spark6:9092,spark7:9092,spark8:9092,spark9:9092,spark10:9092,",4);
+
 
 */
 -- hdfs

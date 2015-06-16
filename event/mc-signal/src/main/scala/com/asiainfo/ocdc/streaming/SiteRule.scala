@@ -40,5 +40,5 @@ class SiteRule extends MCLabelRule {
     if (cachedArea == null || cachedArea.isEmpty) List[String]() else cachedArea.split(",").toList
   }
 
-  def getQueKeys(mc: MCSourceObject): Seq[String] = Seq()
+//  override def getQryKeys(mc: MCSourceObject): String = "lacci2area:" + mc.lac + ":" + mc.ci
 }

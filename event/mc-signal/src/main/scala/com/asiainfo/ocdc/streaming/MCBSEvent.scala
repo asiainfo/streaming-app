@@ -10,11 +10,11 @@ import org.apache.spark.sql.Row
 class MCBSEvent extends BusinessEvent {
 
   override def getHashKey(row: Row): String = {
-    val imsi = row.getString(2)
+    val imsi = row.getString(0)
     "MC_" + id + ":" + imsi
   }
 
-  override def getTime(row: Row): String = row.getLong(4).toString
+  override def getTime(row: Row): String = row.getLong(1).toString
 
   override def output(data: RDD[Option[Row]]) {
     val output_msg = transforEvent2Message(data)
