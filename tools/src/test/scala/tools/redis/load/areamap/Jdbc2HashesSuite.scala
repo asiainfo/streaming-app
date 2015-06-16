@@ -1,4 +1,4 @@
-package tools.redis.load
+package tools.redis.load.areamap
 
 import java.text.SimpleDateFormat
 import java.util.Timer
@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import redis.clients.jedis.{Jedis, JedisPool, Pipeline}
 import tools.jdbc.JdbcUtils
 import tools.redis.RedisUtils
+import tools.redis.load.{FutureTaskResult, LoadStatus, LoadStatusUpdateThread, MonitorTask}
 
 /**
  * Created by tsingfu on 15/6/8.
@@ -105,7 +106,7 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
   test("1 生成测试数据"){
 
     val confXmlFile = "tools/conf/redis-load/jdbc2hashes-test.xml"
-    val props = Jdbc2Hashes.init_props_fromXml(confXmlFile)
+    val props = Load2Redis.init_props_fromXml(confXmlFile)
 
     val redisServers = props.getProperty("redis.servers")
     val redisDatabase = props.getProperty("redis.database").trim.toInt
@@ -137,6 +138,13 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
     val valueColumnNames = props.getProperty("load.valueColumnNames").trim.split(",").map(_.trim)
     val fieldNames = props.getProperty("load.fieldNames").trim.split(",").map(_.trim)
 
+    val valueMapEnabledColumnNames = props.getProperty("load.valueMapEnabled.columnNames").split(",").map(_.trim)
+    val valueMapEnabledWhereSperator = props.getProperty("load.valueMapEnabled.where.seperator").trim
+    val valueMapEnabledWhereValueSperator = props.getProperty("load.valueMapEnabled.where.valueSeperator").trim
+    val valueMapEnabledWhere = props.getProperty("load.valueMapEnabled.where")
+            .split(valueMapEnabledWhereSperator).map(_.split(valueMapEnabledWhereValueSperator))
+    val valueMaps = props.getProperty("load.valueMaps").trim.split(",").map(_.trim)
+
     val batchLimit = props.getProperty("load.batchLimit").trim.toInt
     val batchLimitForRedis = props.getProperty("load.batchLimit.redis").trim.toInt
 
@@ -152,70 +160,85 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
     val conn = ds.getConnection
     val stmt = conn.createStatement()
 
-    val tabName_test = "tab_test_jdbc2hashes"
+    val tabName_test = "tab_areamap_jdbc2hashes"
 
 //    stmt.execute("create table if not exists "+tabName_test+" (id1 int, id2 int, col3 varchar(50), col4 varchar(50))")
 //    stmt.execute("truncate table "+tabName_test)
 //
 //    for(i <- 0 until 10; j<- 0 until 10){
-//      stmt.execute("insert into "+tabName_test+" value ("+i+","+j+",\"value-test-"+i+"\", \"value-test-"+j+"\")")
+//      stmt.execute("insert into "+tabName_test+" value ("+(100+i)+","+(100+j)+"," + ((i+j)%2)+", \""+("WLAN"*(((-1)*i+j)%2))+"\")")
 //    }
 
     val rs = stmt.executeQuery("select * from "+tabName_test)
     rs.absolute(24)
     println(rs.getString(1))
-    assert(rs.getString(1)=="2")
+    assert(rs.getString(1)=="102")
     println(rs.getString(2))
-    assert(rs.getString(2)=="3")
+    assert(rs.getString(2)=="103")
     println(rs.getString(3))
-    assert(rs.getString(3)=="value-test-"+2)
+    assert(rs.getString(3)=="1")
     println(rs.getString(4))
-    assert(rs.getString(4)=="value-test-"+3)
+    assert(rs.getString(4)=="WLAN")
 
-/*
-    //为 Jdbc2SingleHash准备数据
-    val tabName_test2="tab_test_jdbc2singlehash"
-    stmt.execute("create table if not exists "+tabName_test2 +" as select * from " + tabName_test)
-*/
+//        //为 Jdbc2SingleHash准备数据
+        val tabName_test2="tab_areamap_jdbc2onehash"
+//    stmt.execute("drop table if exists "+tabName_test2)
+//        stmt.execute("create table if not exists "+tabName_test2 +" as select * from " + tabName_test)
 
-    val tabName_test3 = tabName_test + "_change"
+    val tabName_test3 = tabName_test2 + "_change"
 //    stmt.execute("create table if not exists "+tabName_test3+" (sync_flag int, id1 int, id2 int, col3 varchar(50), col4 varchar(50))")
 //    stmt.execute("truncate table "+tabName_test3)
+//
+//
+//    val insertId1 = 11
+//    val insertId2 = 12
+//
+//    val updateId1 = 2
+//    val updateId2 = 3
+//    val deleteId1 = 3
+//    val deleteId2 = 4
+//    stmt.execute("insert into "+tabName_test3+" value (1,"+(100+insertId1)+","+(100+insertId2)+"," + ((insertId1+insertId2)%2)+", \""+("WLAN"*(((-1)*insertId1+insertId2)%2))+"\")")
+//    stmt.execute("insert into "+tabName_test3+" value (0,"+(100+updateId1)+","+(100+updateId2)+"," + ((updateId1+updateId2)%2)+", \""+("WLAN2"*(((-1)*updateId1+updateId2)%2))+"\")")
+//    stmt.execute("insert into "+tabName_test3+" value (-1,"+(100+deleteId1)+","+(100+deleteId2)+"," + ((deleteId1+deleteId2)%2)+", \""+("WLAN2"*(((-1)*deleteId1+deleteId2)%2))+"\")")
 
-    val insertId = "11"
-    val updateId1 = "2"
-    val updateId2 = "3"
-    val deleteId1 = "3"
-    val deleteId2 = "2"
-
-    stmt.execute("insert into "+tabName_test3+" value (1," + insertId + ","+ insertId+",\"value-test-"+insertId+"\", \"value-test-"+insertId+"\")")
-    stmt.execute("insert into "+tabName_test3+" value (0," + updateId1 + ","+ updateId2+",\"value-test2-"+updateId1+"\", \"value-test2-"+updateId2+"\")")
-    stmt.execute("insert into "+tabName_test3+" value (-1," + deleteId1 + ","+ deleteId2+",\"value-test-"+deleteId1+"\", \"value-test-"+deleteId2+"\")")
 
     JdbcUtils.closeQuiet(rs, stmt, conn)
 
   }
 
 
-  test("2 测试 tools/conf/redis-load/jdbc2hashes-test.xml"){
+  test("2 测试 tools/conf/redis-load/areamap-jdbc2hashes-test.xml"){
 
     //测试数据，如：2,3,value-test-2,value-test-3
     // 从mysql tab_test_jdbc2hashes表中导入id1,id2,col3,col4 4列数据到redis中,
     // id1,id2取值使用冒号拼接，和前缀jdbc2hashes:共同组成hash名
     // col3,col4取值作为value，属性名分别对应field1,field2
-    val confXmlFile = "tools/conf/redis-load/jdbc2hashes-test.xml"
-    Jdbc2Hashes.jdbc2Hashes(confXmlFile)
+    val confXmlFile = "tools/conf/redis-load/areamap-jdbc2hashes-test.xml"
+    Load2Redis.jdbc2Hashes(confXmlFile)
 
-    val props = Jdbc2Hashes.init_props_fromXml(confXmlFile)
+    val props = Load2Redis.init_props_fromXml(confXmlFile)
     val hashNamePrefix = props.getProperty("load.hashNamePrefix")
 
     //检查结果
-    println("hgetall " + hashNamePrefix + "\"2:3\"")
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    //102,103,1,WLAN
+    val lacci = "0066:0067"
+    println("hgetall \"" + hashNamePrefix + lacci + "\"")
+    val rs1 = jedises(0).hgetAll(hashNamePrefix + lacci)
     println("rs1 = "+rs1)
 
-    assert(rs1.get("field1")=="value-test-2")
-    assert(rs1.get("field2")=="value-test-3")
+    assert(rs1.get("area1")=="1")
+    assert(rs1.get("wlan")=="1")
     assert(rs1.size() == 2)
+
+    //103,102,1,""
+    val lacci2 = "0067:0066"
+    println("hgetall \"" + hashNamePrefix + lacci2 +"\"")
+    val rs2 = jedises(0).hgetAll(hashNamePrefix + lacci2)
+    println("rs1 = "+rs2)
+
+    assert(rs2.get("area1")=="1")
+    assert(rs2.get("wlan")==null)
+    assert(rs2.size() == 1)
+
   }
 }

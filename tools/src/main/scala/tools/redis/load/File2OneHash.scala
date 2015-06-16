@@ -11,9 +11,9 @@ import scala.collection.mutable.ArrayBuffer
 import scala.xml.XML
 
 /**
- * Created by tsingfu on 15/6/9.
+ * Created by tsingfu on 15/6/7.
  */
-object File2Hashes {
+object File2OneHash {
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -24,19 +24,21 @@ object File2Hashes {
   val timer = new Timer() //用于调度reporter任务，定期输出进度信息
 
   def main(args: Array[String]): Unit ={
+
     if (args.length != 1) {
-      println("Error: args.length = " + args.length + "\n" + "You should specify a confXmlFile")
+      println("WARN: args.length = " + args.length + "\n" + "You should specify a confXmlFile")
       System.exit(-1)
     }
 
     val confXmlFile = args(0)
-    load2Hashes(confXmlFile)
+    load2SingleHash(confXmlFile)
   }
 
-  def load2Hashes(confXmlFile: String): Unit ={
 
+  def load2SingleHash(confXmlFile: String): Unit ={
     //解析配置
     val props = init_props_fromXml(confXmlFile)
+
     val servers = props.getProperty("redis.servers").trim
     val database = props.getProperty("redis.database", "0").trim.toInt
     val timeout = props.getProperty("redis.timeout").trim.toInt
@@ -47,16 +49,17 @@ object File2Hashes {
     val minIdle = props.getProperty("jedisPool.minIdle").trim.toInt
 
     val from = props.getProperty("load.from").trim
+    assert(from=="file", "WARN: support only file From now")
+
     val filename = props.getProperty("load.filename").trim
     val fileEncode = props.getProperty("load.fileEncode").trim
     val columnSeperator = props.getProperty("load.columnSeperator").trim
 
-    val hashNamePrefix = props.getProperty("load.hashNamePrefix").trim
-    val hashIdxes = props.getProperty("load.hashIdxes").trim.split(",").map(_.trim.toInt)
-    val hashSeperator = props.getProperty("load.hashSeperator").trim
-
+    val hashName = props.getProperty("load.hashName").trim
+    val fieldIdxes = props.getProperty("load.fieldIdxes").trim.split(",").map(_.trim.toInt)
+    val fieldSeperator = props.getProperty("load.fieldSeperator").trim
     val valueIdxes = props.getProperty("load.valueIdxes").trim.split(",").map(_.trim.toInt)
-    val fieldNames = props.getProperty("load.fieldNames").trim.split(",").map(_.trim)
+    val valueSeperator = props.getProperty("load.valueSeperator").trim
 
     val batchLimit = props.getProperty("load.batchLimit").trim.toInt
     val batchLimitForRedis = props.getProperty("load.batchLimit.redis").trim.toInt
@@ -70,7 +73,6 @@ object File2Hashes {
     val reportEnabled = props.getProperty("load.report.enabled", "false").trim.toBoolean
     val reportDelaySeconds = props.getProperty("load.report.delay.seconds", "10").trim.toLong
     val reportIntervalSeconds = props.getProperty("load.report.interval.seconds", "60").trim.toLong
-
 
     //记录开始时间
     loadStatus.startTimeMs = System.currentTimeMillis()
@@ -97,7 +99,6 @@ object File2Hashes {
 
     //获取要加载的记录数
     loadStatus.numTotal = scala.io.Source.fromFile(filename, fileEncode).getLines().length
-
 
     //遍历数据准备，初始化构造线程任务处理批量数据的信息
     var numInBatch = 0
@@ -128,9 +129,10 @@ object File2Hashes {
 
       if(numInBatch == batchLimit){
         logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-        val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-          hashNamePrefix, hashIdxes, hashSeperator,
-          fieldNames, valueIdxes,
+        val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
+          hashName,
+          fieldIdxes, fieldSeperator,
+          valueIdxes, valueSeperator,
           jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
           FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
         val futureTask = new FutureTask[FutureTaskResult](task)
@@ -147,9 +149,10 @@ object File2Hashes {
     //遍历完数据后，提交没有达到batchLimit的batch任务
     if(numInBatch > 0){
       logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-      val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-        hashNamePrefix, hashIdxes, hashSeperator,
-        fieldNames, valueIdxes,
+      val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
+        hashName,
+        fieldIdxes, fieldSeperator,
+        valueIdxes, valueSeperator,
         jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
         FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
       val futureTask = new FutureTask[FutureTaskResult](task)
@@ -173,6 +176,7 @@ object File2Hashes {
     threadPool2.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
     if(reportEnabled) timer.cancel()
 
+
     val runningTimeMs = System.currentTimeMillis() - loadStatus.startTimeMs
     val loadSpeedPerSec = loadStatus.numProcessed * 1.0 / runningTimeMs * 1000 //记录加载运行期间加载平均速度
     val loadSpeedPerSecLastMonitored = (loadStatus.numProcessed - loadStatus.numProcessedlastMonitored) * 1.0 / reportIntervalSeconds //记录最近一次输出进度信息的周期对应的加载平均速度
@@ -181,20 +185,17 @@ object File2Hashes {
     println(sdf.format(new Date()) + " [INFO] finished load, statistics: numTotal = "+loadStatus.numTotal+ ", numScanned = " + loadStatus.numScanned +", numBatches = "+loadStatus.numBatches +
             ", numProcessed = " + loadStatus.numProcessed + ", numProcessedBatches = "+loadStatus.numBatchesProcessed+
             ", runningTime = " + runningTimeMs +" ms <=> " + runningTimeMs / 1000.0  +" s <=> " + runningTimeMs / 1000.0 / 60 +" min" +
-            ", loadSpeed = " + loadSpeedPerSec +", records/s => " + (loadSpeedPerSec * 60) + " records/min <=> " + (loadSpeedPerSec * 60 * 60) +" records/h" +
-            ", loadSpeedLastMonitored = " + loadSpeedPerSecLastMonitored +" records/s <=> " + loadSpeedPerSecLastMonitored * 60 +" records/min  " +
-            "<=> " + (loadSpeedPerSecLastMonitored * 60 * 60) +" records/h" +
+            ", loadSpeed = " + loadSpeedPerSec +", records/s => " + (loadSpeedPerSec / 60) + " records/min <=> " + (loadSpeedPerSec / 60 / 60) +" records/h" +
+            ", loadSpeedLastMonitored = " + loadSpeedPerSecLastMonitored +" records/s <=> " + loadSpeedPerSecLastMonitored / 60 +" records/min" +
             ", loadProgress percent of numProcessed = " + loadStatus.numProcessed * 1.0 / loadStatus.numTotal * 100 +"%" +
             ", loadProgress percent of numBatchesProcessed = " + loadStatus.numBatchesProcessed * 1.0 / loadStatus.numBatches * 100 +"%" )
 
 
     //释放资源
-    logger.info("Release jedis Pool resources...")
     for(i <- 0 until numPools){
       jedisPools(i).returnResourceObject(jedises(i))
     }
     jedisPools.foreach(_.close())
-
   }
 
   /**
@@ -221,22 +222,24 @@ object File2Hashes {
     val fileEncode = (conf \ "load" \ "fileEncode").text.trim
     val columnSeperator = (conf \ "load" \ "columnSeperator").text.trim
 
-    val hashNamePrefix = (conf \ "load" \ "hashNamePrefix").text.trim
-    val hashIdxes = (conf \ "load" \ "hashIdxes").text.trim
-    val hashSeperator = (conf \ "load" \ "hashSeperator").text.trim
+    val hashName = (conf \ "load" \ "hashName").text.trim
+    val fieldIdxes = (conf \ "load" \ "fieldIdxes").text.trim
+    val fieldSeperator = (conf \ "load" \ "fieldSeperator").text.trim
     val valueIdxes = (conf \ "load" \ "valueIdxes").text.trim
-    val fieldNames = (conf \ "load" \ "fieldNames").text.trim
+    val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
 
     val batchLimit = (conf \ "load" \ "batchLimit").text.trim
     val batchLimitForRedis = (conf \ "load" \ "batchLimit.redis").text.trim
     val numThreads = (conf \ "load" \ "numThreads").text.trim
     val loadMethod = (conf \ "load" \ "method").text.trim
+
     val overwrite = (conf \ "load" \ "overwrite").text.trim
     val appendSeperator = (conf \ "load" \ "appendSeperator").text.trim
 
     val reportEnabled = (conf \ "load" \ "report.enabled").text.trim
     val reportDelaySeconds = (conf \ "load" \ "report.delay.seconds").text.trim
     val reportIntervalSeconds = (conf \ "load" \ "report.interval.seconds").text.trim
+
 
     val props = new Properties()
     props.put("redis.servers", servers)
@@ -254,15 +257,15 @@ object File2Hashes {
     props.put("load.fileEncode", fileEncode)
     props.put("load.columnSeperator", columnSeperator)
 
-    props.put("load.hashNamePrefix", hashNamePrefix)
-    props.put("load.hashIdxes", hashIdxes)
-    props.put("load.hashSeperator", hashSeperator)
-
+    props.put("load.hashName", hashName)
+    props.put("load.fieldIdxes", fieldIdxes)
+    props.put("load.fieldSeperator", fieldSeperator)
     props.put("load.valueIdxes", valueIdxes)
-    props.put("load.fieldNames", fieldNames)
+    props.put("load.valueSeperator", valueSeperator)
 
     props.put("load.batchLimit", batchLimit)
     props.put("load.batchLimit.redis", batchLimitForRedis)
+
     props.put("load.numThreads", numThreads)
     props.put("load.method", loadMethod)
 

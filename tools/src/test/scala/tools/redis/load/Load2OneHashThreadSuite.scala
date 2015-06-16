@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.concurrent.{ExecutorService, Executors, FutureTask, TimeUnit}
 import java.util.{Date, Timer}
 
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.{Jedis, JedisPool, Pipeline}
 import tools.redis.RedisUtils
@@ -12,7 +12,7 @@ import tools.redis.RedisUtils
 /**
  * Created by tsingfu on 15/6/8.
  */
-class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAndAfterAll {
+class Load2OneHashThreadSuite extends FunSuite with BeforeAndAfter {
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -33,6 +33,8 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
   val maxIdle = 10
   val minIdle = 0
 
+  val hashName = "load2singlehash"
+
   val reportEnabled = true
   val reportDelaySeconds = 1
   val reportIntervalSeconds = 10
@@ -41,6 +43,7 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
   val columnSeperator = ","
 
   val batchLimitForRedis = 6
+
 
   //初始化线程池
   var threadPool: ExecutorService = _
@@ -101,37 +104,38 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
     timer = null
   }
 
-  test("1 测试100条记录，1个线程，每6条记录批量提交， hset, 覆盖加载"){
+  test("1 测试100条记录，1个线程，每6条记录批量提交， hset，覆盖加载"){
 
-    //生成测试数据：如2,3,value1-test-2,value2-test-3
+    val columnSeperator = ","
+
+    //生成测试数据 2,3,value1-test-2,value2-test-3
     val lines = for(i<- 0 until 10;j<-0 until 10) yield i+ columnSeperator + j + columnSeperator + "value1-test-"+i + columnSeperator +"value2-test-" + j
     println("- - " * 20)
-//    lines.foreach(println(_))
+    //    lines.foreach(println(_))
     println(lines(23))
     println("- - " * 20)
+
     loadStatus.numTotal = 100
 
-    //单元测试相关的配置
-    val hashIdxes = (0 to 1).toArray
-    val hashNamePrefix = "load2hashes:"
-    val hashSeperator = ":"
+    //1，2两列使用冒号拼接，作为field
+    val fieldIdxes = (0 to 1).toArray
+    val fieldSeperator = ":"
+    //3，4两列使用井号拼接，作为对应value
+    val valueIdxes = (2 to 3).toArray
+    val valueSeperator = "#"
 
-    val valueIdxes = (2 to 3).toArray //导入3，4两列数据，分别对应 field1, field2的属性取值
-    val fieldNames = Array("field1", "field2")
 
     val loadMethod = "hset"
-
     val overwrite = true
     val appendSeperator = ","
 
-
-    //提交加载线程任务，等待完成
     loadStatus.numScanned = 100
-    val task = new Load2HashesThread(lines.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
+    val task = new Load2OneHashThread(lines.toArray, columnSeperator,
+      hashName, fieldIdxes, fieldSeperator,
+      valueIdxes, valueSeperator,
       jedisPools(0),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
       FutureTaskResult(loadStatus.numBatches, 100, 0))
+
     val futureTask = new FutureTask[FutureTaskResult](task)
 
     threadPool.submit(futureTask)
@@ -164,45 +168,47 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
 
     //检查结果
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    val rs1 = jedises(0).hgetAll(hashName)
     println("rs1 = "+rs1)
 
-    assert(rs1.get("field1")=="value1-test-2")
-    assert(rs1.get("field2")=="value2-test-3")
-    assert(rs1.size() == 2)
+    assert(rs1.get("2:3").toString=="value1-test-2#value2-test-3")
+    assert(rs1.get("8:9").toString=="value1-test-8#value2-test-9")
+    assert(rs1.size() == 100)
   }
 
-  test("2 测试100条记录，1个线程，每6条记录批量提交， hmset, 覆盖加载"){
 
-    //生成测试数据：如2,3,value1-test-2,value2-test-3
+  test("2 测试100条记录，1个线程，每6条记录批量提交， hmset，覆盖加载"){
+
+    val columnSeperator = ","
+
+    //生成测试数据 2,3,value1-test-2,value2-test-3
     val lines = for(i<- 0 until 10;j<-0 until 10) yield i+ columnSeperator + j + columnSeperator + "value1-test-"+i + columnSeperator +"value2-test-" + j
     println("- - " * 20)
     //    lines.foreach(println(_))
     println(lines(23))
     println("- - " * 20)
+
     loadStatus.numTotal = 100
 
-    //单元测试相关的配置
-    val hashIdxes = (0 to 1).toArray
-    val hashNamePrefix = "load2hashes:"
-    val hashSeperator = ":"
+    //1，2两列使用冒号拼接，作为field
+    val fieldIdxes = (0 to 1).toArray
+    val fieldSeperator = ":"
+    //3，4两列使用井号拼接，作为对应value
+    val valueIdxes = (2 to 3).toArray
+    val valueSeperator = "#"
 
-    val valueIdxes = (2 to 3).toArray //导入3，4两列数据，分别对应 field1, field2的属性取值
-    val fieldNames = Array("field1", "field2")
 
     val loadMethod = "hmset"
-
     val overwrite = true
     val appendSeperator = ","
 
-
-    //提交加载线程任务，等待完成
     loadStatus.numScanned = 100
-    val task = new Load2HashesThread(lines.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
+    val task = new Load2OneHashThread(lines.toArray, columnSeperator,
+      hashName, fieldIdxes, fieldSeperator,
+      valueIdxes, valueSeperator,
       jedisPools(0),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
       FutureTaskResult(loadStatus.numBatches, 100, 0))
+
     val futureTask = new FutureTask[FutureTaskResult](task)
 
     threadPool.submit(futureTask)
@@ -235,46 +241,47 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
 
     //检查结果
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    val rs1 = jedises(0).hgetAll(hashName)
     println("rs1 = "+rs1)
 
-    assert(rs1.get("field1")=="value1-test-2")
-    assert(rs1.get("field2")=="value2-test-3")
-    assert(rs1.size() == 2)
+    assert(rs1.get("2:3").toString=="value1-test-2#value2-test-3")
+    assert(rs1.get("8:9").toString=="value1-test-8#value2-test-9")
+    assert(rs1.size() == 100)
   }
 
 
-  test("3 测试100条记录，1个线程，每6条记录批量提交， pipeline_hset, 覆盖加载"){
+  test("3 测试100条记录，1个线程，每6条记录批量提交， pipeline_hset，覆盖加载"){
 
-    //生成测试数据：如2,3,value1-test-2,value2-test-3
+    val columnSeperator = ","
+
+    //生成测试数据 2,3,value1-test-2,value2-test-3
     val lines = for(i<- 0 until 10;j<-0 until 10) yield i+ columnSeperator + j + columnSeperator + "value1-test-"+i + columnSeperator +"value2-test-" + j
     println("- - " * 20)
     //    lines.foreach(println(_))
     println(lines(23))
     println("- - " * 20)
+
     loadStatus.numTotal = 100
 
-    //单元测试相关的配置
-    val hashIdxes = (0 to 1).toArray
-    val hashNamePrefix = "load2hashes:"
-    val hashSeperator = ":"
+    //1，2两列使用冒号拼接，作为field
+    val fieldIdxes = (0 to 1).toArray
+    val fieldSeperator = ":"
+    //3，4两列使用井号拼接，作为对应value
+    val valueIdxes = (2 to 3).toArray
+    val valueSeperator = "#"
 
-    val valueIdxes = (2 to 3).toArray //导入3，4两列数据，分别对应 field1, field2的属性取值
-    val fieldNames = Array("field1", "field2")
 
     val loadMethod = "pipeline_hset"
-
     val overwrite = true
     val appendSeperator = ","
 
-
-    //提交加载线程任务，等待完成
     loadStatus.numScanned = 100
-    val task = new Load2HashesThread(lines.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
+    val task = new Load2OneHashThread(lines.toArray, columnSeperator,
+      hashName, fieldIdxes, fieldSeperator,
+      valueIdxes, valueSeperator,
       jedisPools(0),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
       FutureTaskResult(loadStatus.numBatches, 100, 0))
+
     val futureTask = new FutureTask[FutureTaskResult](task)
 
     threadPool.submit(futureTask)
@@ -307,18 +314,20 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
 
     //检查结果
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    val rs1 = jedises(0).hgetAll(hashName)
     println("rs1 = "+rs1)
 
-    assert(rs1.get("field1")=="value1-test-2")
-    assert(rs1.get("field2")=="value2-test-3")
-    assert(rs1.size() == 2)
+    assert(rs1.get("2:3").toString=="value1-test-2#value2-test-3")
+    assert(rs1.get("8:9").toString=="value1-test-8#value2-test-9")
+    assert(rs1.size() == 100)
   }
 
 
-  test("4 测试100条记录，1个线程，每6条记录批量提交， hset, 追加加载"){
+  test("4 测试100条记录，1个线程，每6条记录批量提交， hset，追加加载"){
 
-    //生成测试数据：如2,3,value1-test-2,value2-test-3
+    val columnSeperator = ","
+
+    //生成测试数据 2,3,value1-test-2,value2-test-3
     val lines = for(i<- 0 until 10;j<-0 until 10) yield i+ columnSeperator + j + columnSeperator + "value1-test-"+i + columnSeperator +"value2-test-" + j
     println("- - " * 20)
     //    lines.foreach(println(_))
@@ -334,27 +343,25 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
     loadStatus.numTotal = 200
 
-    //单元测试相关的配置
-    val hashIdxes = (0 to 1).toArray
-    val hashNamePrefix = "load2hashes:"
-    val hashSeperator = ":"
+    //1，2两列使用冒号拼接，作为field
+    val fieldIdxes = (0 to 1).toArray
+    val fieldSeperator = ":"
+    //3，4两列使用井号拼接，作为对应value
+    val valueIdxes = (2 to 3).toArray
+    val valueSeperator = "#"
 
-    val valueIdxes = (2 to 3).toArray //导入3，4两列数据，分别对应 field1, field2的属性取值
-    val fieldNames = Array("field1", "field2")
 
     val loadMethod = "hset"
-
     val overwrite = true
     val appendSeperator = ","
 
-
-    //提交加载线程任务，等待完成
     loadStatus.numScanned = 200
-    val task = new Load2HashesThread(lines.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
+    val task = new Load2OneHashThread(lines.toArray, columnSeperator,
+      hashName, fieldIdxes, fieldSeperator,
+      valueIdxes, valueSeperator,
       jedisPools(0),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
       FutureTaskResult(loadStatus.numBatches, 100, 0))
+
     val futureTask = new FutureTask[FutureTaskResult](task)
 
     threadPool.submit(futureTask)
@@ -362,34 +369,29 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
     loadStatus.numBatches += 1
 
-
     val overwrite2 = false
-    //线程2
-    val task2 = new Load2HashesThread(lines2.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
+    val task2 = new Load2OneHashThread(lines.toArray, columnSeperator,
+      hashName, fieldIdxes, fieldSeperator,
+      valueIdxes, valueSeperator,
       jedisPools(0),loadMethod, batchLimitForRedis, overwrite2, appendSeperator,
       FutureTaskResult(loadStatus.numBatches, 100, 0))
-    val futureTask2 = new FutureTask[FutureTaskResult](task2)
 
-//    Thread.sleep(1000)
+    val futureTask2 = new FutureTask[FutureTaskResult](task)
+
     threadPool.submit(futureTask2)
     taskMap.put(loadStatus.numBatches, futureTask2)
+
     loadStatus.numBatches += 1
 
     threadPool.shutdown()
     threadPool.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
+
 
     //加载线程任务都完成后，关闭监控线程，并输出最终的统计信息
     loadStatus.loadFinished = true
     threadPool2.shutdown()
     threadPool2.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
     if(reportEnabled) timer.cancel()
-
-    assert(loadStatus.numTotal == 200)
-    assert(loadStatus.numScanned == 200)
-    assert(loadStatus.numProcessed == 200)
-    assert(loadStatus.numBatchesProcessed == 2)
 
     val runningTimeMs = System.currentTimeMillis() - loadStatus.startTimeMs
     val loadSpeedPerSec = loadStatus.numProcessed * 1.0 / runningTimeMs * 1000 //记录加载运行期间加载平均速度
@@ -406,12 +408,12 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
 
     //检查结果
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    val rs1 = jedises(0).hgetAll(hashName)
     println("rs1 = "+rs1)
 
-    assert(rs1.get("field1").split(appendSeperator).toSet==Set("value1-test-2","value1-test2-2"))
-    assert(rs1.get("field2").split(appendSeperator).toSet==Set("value2-test-3","value2-test2-3"))
-    assert(rs1.size() == 2)
+    assert(rs1.get("2:3").toString=="value1-test-2#value2-test-3")
+    assert(rs1.get("8:9").toString=="value1-test-8#value2-test-9")
+    assert(rs1.size() == 100)
   }
 
 }

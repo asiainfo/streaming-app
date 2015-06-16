@@ -1,18 +1,19 @@
-package tools.redis.load
+package tools.redis.load.areamap
 
 import java.text.SimpleDateFormat
 import java.util.concurrent.{ExecutorService, Executors, FutureTask, TimeUnit}
 import java.util.{Date, Timer}
 
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, FunSuite}
+import org.scalatest.{BeforeAndAfter, FunSuite}
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.{Jedis, JedisPool, Pipeline}
 import tools.redis.RedisUtils
+import tools.redis.load.{FutureTaskResult, LoadStatus, LoadStatusUpdateThread, MonitorTask}
 
 /**
- * Created by tsingfu on 15/6/8.
+ * Created by tsingfu on 15/6/14.
  */
-class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAndAfterAll {
+class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter{
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -52,6 +53,7 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
   var jedises: Array[Jedis] = _
   var pipelines: Array[Pipeline] = _
 
+  val dummyEndMarker = "dummyEndMarker"
 
   before{
     //进度信息监控
@@ -101,23 +103,29 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
     timer = null
   }
 
-  test("1 测试100条记录，1个线程，每6条记录批量提交， hset, 覆盖加载"){
+  test("1 测试100条记录，1个线程，每6条记录批量提交， hset, 覆盖加载，不进行10to16进制转换，进行取值映射"){
 
-    //生成测试数据：如2,3,value1-test-2,value2-test-3
-    val lines = for(i<- 0 until 10;j<-0 until 10) yield i+ columnSeperator + j + columnSeperator + "value1-test-"+i + columnSeperator +"value2-test-" + j
+    //生成测试数据 如：102,103,1,WLAN
+    //103,102,1,""
+    val lines = for(i<- 0 until 10;j<-0 until 10) yield (100+i)+ columnSeperator + (100+j) +
+            columnSeperator + ((i+j)%2) + columnSeperator+"WLAN"*(((-1)*i+j)%2)+columnSeperator+ dummyEndMarker
     println("- - " * 20)
-//    lines.foreach(println(_))
+    //    lines.foreach(println(_))
     println(lines(23))
     println("- - " * 20)
     loadStatus.numTotal = 100
 
     //单元测试相关的配置
     val hashIdxes = (0 to 1).toArray
-    val hashNamePrefix = "load2hashes:"
+    val hashNamePrefix = "areamap2hashes:"
     val hashSeperator = ":"
+    val conversion10to16Idxes = Array[Int]()
 
-    val valueIdxes = (2 to 3).toArray //导入3，4两列数据，分别对应 field1, field2的属性取值
-    val fieldNames = Array("field1", "field2")
+    val fieldNames = Array("area1","WLAN")
+    val valueIdxes = Array(2,3) //导入第3，4两列数据，分别对应 area1, wlan的属性取值
+    val valueMapEnabledColumnIdxes = Array(3) //第4列进行取值映射
+    val valueMapEnabledWhere = Array(Array("WLAN","wlan"))
+    val valueMaps = Array("1") //第4列维WLAN时取映射值1，否则跳过
 
     val loadMethod = "hset"
 
@@ -128,8 +136,8 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
     //提交加载线程任务，等待完成
     loadStatus.numScanned = 100
     val task = new Load2HashesThread(lines.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
+      hashNamePrefix, hashIdxes, hashSeperator, conversion10to16Idxes,
+      fieldNames, valueIdxes, valueMapEnabledColumnIdxes, valueMapEnabledWhere, valueMaps,
       jedisPools(0),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
       FutureTaskResult(loadStatus.numBatches, 100, 0))
     val futureTask = new FutureTask[FutureTaskResult](task)
@@ -164,18 +172,35 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
 
     //检查结果
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    //102,103,1,WLAN
+    val rs1 = jedises(0).hgetAll(hashNamePrefix + "102:103")
     println("rs1 = "+rs1)
-
-    assert(rs1.get("field1")=="value1-test-2")
-    assert(rs1.get("field2")=="value2-test-3")
+    assert(rs1.get("area1")=="1")
+    assert(rs1.get("WLAN")=="1")
     assert(rs1.size() == 2)
+
+    //103,102,1,""
+    val rs2 = jedises(0).hgetAll(hashNamePrefix + "103:102")
+    println("rs2 = "+rs2)
+    assert(rs2.get("area1")=="1")
+    assert(rs2.get("WLAN")==null)
+    assert(rs2.size() == 1)
+
+    //102,104,0,""
+    val rs3 = jedises(0).hgetAll(hashNamePrefix + "102:104")
+    println("rs3 = "+rs3)
+    assert(rs3.get("area1")=="0")
+    assert(rs3.get("WLAN")==null)
+    assert(rs3.size() == 1)
+
   }
 
-  test("2 测试100条记录，1个线程，每6条记录批量提交， hmset, 覆盖加载"){
+  test("2 测试100条记录，1个线程，每6条记录批量提交， hmset, 覆盖加载，不进行10to16进制转换，进行取值映射"){
 
-    //生成测试数据：如2,3,value1-test-2,value2-test-3
-    val lines = for(i<- 0 until 10;j<-0 until 10) yield i+ columnSeperator + j + columnSeperator + "value1-test-"+i + columnSeperator +"value2-test-" + j
+    //生成测试数据 如：102,103,1,WLAN
+    //103,102,1,""
+    val lines = for(i<- 0 until 10;j<-0 until 10) yield (100+i)+ columnSeperator + (100+j) +
+            columnSeperator + ((i+j)%2) + columnSeperator+"WLAN"*(((-1)*i+j)%2)+columnSeperator+ dummyEndMarker
     println("- - " * 20)
     //    lines.foreach(println(_))
     println(lines(23))
@@ -184,11 +209,15 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
     //单元测试相关的配置
     val hashIdxes = (0 to 1).toArray
-    val hashNamePrefix = "load2hashes:"
+    val hashNamePrefix = "areamap2hashes:"
     val hashSeperator = ":"
+    val conversion10to16Idxes = Array[Int]()
 
-    val valueIdxes = (2 to 3).toArray //导入3，4两列数据，分别对应 field1, field2的属性取值
-    val fieldNames = Array("field1", "field2")
+    val fieldNames = Array("area1","WLAN")
+    val valueIdxes = Array(2,3) //导入第3，4两列数据，分别对应 area1, wlan的属性取值
+    val valueMapEnabledColumnIdxes = Array(3)
+    val valueMapEnabledWhere = Array(Array("WLAN","wlan"))
+    val valueMaps = Array("1")
 
     val loadMethod = "hmset"
 
@@ -199,8 +228,8 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
     //提交加载线程任务，等待完成
     loadStatus.numScanned = 100
     val task = new Load2HashesThread(lines.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
+      hashNamePrefix, hashIdxes, hashSeperator, conversion10to16Idxes,
+      fieldNames, valueIdxes, valueMapEnabledColumnIdxes, valueMapEnabledWhere, valueMaps,
       jedisPools(0),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
       FutureTaskResult(loadStatus.numBatches, 100, 0))
     val futureTask = new FutureTask[FutureTaskResult](task)
@@ -235,19 +264,36 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
 
     //检查结果
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    //102,103,1,WLAN
+    val rs1 = jedises(0).hgetAll(hashNamePrefix + "102:103")
     println("rs1 = "+rs1)
-
-    assert(rs1.get("field1")=="value1-test-2")
-    assert(rs1.get("field2")=="value2-test-3")
+    assert(rs1.get("area1")=="1")
+    assert(rs1.get("WLAN")=="1")
     assert(rs1.size() == 2)
+
+    //103,102,1,""
+    val rs2 = jedises(0).hgetAll(hashNamePrefix + "103:102")
+    println("rs2 = "+rs2)
+    assert(rs2.get("area1")=="1")
+    assert(rs2.get("WLAN")==null)
+    assert(rs2.size() == 1)
+
+    //102,104,0,""
+    val rs3 = jedises(0).hgetAll(hashNamePrefix + "102:104")
+    println("rs3 = "+rs3)
+    assert(rs3.get("area1")=="0")
+    assert(rs3.get("WLAN")==null)
+    assert(rs3.size() == 1)
+
   }
 
 
-  test("3 测试100条记录，1个线程，每6条记录批量提交， pipeline_hset, 覆盖加载"){
+  test("3 测试100条记录，1个线程，每6条记录批量提交， pipeline_hset, 覆盖加载，不进行10to16进制转换，进行取值映射"){
 
-    //生成测试数据：如2,3,value1-test-2,value2-test-3
-    val lines = for(i<- 0 until 10;j<-0 until 10) yield i+ columnSeperator + j + columnSeperator + "value1-test-"+i + columnSeperator +"value2-test-" + j
+      //生成测试数据 如：102,103,1,WLAN
+    //103,102,1,""
+    val lines = for(i<- 0 until 10;j<-0 until 10) yield (100+i)+ columnSeperator + (100+j) +
+            columnSeperator + ((i+j)%2) + columnSeperator+"WLAN"*(((-1)*i+j)%2)+columnSeperator+ dummyEndMarker
     println("- - " * 20)
     //    lines.foreach(println(_))
     println(lines(23))
@@ -256,11 +302,15 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
     //单元测试相关的配置
     val hashIdxes = (0 to 1).toArray
-    val hashNamePrefix = "load2hashes:"
+    val hashNamePrefix = "areamap2hashes:"
     val hashSeperator = ":"
+    val conversion10to16Idxes = Array[Int]()
 
-    val valueIdxes = (2 to 3).toArray //导入3，4两列数据，分别对应 field1, field2的属性取值
-    val fieldNames = Array("field1", "field2")
+    val fieldNames = Array("area1","WLAN")
+    val valueIdxes = Array(2,3) //导入第3，4两列数据，分别对应 area1, wlan的属性取值
+    val valueMapEnabledColumnIdxes = Array(3)
+    val valueMapEnabledWhere = Array(Array("WLAN","wlan"))
+    val valueMaps = Array("1")
 
     val loadMethod = "pipeline_hset"
 
@@ -271,8 +321,8 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
     //提交加载线程任务，等待完成
     loadStatus.numScanned = 100
     val task = new Load2HashesThread(lines.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
+      hashNamePrefix, hashIdxes, hashSeperator, conversion10to16Idxes,
+      fieldNames, valueIdxes, valueMapEnabledColumnIdxes, valueMapEnabledWhere, valueMaps,
       jedisPools(0),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
       FutureTaskResult(loadStatus.numBatches, 100, 0))
     val futureTask = new FutureTask[FutureTaskResult](task)
@@ -307,40 +357,52 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
 
     //检查结果
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    //102,103,1,WLAN
+    val rs1 = jedises(0).hgetAll(hashNamePrefix + "102:103")
     println("rs1 = "+rs1)
-
-    assert(rs1.get("field1")=="value1-test-2")
-    assert(rs1.get("field2")=="value2-test-3")
+    assert(rs1.get("area1")=="1")
+    assert(rs1.get("WLAN")=="1")
     assert(rs1.size() == 2)
-  }
+
+    //103,102,1,""
+    val rs2 = jedises(0).hgetAll(hashNamePrefix + "103:102")
+    println("rs2 = "+rs2)
+    assert(rs2.get("area1")=="1")
+    assert(rs2.get("WLAN")==null)
+    assert(rs2.size() == 1)
+
+    //102,104,0,""
+    val rs3 = jedises(0).hgetAll(hashNamePrefix + "102:104")
+    println("rs3 = "+rs3)
+    assert(rs3.get("area1")=="0")
+    assert(rs3.get("WLAN")==null)
+    assert(rs3.size() == 1)
+    }
 
 
-  test("4 测试100条记录，1个线程，每6条记录批量提交， hset, 追加加载"){
+  test("1 测试100条记录，1个线程，每6条记录批量提交， hset, 覆盖加载，进行10to16进制转换，不进行取值映射"){
 
-    //生成测试数据：如2,3,value1-test-2,value2-test-3
-    val lines = for(i<- 0 until 10;j<-0 until 10) yield i+ columnSeperator + j + columnSeperator + "value1-test-"+i + columnSeperator +"value2-test-" + j
+    //生成测试数据 如：102,103,1,WLAN
+    //103,102,1,""
+    val lines = for(i<- 0 until 10;j<-0 until 10) yield (100+i)+ columnSeperator + (100+j) +
+            columnSeperator + ((i+j)%2) + columnSeperator+"WLAN"*(((-1)*i+j)%2)+columnSeperator+ dummyEndMarker
     println("- - " * 20)
     //    lines.foreach(println(_))
     println(lines(23))
     println("- - " * 20)
-
-    //数据 2,3,value1-test2-2,value2-test2-3
-    val lines2 = for(i<- 0 until 10;j<-0 until 10) yield i+ columnSeperator + j + columnSeperator + "value1-test2-"+i + columnSeperator +"value2-test2-" + j
-    println("- - " * 20)
-    //    lines2.foreach(println(_))
-    println(lines2(23))
-    println("- - " * 20)
-
-    loadStatus.numTotal = 200
+    loadStatus.numTotal = 100
 
     //单元测试相关的配置
     val hashIdxes = (0 to 1).toArray
-    val hashNamePrefix = "load2hashes:"
+    val hashNamePrefix = "areamap2hashes:"
     val hashSeperator = ":"
+    val conversion10to16Idxes = Array[Int](0,1)
 
-    val valueIdxes = (2 to 3).toArray //导入3，4两列数据，分别对应 field1, field2的属性取值
-    val fieldNames = Array("field1", "field2")
+    val fieldNames = Array("area1","WLAN")
+    val valueIdxes = Array(2) //导入第3列数据，分别对应 area1的属性取值
+    val valueMapEnabledColumnIdxes = Array[Int]() //第4列进行取值映射
+    val valueMapEnabledWhere = Array(Array("WLAN","wlan"))
+    val valueMaps = Array("1") //第4列维WLAN时取映射值1，否则跳过
 
     val loadMethod = "hset"
 
@@ -349,10 +411,10 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
 
     //提交加载线程任务，等待完成
-    loadStatus.numScanned = 200
+    loadStatus.numScanned = 100
     val task = new Load2HashesThread(lines.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
+      hashNamePrefix, hashIdxes, hashSeperator, conversion10to16Idxes,
+      fieldNames, valueIdxes, valueMapEnabledColumnIdxes, valueMapEnabledWhere, valueMaps,
       jedisPools(0),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
       FutureTaskResult(loadStatus.numBatches, 100, 0))
     val futureTask = new FutureTask[FutureTaskResult](task)
@@ -362,34 +424,15 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
 
     loadStatus.numBatches += 1
 
-
-    val overwrite2 = false
-    //线程2
-    val task2 = new Load2HashesThread(lines2.toArray, columnSeperator,
-      hashNamePrefix, hashIdxes, hashSeperator,
-      fieldNames, valueIdxes,
-      jedisPools(0),loadMethod, batchLimitForRedis, overwrite2, appendSeperator,
-      FutureTaskResult(loadStatus.numBatches, 100, 0))
-    val futureTask2 = new FutureTask[FutureTaskResult](task2)
-
-//    Thread.sleep(1000)
-    threadPool.submit(futureTask2)
-    taskMap.put(loadStatus.numBatches, futureTask2)
-    loadStatus.numBatches += 1
-
     threadPool.shutdown()
     threadPool.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
+
 
     //加载线程任务都完成后，关闭监控线程，并输出最终的统计信息
     loadStatus.loadFinished = true
     threadPool2.shutdown()
     threadPool2.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
     if(reportEnabled) timer.cancel()
-
-    assert(loadStatus.numTotal == 200)
-    assert(loadStatus.numScanned == 200)
-    assert(loadStatus.numProcessed == 200)
-    assert(loadStatus.numBatchesProcessed == 2)
 
     val runningTimeMs = System.currentTimeMillis() - loadStatus.startTimeMs
     val loadSpeedPerSec = loadStatus.numProcessed * 1.0 / runningTimeMs * 1000 //记录加载运行期间加载平均速度
@@ -405,13 +448,24 @@ class Load2HashesThreadSuite extends FunSuite with BeforeAndAfter with BeforeAnd
             ", loadProgress percent of numBatchesProcessed = " + loadStatus.numBatchesProcessed * 1.0 / loadStatus.numBatches * 100 +"%" )
 
 
-    //检查结果
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    //检查结果 102->66, 103->67,104->68
+    //102,103,1,WLAN
+    val rs1 = jedises(0).hgetAll(hashNamePrefix + "0066:0067")
     println("rs1 = "+rs1)
+    assert(rs1.get("area1")=="1")
+    assert(rs1.size() == 1)
 
-    assert(rs1.get("field1").split(appendSeperator).toSet==Set("value1-test-2","value1-test2-2"))
-    assert(rs1.get("field2").split(appendSeperator).toSet==Set("value2-test-3","value2-test2-3"))
-    assert(rs1.size() == 2)
+    //103,102,1,""
+    val rs2 = jedises(0).hgetAll(hashNamePrefix + "0067:0066")
+    println("rs2 = "+rs2)
+    assert(rs2.get("area1")=="1")
+    assert(rs2.size() == 1)
+
+    //102,104,0,""
+    val rs3 = jedises(0).hgetAll(hashNamePrefix + "0066:0068")
+    println("rs3 = "+rs3)
+    assert(rs3.get("area1")=="0")
+    assert(rs3.size() == 1)
+
   }
-
 }
