@@ -19,12 +19,20 @@
         <fileEncode>UTF-8</fileEncode> <!-- 设置数据文件的编码格式 -->
         <columnSeperator>,</columnSeperator> <!-- 设置数据文件字段分隔符 -->
 
-        <hashNamePrefix>load2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
+        <redis.type>multihashes</redis.type>
+
+        <sync.incrementEnabled>false</sync.incrementEnabled> <!-- 设置加载的类型，false全量加载, true增量加载-->
+
+
+
+        <!--load into multihashes form file-->
+        <hashNamePrefix>file2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
         <hashIdxes>0,1</hashIdxes> <!-- 设置 hashkey取值字段的索引位置,可以使用多个列组合作为hashkey名，使用逗号分隔 -->
         <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
 
         <valueIdxes>2,3</valueIdxes> <!-- 设置加载列的索引，可以加载多个列数据，使用逗号分隔 -->
         <fieldNames>field1, field2</fieldNames> <!-- 设置加载数据对应的的属性名 -->
+
 
         <numThreads>2</numThreads> <!-- 设置线程数-->
         <batchLimit>30</batchLimit> <!-- 设置每个线程每批次加载的记录数量 -->
@@ -36,42 +44,110 @@
         <overwrite>true</overwrite> <!-- 设置加载过程中采用覆盖，还是追加 -->
         <appendSeperator>,</appendSeperator> <!-- 设置加载过程中追加时使用的分隔符 -->
 
+        <report.enabled>true</report.enabled>
+        <report.delay.seconds>5</report.delay.seconds>
+        <report.interval.seconds>60</report.interval.seconds>
     </load>
 
     <description>
         reids部分：
-          servers：设置 redis/codis 的服务ip地址和端口
-          database: 设置导入到哪个 db
-          timeout: 设置连接的超时，单位 ms
-          password: 设置访问密码
+        servers：设置 redis/codis 的服务ip地址和端口
+        database: 设置导入到redis哪个db
+        timeout: 设置连接redis的超时，单位ms
+        password: 设置访问redis的密码
 
         jedisPool部分：
-          maxTotal: 设置连接池最大连接数
-          maxIdle: 设置连接池最大空闲连接数
-          minIdle: 设置连接池最小空闲连接数
+        maxTotal: 设置连接池最大连接数
+        maxIdle: 设置连接池最大空闲连接数
+        minIdle: 设置连接池最小空闲连接数
+
+        jdbcPool部分：
+        maxActive:设置连接池最大连接数
+        initialSize:设置连接池初始化连接数
+        maxIdle:设置连接池最大空闲连接数
+        minIdle:设置连接池最小空闲连接数
 
         load部分:
-          from: 标识数据源:file/db，程序内部没有使用，后期可能会用到,如果是from=file，需要配置filename, fileEncode, columnSeperator
-          filename: 设置文件路径
-          fileEncode: 设置文件编码
-          columnSeperator: 设置文件字段分隔符
+        from: 标识数据源:file/db
 
-          hashNamePrefix,hashIdxes, hashSeperator 用于设置hash名的映射
-          hashNamePrefix：设置hash名前缀
-          hashIdxes: 设置 hashkey取值字段的索引位置,可以使用多个列组合作为hashkey名，使用逗号分隔
-          hashSeperator: 设置 hashkey名多个字段值组合的分隔符
+        如果是from=db，需要配置 driver,url,username,password
+        driver: jdbc驱动名
+        url: jdbc访问url
+        username: jdbc访问用户名
+        password: jdbc访问密码
+        table: jdbc访问的表名
 
-        valueIdxes:设置hash 对应field的value索引位置
-        fieldNames: 设置hash的field
+        如果是from=file，需要配置 filename, fileEncode, columnSeperator
+        filename:设置数据文件的路径
+        fileEncode:设置数据文件的编码格式
+        columnSeperator:设置数据文件字段分隔符
 
-          numThreads 设置多线程的数量
-          batchLimit：设置每个线程一次处理的记录数
 
-          method：设置加载到redis的方法： hset,hmset,pipeline_hset
-          batchLimit.redis: 设置批量加载到redis的批量提交的记录数
+        multihashes:设置加载到redis的类型，onehash:OneHashPerRecord, multihashes:OneHashAllRecords -->
 
-          overwrite： 设置加载时是否覆盖已存在的数据，true覆盖，false先检查是否含有要加载的值，有忽略，没有追加
-          appendSeperator： 设置加载过程中追加时使用的分隔符
+        sync.incrementEnabled:设置加载的类型，false全量加载, true增量加载
+
+        <!--for increment sync-->
+        sync.insertFlag:设置增量同步时标识记录是新插入insert的值
+        sync.updateFlag:设置增量同步时标识记录是新更新update的值
+        sync.deleteFlag:设置增量同步时标识记录是新删除delete的值
+
+        sync.insertEnabled:设置增量同步时是否同步新插入insert的记录
+        sync.updateEnabled:设置增量同步时是否同步新更新update的记录
+        sync.deleteEnabled:设置增量同步时是否同步新删除delete的记录
+
+        <!--increment sync from db-->
+        sync.columnName:设置增量同步的同步标识列的字段名
+
+        <!--increment sync from db-->
+        sync.idx:设置增量同步的同步标识列的字段位置索引
+
+
+        <!--load into multihashes from db-->
+        hashNamePrefix,hashIdxes, hashSeperator 用于设置hashkey名的映射
+        hashNamePrefix：设置hashkey名前缀
+        hashColumnNames: 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔
+        hashSeperator: 设置 hashkey名多个字段值组合的分隔符
+        valueColumnNames:设置hashkey 对应field的列名，可以加载多个列数据，使用逗号分隔
+        fieldNames: 设置hashkey的field
+
+        <!--load into multihashes from file-->
+        hashNamePrefix:设置hashkey名前缀
+        hashIdxes:设置 hashkey取值字段的索引位置,可以使用多个列组合作为hashkey名，使用逗号分隔
+        hashSeperator:设置 hashkey名多个字段值组合的分隔符
+        valueIdxes:设置加载列的索引，可以加载多个列数据，使用逗号分隔
+        fieldNames:设置加载数据对应的的属性名
+
+
+        <!--load into onehash from db-->
+        hashName:设置hashkey名
+        fieldColumnNames:设置 field的字段名,可以使用多个字段组合作为field名，使用逗号分隔
+        fieldSeperator:设置 field名多个字段值组合的分隔符
+        valueColumnNames:设置加载列的列名，取值作为对应field的value，可以加载多个列数据，使用逗号分隔 -->
+        valueSeperator:设置多个字段值组合成value的分隔符
+
+
+        <!--load into onehash from file-->
+        hashName：设置hashkey名
+        fieldIdxes：设置哪几列作为 hashkey 的 field, 支持取多列数据进行组合
+        fieldSeperator：设置多列数据组合hashkey 的 field名时使用的分隔符
+        valueIdxes：设置哪几列作为 hashkey 的 value，支持写多个，会进行拼接
+        valueSeperator：设置多列数据组合hashkey 的 value时使用的分隔符
+
+
+        numThreads 设置多线程的数量
+        batchLimit：设置每个线程一次处理的记录数
+
+        method：设置加载到redis的方法： hset,hmset,pipeline_hset
+        batchLimit.redis: 设置批量加载到redis的批量提交的记录数
+
+        overwrite： 设置加载时是否覆盖已存在的数据，true覆盖，false先检查是否含有要加载的值，有忽略，没有追加
+        appendSeperator： 设置加载过程中追加时使用的分隔符
+
+        report.enabled:设置加载过程中是否启用进度信息监控线程定期输出加载进度信息
+        report.delay.seconds:设置输出加载进度信息的首次延迟时间，单位秒
+        report.interval.seconds:设置输出加载进度信息的周期，单位秒
+
     </description>
 
 </configuration>

@@ -24,25 +24,21 @@
         <from>db</from>
 
         <driver>com.mysql.jdbc.Driver</driver>
-        <url>jdbc:mysql://mysql1:3306/test?useCursorFetch=true</url> <!-- 设置数据库的URL -->
+        <url>jdbc:mysql://mysql1:3306/test</url> <!-- 设置数据库的URL -->
         <username>root</username>
         <password>mysql123</password>
-        <table>tab_test_jdbc2hashes</table>
+        <table>tab_test_jdbc2singlehash</table>
         <isBigTable>true</isBigTable>
 
-        <redis.type>multihashes</redis.type>
+        <redis.type>onehash</redis.type>
 
-        <sync.incrementEnabled>false</sync.incrementEnabled> <!-- 设置加载的类型，false全量加载, true增量加载-->
-
-
-        <!--load into multihashes form db-->
-        <hashNamePrefix>jdbc2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
-        <hashColumnNames>id1,id2</hashColumnNames> <!-- 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔 -->
-        <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
+        <!--load into onehash form db-->
+        <hashName>jdbc2singlehash</hashName> <!-- 设置hashkey名 -->
+        <fieldColumnNames>id1,id2</fieldColumnNames> <!-- 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔 -->
+        <fieldSeperator>:</fieldSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
 
         <valueColumnNames>col3,col4</valueColumnNames> <!-- 设置加载列的列名，可以加载多个列数据，使用逗号分隔 -->
-        <fieldNames>field1, field2</fieldNames> <!-- 设置加载数据时Redis中对应的的hash属性名 -->
-
+        <valueSeperator>#</valueSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
 
         <numThreads>2</numThreads> <!-- 设置并行线程数-->
         <batchLimit>30</batchLimit> <!-- 设置每个线程每批次加载的记录数量 -->
@@ -56,7 +52,6 @@
         <report.enabled>true</report.enabled>
         <report.delay.seconds>5</report.delay.seconds>
         <report.interval.seconds>60</report.interval.seconds>
-
     </load>
 
     <description>

@@ -13,9 +13,9 @@ import scala.collection.mutable.ArrayBuffer
 import scala.xml.XML
 
 /**
- * Created by tsingfu on 15/6/7.
+ * Created by tsingfu on 15/6/8.
  */
-object Jdbc2Hashes {
+object Jdbc2OneHash {
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -26,11 +26,12 @@ object Jdbc2Hashes {
   val timer = new Timer() //用于调度reporter任务，定期输出进度信息
 
   def main(args: Array[String]): Unit ={
+
     val confXmlFile = args(0)
-    jdbc2Hashes(confXmlFile)
+    jdbc2SingleHash(confXmlFile)
   }
 
-  def jdbc2Hashes(confXmlFile: String): Unit ={
+  def jdbc2SingleHash(confXmlFile: String): Unit ={
 
     //解析配置
     val props = init_props_fromXml(confXmlFile)
@@ -59,18 +60,18 @@ object Jdbc2Hashes {
     val jdbcTable = props.getProperty("load.table").trim
     val jdbcIsBigTable = props.getProperty("load.isBigTable").trim.toBoolean
 
-    val hashNamePrefix = props.getProperty("load.hashNamePrefix").trim
-    val hashColumnNames = props.getProperty("load.hashColumnNames").trim.split(",").map(_.trim)
-    val hashSeperator = props.getProperty("load.hashSeperator").trim
+    val hashName = props.getProperty("load.hashName").trim
+    val fieldColumnNames = props.getProperty("load.fieldColumnNames").trim.split(",").map(_.trim)
+    val fieldSeperator = props.getProperty("load.fieldSeperator").trim
 
     val valueColumnNames = props.getProperty("load.valueColumnNames").trim.split(",").map(_.trim)
-    val fieldNames = props.getProperty("load.fieldNames").trim.split(",").map(_.trim)
+    val valueSeperator = props.getProperty("load.valueSeperator").trim
 
     val batchLimit = props.getProperty("load.batchLimit").trim.toInt
     val batchLimitForRedis = props.getProperty("load.batchLimit.redis").trim.toInt
 
-    val numThreads = props.getProperty("load.numThreads", "1").trim.toInt
-    val loadMethod = props.getProperty("load.method", "hset").trim
+    val numThreads = props.getProperty("load.numThreads").trim.toInt
+    val loadMethod = props.getProperty("load.method").trim
 
     val overwrite = props.getProperty("load.overwrite").trim.toBoolean
     val appendSeperator = props.getProperty("load.appendSeperator").trim
@@ -85,7 +86,7 @@ object Jdbc2Hashes {
     logger.info("startTimeMs = " + loadStatus.startTimeMs + "")
 
 
-    //初始化 jedisPool, jedis, pipeline
+    // 初始化 jedisPool, jedis, pipeline
     val jedisPools = redisServers.split(",").map(server=>{
       val hostPort = server.split(":").map(_.trim)
       val host = hostPort(0)
@@ -97,7 +98,6 @@ object Jdbc2Hashes {
     val numPools = jedisPools.length
     val jedises = jedisPools.map(_.getResource)
     val pipelines = jedises.map(_.pipelined)
-
 
     //初始化线程池
     val threadPool = Executors.newFixedThreadPool(numThreads)
@@ -125,13 +125,14 @@ object Jdbc2Hashes {
 
     //遍历数据准备，初始化构造线程任务处理批量数据的信息
     //格式： Array[String]
-    //      String格式: hashNameValue, fieldValue1, fieldValue2 ,... fieldValuen
-    val hashColumnNamesLength = hashColumnNames.length
+    //      String格式: field1, value1
+    val fieldColumnNamesLength = fieldColumnNames.length
     val valueColumnNamesLength = valueColumnNames.length
-    val columnSeperator = "Jdbc2HashesSeperator"
+    val columnSeperator = "Jdbc2SingleHashSeperator"
     var numInBatch = 0
     var batchArrayBuffer: ArrayBuffer[String] = null
     def jedisPoolId = (loadStatus.numBatches % numPools).toInt
+
 
     //遍历数据之前，先启动进度监控线程和进度信息更新线程
     //如果启用定期输出进度信息功能，启动reporter任务
@@ -174,29 +175,31 @@ object Jdbc2Hashes {
       }
     }
 
-    val sql = "select " + hashColumnNames.mkString(",") + "," +
+    val sql = "select " +fieldColumnNames.mkString(",") + "," +
             valueColumnNames.mkString(",") +
             " from " + jdbcTable
-    logger.info("SQL : "+sql)
+    logger.info("SQL: " + sql)
 
     val rs = stmt.executeQuery(sql)
 
     while(rs.next()){
       loadStatus.numScanned += 1
 
-      val hashNameValue = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(hashSeperator)
-      val fieldValues = for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)
+      val field = (for (i <- 1 to fieldColumnNamesLength) yield rs.getString(i)).mkString(fieldSeperator)
+      val value = (for (i <- fieldColumnNamesLength + 1 to fieldColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(valueSeperator)
 
       if(numInBatch == 0){
         batchArrayBuffer = new ArrayBuffer[String]()
       }
-      batchArrayBuffer.append(hashNameValue + columnSeperator + fieldValues.mkString(columnSeperator))
+      batchArrayBuffer.append(field + columnSeperator + value)
       numInBatch += 1
 
       if(numInBatch == batchLimit){
         logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-        val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-          hashNamePrefix, Array(0),hashSeperator, fieldNames, (1 to valueColumnNamesLength).toArray,
+        val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
+          hashName,
+          Array(0), fieldSeperator,
+          Array(1), valueSeperator,
           jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
           FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
         val futureTask = new FutureTask[FutureTaskResult](task)
@@ -213,8 +216,10 @@ object Jdbc2Hashes {
     //遍历完数据后，提交没有达到batchLimit的batch任务
     if(numInBatch > 0){
       logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-      val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-        hashNamePrefix, Array(0),hashSeperator, fieldNames, (1 to valueColumnNamesLength).toArray,
+      val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
+        hashName,
+        Array(0), fieldSeperator,
+        Array(1), valueSeperator,
         jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
         FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
       val futureTask = new FutureTask[FutureTaskResult](task)
@@ -298,14 +303,11 @@ object Jdbc2Hashes {
     val jdbcTable = (conf \ "load" \ "table").text.trim
     val jdbcIsBigTable =  (conf \ "load" \ "isBigTable").text.trim
 
-    val hashNamePrefix = (conf \ "load" \ "hashNamePrefix").text.trim
-    val hashColumnNames = (conf \ "load" \ "hashColumnNames").text.trim
-    val hashSeperator = (conf \ "load" \ "hashSeperator").text.trim
+    val hashName = (conf \ "load" \ "hashName").text.trim
+    val fieldColumnNames = (conf \ "load" \ "fieldColumnNames").text.trim
+    val fieldSeperator = (conf \ "load" \ "fieldSeperator").text.trim
     val valueColumnNames = (conf \ "load" \ "valueColumnNames").text.trim
     val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
-
-    val fieldNames = (conf \ "load" \ "fieldNames").text.trim
-
 
     val batchLimit = (conf \ "load" \ "batchLimit").text.trim
     val batchLimitForRedis = (conf \ "load" \ "batchLimit.redis").text.trim
@@ -345,13 +347,11 @@ object Jdbc2Hashes {
 
     props.put("load.from", from)
 
-    props.put("load.hashNamePrefix", hashNamePrefix)
-    props.put("load.hashColumnNames", hashColumnNames)
-    props.put("load.hashSeperator", hashSeperator)
+    props.put("load.hashName", hashName)
+    props.put("load.fieldColumnNames", fieldColumnNames)
+    props.put("load.fieldSeperator", fieldSeperator)
     props.put("load.valueColumnNames", valueColumnNames)
     props.put("load.valueSeperator", valueSeperator)
-
-    props.put("load.fieldNames", fieldNames)
 
     props.put("load.batchLimit", batchLimit)
     props.put("load.batchLimit.redis", batchLimitForRedis)
@@ -366,12 +366,9 @@ object Jdbc2Hashes {
     props.put("load.report.interval.seconds", reportIntervalSeconds)
 
     println("="*80)
-    //TODO: 解决properties配置项输出乱序问题
-    props.list(System.out)//问题，没有顺序
-
+    props.list(System.out)
     println("="*80)
 
     props
   }
-
 }

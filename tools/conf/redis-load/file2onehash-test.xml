@@ -1,8 +1,8 @@
 <configuration>
     <redis>
         <servers>codis1:29001, codis1:29002</servers> <!-- 设置redis/codis地址, 格式为 ip:port -->
-        <database>0</database> <!-- 设置导入到redis/codis哪个db，默认有16个db，编号0-15 -->
-        <timeout>10000</timeout> <!-- 设置连接redis/codis最大超时,单位ms -->
+        <database>4</database> <!-- 设置导入到redis/codis哪个db，默认有16个db，编号0-15 -->
+        <timeout>10000</timeout> <!-- 设置连接redis/codis最大超时,单位ms ,默认2000 -->
         <password></password> <!-- 设置连接redis/codis的密码 -->
     </redis>
 
@@ -12,39 +12,24 @@
         <minIdle>0</minIdle> <!-- 设置连接池最小空闲连接数 -->
     </jedisPool>
 
-    <jdbcPool>
-        <maxActive>100</maxActive>
-        <initialSize>10</initialSize>
-        <maxIdle>100</maxIdle>
-        <minIdle>10</minIdle>
-        <maxAage>0</maxAage>
-    </jdbcPool>
-
     <load>
-        <from>db</from>
+        <from>file</from>
 
-        <driver>com.mysql.jdbc.Driver</driver>
-        <url>jdbc:mysql://mysql1:3306/test?useCursorFetch=true</url> <!-- 设置数据库的URL -->
-        <username>root</username>
-        <password>mysql123</password>
-        <table>tab_test_jdbc2hashes</table>
-        <isBigTable>true</isBigTable>
+        <filename>tools/src/test/resources/load2hashes-thread-test.data</filename> <!-- 设置数据文件的路径 -->
+        <fileEncode>UTF-8</fileEncode> <!-- 设置数据文件的编码格式 -->
+        <columnSeperator>,</columnSeperator> <!-- 设置数据文件字段分隔符 -->
 
-        <redis.type>multihashes</redis.type>
+        <redis.type>onehash</redis.type>
 
-        <sync.incrementEnabled>false</sync.incrementEnabled> <!-- 设置加载的类型，false全量加载, true增量加载-->
+        <!--load into onehash form file-->
+        <hashName>file2onehash</hashName> <!-- 设置hashkey名 -->
 
+        <fieldIdxes>0,1</fieldIdxes> <!-- 设置哪几列作为 hash 的 field, 支持取多列数据进行组合 -->
+        <fieldSeperator>:</fieldSeperator> <!-- 设置多列数据组合hash 的 field名时使用的分隔符 -->
+        <valueIdxes>2,3</valueIdxes> <!-- 设置哪几列作为 hash 的 value，支持写多个，会进行拼接 -->
+        <valueSeperator>#</valueSeperator> <!-- 设置多列数据组合hash 的 value时使用的分隔符 -->
 
-        <!--load into multihashes form db-->
-        <hashNamePrefix>jdbc2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
-        <hashColumnNames>id1,id2</hashColumnNames> <!-- 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔 -->
-        <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
-
-        <valueColumnNames>col3,col4</valueColumnNames> <!-- 设置加载列的列名，可以加载多个列数据，使用逗号分隔 -->
-        <fieldNames>field1, field2</fieldNames> <!-- 设置加载数据时Redis中对应的的hash属性名 -->
-
-
-        <numThreads>2</numThreads> <!-- 设置并行线程数-->
+        <numThreads>2</numThreads> <!-- 设置线程数-->
         <batchLimit>30</batchLimit> <!-- 设置每个线程每批次加载的记录数量 -->
         <method>hmset</method> <!-- 设置加载方法 hset, hmset, pipeline_hset  -->
         <!--<method>pipeline_hset</method> -->
@@ -159,6 +144,5 @@
         report.interval.seconds:设置输出加载进度信息的周期，单位秒
 
     </description>
-
 
 </configuration>

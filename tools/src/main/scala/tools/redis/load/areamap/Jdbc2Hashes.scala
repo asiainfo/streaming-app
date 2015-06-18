@@ -1,13 +1,14 @@
-package tools.redis.load
+package tools.redis.load.areamap
 
 import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util.concurrent.{Executors, FutureTask, TimeUnit}
-import java.util.{Date, Properties, Timer}
+import java.util.{HashMap => JHashMap, _}
 
 import org.slf4j.LoggerFactory
 import tools.jdbc.JdbcUtils
 import tools.redis.RedisUtils
+import tools.redis.load.{FutureTaskResult, LoadStatus, LoadStatusUpdateThread, MonitorTask}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.xml.XML
@@ -33,6 +34,8 @@ object Jdbc2Hashes {
   def jdbc2Hashes(confXmlFile: String): Unit ={
 
     //解析配置
+    val dummyEndMarker = "dummyEndMarker" //处理scala string1.split 陷阱问题
+
     val props = init_props_fromXml(confXmlFile)
 
     val redisServers = props.getProperty("redis.servers")
@@ -63,8 +66,26 @@ object Jdbc2Hashes {
     val hashColumnNames = props.getProperty("load.hashColumnNames").trim.split(",").map(_.trim)
     val hashSeperator = props.getProperty("load.hashSeperator").trim
 
-    val valueColumnNames = props.getProperty("load.valueColumnNames").trim.split(",").map(_.trim)
     val fieldNames = props.getProperty("load.fieldNames").trim.split(",").map(_.trim)
+    val valueColumnNames = props.getProperty("load.valueColumnNames").trim.split(",").map(_.trim)
+
+    val valueMapEnabledColumnNames = props.getProperty("load.valueMapEnabled.columnNames").split(",").map(_.trim)
+    val valueMapEnabledWhereSperator = props.getProperty("load.valueMapEnabled.where.seperator").trim
+    val valueMapEnabledWhereValueSperator = props.getProperty("load.valueMapEnabled.where.valueSeperator").trim
+    val valueMapEnabledWhere = props.getProperty("load.valueMapEnabled.where")
+            .split(valueMapEnabledWhereSperator).map(_.split(valueMapEnabledWhereValueSperator))
+    val valueMaps = props.getProperty("load.valueMaps").trim.split(",").map(_.trim)
+
+    println("= = " * 20)
+    println("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).mkString("[", ",","]"))
+    println("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).foreach(values=>{
+      println(values.split(valueMapEnabledWhereValueSperator).mkString("[", "-", "]"))
+    }))
+    println("valueMapEnabledWhere.length = " + valueMapEnabledWhere.length)
+    println("= = " * 20)
+
+
+    val conversion10to16ColumnNames = props.getProperty("load.conversion10to16.columnNames").trim.split(",").map(_.trim)
 
     val batchLimit = props.getProperty("load.batchLimit").trim.toInt
     val batchLimitForRedis = props.getProperty("load.batchLimit.redis").trim.toInt
@@ -133,6 +154,18 @@ object Jdbc2Hashes {
     var batchArrayBuffer: ArrayBuffer[String] = null
     def jedisPoolId = (loadStatus.numBatches % numPools).toInt
 
+    val conversion10to16ColumnIdxes = ArrayBuffer[Int]()
+    for(colIdx<-hashColumnNames.zipWithIndex){
+      val (col, idx) = colIdx
+      if (conversion10to16ColumnNames.contains(col)) conversion10to16ColumnIdxes.append(idx)
+    }
+
+    val valueMapEnabledColumnIdxes = ArrayBuffer[Int]()
+    for(colIdx<-valueColumnNames.zipWithIndex){
+      val (col, idx) = colIdx
+      if (valueMapEnabledColumnNames.contains(col)) valueMapEnabledColumnIdxes.append(hashColumnNamesLength + idx)
+    }
+
     //遍历数据之前，先启动进度监控线程和进度信息更新线程
     //如果启用定期输出进度信息功能，启动reporter任务
     if(reportEnabled){
@@ -148,6 +181,7 @@ object Jdbc2Hashes {
     //解决大表遍历内存问题
     // 针对mysql大表setFetchSize无效问题的处理
     // 参考
+    // Ref: [Bug #18148	setFetchSize() does not adhear to jdbc interface contract](http://bugs.mysql.com/bug.php?id=18148)
     // Ref: [JDBC基础-setFetchSize方法](http://blog.csdn.net/hx756262429/article/details/8196845)
     // Ref: [关于oracle与mysql官方jdbc的一些区别](http://blog.csdn.net/seven_3306/article/details/9303979)
     // For Mysql: 正常情况下MySQL的JDBC是不支持setFetchSize()方法设置的，总是一次性全部抓取到内存中，大表遍历时会遇到内存溢出问题
@@ -181,22 +215,27 @@ object Jdbc2Hashes {
 
     val rs = stmt.executeQuery(sql)
 
+
     while(rs.next()){
       loadStatus.numScanned += 1
 
-      val hashNameValue = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(hashSeperator)
-      val fieldValues = for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)
+      val hashNameValues = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
+      val fieldValues = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(hashColumnNamesLength + i)).mkString(columnSeperator) + columnSeperator + dummyEndMarker
+
 
       if(numInBatch == 0){
         batchArrayBuffer = new ArrayBuffer[String]()
       }
-      batchArrayBuffer.append(hashNameValue + columnSeperator + fieldValues.mkString(columnSeperator))
+      batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues)
       numInBatch += 1
 
       if(numInBatch == batchLimit){
         logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
         val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-          hashNamePrefix, Array(0),hashSeperator, fieldNames, (1 to valueColumnNamesLength).toArray,
+          hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator, conversion10to16ColumnIdxes.toArray,
+          fieldNames,
+          (hashColumnNamesLength until (hashColumnNamesLength + valueColumnNamesLength)).toArray,
+          valueMapEnabledColumnIdxes.toArray, valueMapEnabledWhere, valueMaps,
           jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
           FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
         val futureTask = new FutureTask[FutureTaskResult](task)
@@ -214,7 +253,10 @@ object Jdbc2Hashes {
     if(numInBatch > 0){
       logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
       val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-        hashNamePrefix, Array(0),hashSeperator, fieldNames, (1 to valueColumnNamesLength).toArray,
+        hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator, conversion10to16ColumnIdxes.toArray,
+        fieldNames,
+        (hashColumnNamesLength until (hashColumnNamesLength + valueColumnNamesLength)).toArray,
+        valueMapEnabledColumnIdxes.toArray, valueMapEnabledWhere, valueMaps,
         jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
         FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
       val futureTask = new FutureTask[FutureTaskResult](task)
@@ -301,11 +343,16 @@ object Jdbc2Hashes {
     val hashNamePrefix = (conf \ "load" \ "hashNamePrefix").text.trim
     val hashColumnNames = (conf \ "load" \ "hashColumnNames").text.trim
     val hashSeperator = (conf \ "load" \ "hashSeperator").text.trim
-    val valueColumnNames = (conf \ "load" \ "valueColumnNames").text.trim
-    val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
+
+    val conversion10to16ColumnNames = (conf \ "load" \ "conversion10to16.columnNames").text
 
     val fieldNames = (conf \ "load" \ "fieldNames").text.trim
-
+    val valueColumnNames = (conf \ "load" \ "valueColumnNames").text.trim
+    val valueMapEnabledColumnNames = (conf \ "load" \ "valueMapEnabled.columnNames").text.trim
+    val valueMapEnabledWhere = (conf \ "load" \ "valueMapEnabled.where").text.trim
+    val valueMapEnabledWhereSeperator = (conf \ "load" \ "valueMapEnabled.where.seperator").text.trim
+    val valueMapEnabledWhereValueSeperator = (conf \ "load" \ "valueMapEnabled.where.valueSeperator").text.trim
+    val valueMaps = (conf \ "load" \ "valueMaps").text.trim
 
     val batchLimit = (conf \ "load" \ "batchLimit").text.trim
     val batchLimitForRedis = (conf \ "load" \ "batchLimit.redis").text.trim
@@ -348,10 +395,15 @@ object Jdbc2Hashes {
     props.put("load.hashNamePrefix", hashNamePrefix)
     props.put("load.hashColumnNames", hashColumnNames)
     props.put("load.hashSeperator", hashSeperator)
-    props.put("load.valueColumnNames", valueColumnNames)
-    props.put("load.valueSeperator", valueSeperator)
+    props.put("load.conversion10to16.columnNames", conversion10to16ColumnNames)
 
     props.put("load.fieldNames", fieldNames)
+    props.put("load.valueColumnNames", valueColumnNames)
+    props.put("load.valueMapEnabled.columnNames", valueMapEnabledColumnNames)
+    props.put("load.valueMapEnabled.where", valueMapEnabledWhere)
+    props.put("load.valueMapEnabled.where.seperator", valueMapEnabledWhereSeperator)
+    props.put("load.valueMapEnabled.where.valueSeperator", valueMapEnabledWhereValueSeperator)
+    props.put("load.valueMaps", valueMaps)
 
     props.put("load.batchLimit", batchLimit)
     props.put("load.batchLimit.redis", batchLimitForRedis)
@@ -375,3 +427,7 @@ object Jdbc2Hashes {
   }
 
 }
+
+
+
+

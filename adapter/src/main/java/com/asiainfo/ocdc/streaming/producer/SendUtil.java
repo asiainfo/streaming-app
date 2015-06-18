@@ -106,7 +106,7 @@ public class SendUtil {
 			if (msgList == null) {
 				msgList = new ArrayList<KeyedMessage<String, String>>();
 			}
-			String key = msg.split(",")[2];
+			String key = msg.split(",")[6] + msg.split(",")[7];
 			msgList.add(new KeyedMessage<String, String>(topic, key, msg));
 		}
 		return msgList;

@@ -13,38 +13,84 @@
     </jedisPool>
 
     <jdbcPool>
-        <maxActive>100</maxActive>
-        <initialSize>10</initialSize>
-        <maxIdle>100</maxIdle>
-        <minIdle>10</minIdle>
+        <maxActive>100</maxActive> <!-- 设置连接池最大连接数 -->
+        <initialSize>10</initialSize> <!-- 设置连接池初始化连接数 -->
+        <maxIdle>100</maxIdle> <!-- 设置连接池最大空闲连接数 -->
+        <minIdle>10</minIdle> <!-- 设置连接池最小空闲连接数 -->
         <maxAage>0</maxAage>
     </jdbcPool>
 
     <load>
         <from>db</from>
 
-        <driver>com.mysql.jdbc.Driver</driver>
-        <url>jdbc:mysql://mysql1:3306/test?useCursorFetch=true</url> <!-- 设置数据库的URL -->
-        <username>root</username>
-        <password>mysql123</password>
-        <table>tab_test_jdbc2hashes</table>
-        <isBigTable>true</isBigTable>
+        <!--for from db-->
+        <driver>com.mysql.jdbc.Driver</driver> <!-- 设置连接数据库使用的driver名-->
+        <url>jdbc:mysql://mysql1:3306/test?useCursorFetch=true</url> <!-- 设置连接数据库使用的URL -->
+        <username>root</username> <!-- 设置连接数据库使用的用户名-->
+        <password>mysql123</password> <!-- 设置连接数据库使用的密码-->
+        <table>tab_test_jdbc2hashes</table> <!-- 设置数据库中的源表-->
+        <isBigTable>true</isBigTable> <!-- 设置表是否是大表-->
 
-        <redis.type>multihashes</redis.type>
+        <!--for from file-->
+        <filename>tools/src/test/resources/load2hashes-thread-test.data</filename> <!-- 设置数据文件的路径 -->
+        <fileEncode>UTF-8</fileEncode> <!-- 设置数据文件的编码格式 -->
+        <columnSeperator>,</columnSeperator> <!-- 设置数据文件字段分隔符 -->
+
+
+        <redis.type>multihashes</redis.type> <!--设置加载到redis的类型，onehash:OneHashPerRecord, multihashes:OneHashAllRecords -->
 
         <sync.incrementEnabled>false</sync.incrementEnabled> <!-- 设置加载的类型，false全量加载, true增量加载-->
 
+        <!--for increment sync-->
+        <sync.insertFlag>1</sync.insertFlag> <!-- 设置增量同步时标识记录是新插入insert的值 -->
+        <sync.updateFlag>0</sync.updateFlag> <!-- 设置增量同步时标识记录是新更新update的值 -->
+        <sync.deleteFlag>-1</sync.deleteFlag> <!-- 设置增量同步时标识记录是新删除delete的值 -->
 
-        <!--load into multihashes form db-->
+        <sync.insertEnabled>true</sync.insertEnabled> <!-- 设置增量同步时是否同步新插入insert的记录 -->
+        <sync.updateEnabled>true</sync.updateEnabled> <!-- 设置增量同步时是否同步新更新update的记录 -->
+        <sync.deleteEnabled>true</sync.deleteEnabled> <!-- 设置增量同步时是否同步新删除delete的记录 -->
+
+        <!--increment sync from db-->
+        <sync.columnName>sync_flag</sync.columnName> <!-- 设置增量同步的同步标识列的字段名-->
+
+        <!--increment sync from db-->
+        <sync.idx>0</sync.idx> <!-- 设置增量同步的同步标识列的字段位置索引-->
+
+
+        <!--load into multihashes from db-->
         <hashNamePrefix>jdbc2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
         <hashColumnNames>id1,id2</hashColumnNames> <!-- 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔 -->
         <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
-
         <valueColumnNames>col3,col4</valueColumnNames> <!-- 设置加载列的列名，可以加载多个列数据，使用逗号分隔 -->
-        <fieldNames>field1, field2</fieldNames> <!-- 设置加载数据时Redis中对应的的hash属性名 -->
+        <fieldNames>field1, field2</fieldNames> <!-- 设置加载数据时Redis中对应的的hashkey的field名 -->
 
 
-        <numThreads>2</numThreads> <!-- 设置并行线程数-->
+        <!--load into multihashes from file-->
+        <hashNamePrefix>load2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
+        <hashIdxes>0,1</hashIdxes> <!-- 设置 hashkey取值字段的索引位置,可以使用多个列组合作为hashkey名，使用逗号分隔 -->
+        <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
+        <valueIdxes>2,3</valueIdxes> <!-- 设置加载列的索引，可以加载多个列数据，使用逗号分隔 -->
+        <fieldNames>field1, field2</fieldNames> <!-- 设置加载数据对应的的属性名 -->
+
+        <!--load into onehash from db-->
+        <hashName>jdbc2singlehash</hashName> <!-- 设置hashkey名 -->
+        <fieldColumnNames>id1,id2</fieldColumnNames> <!-- 设置 hashkey的field名,可以使用多个字段组合作为field名，使用逗号分隔 -->
+        <fieldSeperator>:</fieldSeperator> <!-- 设置 field名多个字段值组合的分隔符 -->
+        <valueColumnNames>col3,col4</valueColumnNames> <!-- 设置加载列的列名，取值作为对应field的value，可以加载多个列数据，使用逗号分隔 -->
+        <valueSeperator>#</valueSeperator> <!-- 设置 field名多个字段值组合的分隔符 -->
+
+
+        <!--load into onehash from file-->
+        <hashName>load2singlehash</hashName> <!-- 设置hashkey名 -->
+        <fieldIdxes>0,1</fieldIdxes> <!-- 设置哪几列作为 hashkey 的 field, 支持取多列数据进行组合 -->
+        <fieldSeperator>:</fieldSeperator> <!-- 设置多列数据组合hashkey 的 field名时使用的分隔符 -->
+        <valueIdxes>2,3</valueIdxes> <!-- 设置哪几列作为 对应field 的 value，支持写多个，会进行拼接 -->
+        <valueSeperator>#</valueSeperator> <!-- 设置多列数据组合hash 的 value时使用的分隔符 -->
+
+
+
+
+        <numThreads>2</numThreads> <!-- 设置加载线程的并行运行的最大线程数-->
         <batchLimit>30</batchLimit> <!-- 设置每个线程每批次加载的记录数量 -->
         <method>hmset</method> <!-- 设置加载方法 hset, hmset, pipeline_hset  -->
         <!--<method>pipeline_hset</method> -->
@@ -53,9 +99,9 @@
         <overwrite>true</overwrite> <!-- 设置加载过程中采用覆盖，还是追加 -->
         <appendSeperator>,</appendSeperator> <!-- 设置加载过程中追加时使用的分隔符 -->
 
-        <report.enabled>true</report.enabled>
-        <report.delay.seconds>5</report.delay.seconds>
-        <report.interval.seconds>60</report.interval.seconds>
+        <report.enabled>true</report.enabled> <!-- 设置加载过程中是否启用进度信息监控线程定期输出加载进度信息-->
+        <report.delay.seconds>5</report.delay.seconds> <!-- 设置输出加载进度信息的首次延迟时间，单位秒-->
+        <report.interval.seconds>60</report.interval.seconds> <!-- 设置输出加载进度信息的周期，单位秒-->
 
     </load>
 
@@ -159,6 +205,5 @@
         report.interval.seconds:设置输出加载进度信息的周期，单位秒
 
     </description>
-
 
 </configuration>

@@ -1,0 +1,171 @@
+<configuration>
+    <redis>
+        <servers>codis1:29001, codis1:29002</servers> <!-- 设置redis/codis地址, 格式为 ip:port -->
+        <database>4</database> <!-- 设置导入到redis/codis哪个db，默认有16个db，编号0-15 -->
+        <timeout>10000</timeout> <!-- 设置连接redis/codis最大超时,单位ms -->
+        <password></password> <!-- 设置连接redis/codis的密码 -->
+    </redis>
+
+    <jedisPool>
+        <maxTotal>100</maxTotal> <!-- 设置连接池最大连接数 -->
+        <maxIdle>15</maxIdle> <!-- 设置连接池最大空闲连接数 -->
+        <minIdle>0</minIdle> <!-- 设置连接池最小空闲连接数 -->
+    </jedisPool>
+
+    <jdbcPool>
+        <maxActive>100</maxActive>
+        <initialSize>10</initialSize>
+        <maxIdle>100</maxIdle>
+        <minIdle>10</minIdle>
+        <maxAage>0</maxAage>
+    </jdbcPool>
+
+    <load>
+        <from>db</from>
+
+        <!--from db-->
+        <driver>com.mysql.jdbc.Driver</driver>
+        <url>jdbc:mysql://mysql1:3306/test</url> <!-- 设置数据库的URL -->
+        <username>root</username>
+        <password>mysql123</password>
+        <table>tab_areamap_jdbc2singlehash</table>
+        <isBigTable>true</isBigTable>
+
+        <redis.type>multihashes</redis.type> <!--设置加载到redis的类型，onehash:OneHashPerRecord, multihashes:OneHashAllRecords -->
+
+        <sync.incrementEnabled>false</sync.incrementEnabled> <!-- 设置加载的类型，false全量加载, true增量加载-->
+
+        <!--for increment sync-->
+        <sync.insertFlag>1</sync.insertFlag>
+        <sync.updateFlag>0</sync.updateFlag>
+        <sync.deleteFlag>-1</sync.deleteFlag>
+
+        <sync.insertEnabled>true</sync.insertEnabled>
+        <sync.updateEnabled>true</sync.updateEnabled>
+        <sync.deleteEnabled>true</sync.deleteEnabled>
+
+
+        <!--from file-->
+        <filename>tools/src/test/resources/loadAreaMap-thread-test.data</filename> <!-- 设置数据文件的路径 -->
+        <!--<filename>tools/src/test/resources/loadAreaMap-thread-notMapped-test.data</filename>-->
+        <fileEncode>UTF-8</fileEncode> <!-- 设置数据文件的编码格式 -->
+        <columnSeperator>,</columnSeperator> <!-- 设置数据文件字段分隔符 -->
+
+        <!--load into multihashes from db-->
+        <hashNamePrefix>jdbc2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
+        <hashColumnNames>id1,id2</hashColumnNames> <!-- 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔 -->
+        <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
+
+        <conversion10to16.columnNames>id1,id2</conversion10to16.columnNames> <!-- 设置取值时需要进制转换的字段索引 -->
+
+        <fieldNames>area1,wlan</fieldNames> <!-- 设置加载数据时Redis中对应的的hash属性名 -->
+
+        <valueColumnNames>col3,col4</valueColumnNames> <!-- 设置加载列的列名，可以加载多个列数据，使用逗号分隔 -->
+        <valueMapEnabled>true</valueMapEnabled>
+        <valueMapEnabled.columnNames>col4</valueMapEnabled.columnNames> <!-- 设置需要进行value取值映射的列名 -->
+        <valueMapEnabled.where>WLAN;wlan</valueMapEnabled.where> <!-- 设置需要进行value取值映射的取值条件 -->
+        <valueMapEnabled.where.seperator>,</valueMapEnabled.where.seperator> <!-- 设置不同value的映射取值条件的分隔符 -->
+        <valueMapEnabled.where.valueSeperator>;</valueMapEnabled.where.valueSeperator> <!-- 设置value的映射取值条件多个取值的分隔符 -->
+        <valueMaps>1</valueMaps> <!-- 设置value的映射值 -->
+
+
+        <!--load into onehash from db-->
+        <hashName>areaMap1</hashName> <!-- 设置hashkey名 -->
+
+        <fieldColumnNames>id1,id2</fieldColumnNames> <!-- 设置哪几列作为 hash 的 field, 支持取多列数据进行组合 -->
+        <fieldSeperator>:</fieldSeperator> <!-- 设置多列数据组合hash 的 field名时使用的分隔符 -->
+
+        <conversion10to16.columnNames>id1,id2</conversion10to16.columnNames> <!-- 设置取值时需要进制转换的字段索引 -->
+
+        <valueColumnName>col4</valueColumnName> <!-- 设置作为 hash 的 value名-->
+        <valueMapEnabled>true</valueMapEnabled> <!-- 设置是否进行value取值映射 -->
+        <valueMap>WLAN</valueMap> <!-- 设置value的映射值 -->
+
+
+        <!--load into multihashes from file-->
+        <hashNamePrefix>jdbc2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
+        <hashIdxes>id1,id2</hashIdxes> <!-- 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔 -->
+        <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
+
+        <conversion10to16.idxes>id1,id2</conversion10to16.idxes> <!-- 设置取值时需要进制转换的字段索引 -->
+
+        <fieldNames>area1,wlan</fieldNames> <!-- 设置加载数据时Redis中对应的的hash属性名 -->
+
+        <valueIdxes>col3,col4</valueIdxes> <!-- 设置加载列的列名，可以加载多个列数据，使用逗号分隔 -->
+        <valueMapEnabled>true</valueMapEnabled>
+        <valueMapEnabled.columnIdxes>col4</valueMapEnabled.columnIdxes> <!-- 设置需要进行value取值映射的列名 -->
+        <valueMapEnabled.where>WLAN;wlan</valueMapEnabled.where> <!-- 设置需要进行value取值映射的取值条件 -->
+        <valueMapEnabled.where.seperator>,</valueMapEnabled.where.seperator> <!-- 设置不同value的映射取值条件的分隔符 -->
+        <valueMapEnabled.where.valueSeperator>;</valueMapEnabled.where.valueSeperator> <!-- 设置value的映射取值条件多个取值的分隔符 -->
+        <valueMaps>1</valueMaps> <!-- 设置value的映射值 -->
+
+
+        <!--load into onehash from file-->
+        <hashName>areaMap1</hashName> <!-- 设置hashkey名 -->
+
+        <fieldIdxes>0,1</fieldIdxes> <!-- 设置哪几列作为 hash 的 field, 支持取多列数据进行组合 -->
+        <fieldSeperator>:</fieldSeperator> <!-- 设置多列数据组合hash 的 field名时使用的分隔符 -->
+
+        <conversion10to16.idxes>0,1</conversion10to16.idxes> <!-- 设置取值时需要进制转换的字段索引 -->
+
+        <valueIdx>3</valueIdx> <!-- 设置作为 hash 的 value 的位置索引 -->
+        <valueMapEnabled>true</valueMapEnabled> <!-- 设置是否进行value取值映射 -->
+        <valueMap>WLAN</valueMap> <!-- 设置value的映射值 -->
+
+
+
+        <batchLimit>30</batchLimit> <!-- 设置每个线程每批次加载的记录数量 -->
+        <batchLimit.redis>6</batchLimit.redis> <!-- 设置redis每批次加载(pipeline_hset, hmset)的记录数量 -->
+        <numThreads>2</numThreads>
+
+        <method>hmset</method> <!-- 设置加载方法 hset, hmset, pipeline_hset  -->
+        <!--<method>pipeline_hset</method>-->
+        <overwrite>true</overwrite> <!-- 设置加载过程中采用覆盖，还是追加 -->
+        <appendSeperator>,</appendSeperator> <!-- 设置加载过程中追加时使用的分隔符 -->
+
+        <report.enabled>true</report.enabled>
+        <report.delay.seconds>5</report.delay.seconds>
+        <report.interval.seconds>60</report.interval.seconds>
+    </load>
+
+    <description>
+        reids部分：
+        servers：设置 redis/codis 的服务ip地址和端口
+        database: 设置导入到哪个 db
+        timeout: 设置连接的超时，单位 ms
+        password: 设置访问密码
+
+        jedisPool部分：
+        maxTotal: 设置连接池最大连接数
+        maxIdle: 设置连接池最大空闲连接数
+        minIdle: 设置连接池最小空闲连接数
+
+        load部分:
+        from: 标识数据源:file/db，程序内部没有使用，后期可能会用到,如果是from=db，需要配置 driver,url,username,password
+        driver: jdbc驱动名
+        url: jdbc访问url
+        username: jdbc访问用户名
+        password: jdbc访问密码
+        table: jdbc访问的表名
+
+        hashName：设置hash名
+        fieldColumnNames: 设置哪几列作为 hash 的 field, 支持取多列数据进行组合
+        fieldSeperator: 设置多列数据组合hash 的 field名时使用的分隔符
+        conversion10to16.columnNames：设置取值时需要进制转换的字段名
+
+        valueColumnName:设置作为 hash 的 value的字段名
+        valueSeperator: 设置多列数据组合hash 的 value时使用的分隔符
+        valueMapEnabled：设置是否进行value取值映射
+        valueMap：设置用于映射的值
+
+        numThreads 设置多线程的数量
+        batchLimit：设置每个线程一次处理的记录数
+
+        method：设置加载到redis的方法： hset,hmset,pipeline_hset
+        batchLimit.redis: 设置批量加载到redis的批量提交的记录数
+
+        overwrite： 设置加载时是否覆盖已存在的数据，true覆盖，false先检查是否含有要加载的值，有忽略，没有追加
+        appendSeperator： 设置加载过程中追加时使用的分隔符
+    </description>
+
+</configuration>

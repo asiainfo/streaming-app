@@ -1,13 +1,12 @@
-package tools.redis.load
+package tools.redis.load.areamap
 
-import java.sql.ResultSet
 import java.text.SimpleDateFormat
 import java.util.concurrent.{Executors, FutureTask, TimeUnit}
-import java.util.{Date, Properties, Timer}
+import java.util.{HashMap => JHashMap, _}
 
 import org.slf4j.LoggerFactory
-import tools.jdbc.JdbcUtils
 import tools.redis.RedisUtils
+import tools.redis.load.{FutureTaskResult, LoadStatus, LoadStatusUpdateThread, MonitorTask}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.xml.XML
@@ -15,7 +14,7 @@ import scala.xml.XML
 /**
  * Created by tsingfu on 15/6/7.
  */
-object Jdbc2Hashes {
+object File2Hashes0 {
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -45,26 +44,23 @@ object Jdbc2Hashes {
     val jedisPoolMaxIdle = props.getProperty("jedisPool.maxIdle").trim.toInt
     val jedisPoolMinIdle = props.getProperty("jedisPool.minIdle").trim.toInt
 
-    val jdbcPoolMaxActive = props.getProperty("jdbcPool.maxActive").trim.toInt
-    val jdbcPoolInitialSize = props.getProperty("jdbcPool.initialSize").trim.toInt
-    val jdbcPoolMaxIdle = props.getProperty("jdbcPool.maxIdle").trim.toInt
-    val jdbcPoolMinIdle = props.getProperty("jdbcPool.minIdle").trim.toInt
-
     val from = props.getProperty("load.from").trim
+    assert(from=="file", "WARN: support only file From now")
 
-    val jdbcDriver = props.getProperty("load.driver").trim
-    val jdbcUrl = props.getProperty("load.url").trim
-    val jdbcUsername = props.getProperty("load.username").trim
-    val jdbcPassword = props.getProperty("load.password").trim
-    val jdbcTable = props.getProperty("load.table").trim
-    val jdbcIsBigTable = props.getProperty("load.isBigTable").trim.toBoolean
+    val filename = props.getProperty("load.filename").trim
+    val fileEncode = props.getProperty("load.fileEncode").trim
+    val columnSeperator = props.getProperty("load.columnSeperator").trim
 
     val hashNamePrefix = props.getProperty("load.hashNamePrefix").trim
-    val hashColumnNames = props.getProperty("load.hashColumnNames").trim.split(",").map(_.trim)
+    val hashIdxes = props.getProperty("load.hashIdxes").trim.split(",").map(_.trim.toInt)
     val hashSeperator = props.getProperty("load.hashSeperator").trim
 
-    val valueColumnNames = props.getProperty("load.valueColumnNames").trim.split(",").map(_.trim)
-    val fieldNames = props.getProperty("load.fieldNames").trim.split(",").map(_.trim)
+    val fieldName = props.getProperty("load.fieldName").trim
+    val valueIdx = props.getProperty("load.valueIdx").trim.toInt
+
+    val valueMapEnabled = props.getProperty("load.valueMapEnabled").trim.toBoolean
+    val valueMap = props.getProperty("load.valueMap").trim
+    val conversion10to16Idxes = props.getProperty("load.conversion10to16.columnNames").trim.split(",").map(_.trim.toInt)
 
     val batchLimit = props.getProperty("load.batchLimit").trim.toInt
     val batchLimitForRedis = props.getProperty("load.batchLimit.redis").trim.toInt
@@ -104,31 +100,13 @@ object Jdbc2Hashes {
     val threadPool2 = Executors.newFixedThreadPool(1)
 
 
-    //初始化jdbc连接池，获取conn和stmt
-    val ds = JdbcUtils.init_dataSource(jdbcDriver, jdbcUrl, jdbcUsername, jdbcPassword,
-      jdbcPoolMaxActive, jdbcPoolInitialSize, jdbcPoolMaxIdle, jdbcPoolMinIdle)
-
-    val conn = ds.getConnection
-    val stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
-
-
     //获取要加载的记录数
-    val countSql = "select count(1) from " + jdbcTable
-    logger.info("SQL : " + countSql)
-    val countRs = stmt.executeQuery(countSql)
-    while(countRs.next()){
-      loadStatus.numTotal = countRs.getLong(1)
-    }
-    logger.info(jdbcTable + " numTotal = " + loadStatus.numTotal)
-    countRs.close()
+    loadStatus.numTotal = scala.io.Source.fromFile(filename, fileEncode).getLines().length
 
 
     //遍历数据准备，初始化构造线程任务处理批量数据的信息
     //格式： Array[String]
     //      String格式: hashNameValue, fieldValue1, fieldValue2 ,... fieldValuen
-    val hashColumnNamesLength = hashColumnNames.length
-    val valueColumnNamesLength = valueColumnNames.length
-    val columnSeperator = "Jdbc2HashesSeperator"
     var numInBatch = 0
     var batchArrayBuffer: ArrayBuffer[String] = null
     def jedisPoolId = (loadStatus.numBatches % numPools).toInt
@@ -144,59 +122,23 @@ object Jdbc2Hashes {
     val loadStatusUpdateTask = new LoadStatusUpdateThread(loadStatus, taskMap)
     threadPool2.submit(loadStatusUpdateTask)
 
+
     //遍历数据，提交加载任务，之后等待加载完成
-    //解决大表遍历内存问题
-    // 针对mysql大表setFetchSize无效问题的处理
-    // 参考
-    // Ref: [JDBC基础-setFetchSize方法](http://blog.csdn.net/hx756262429/article/details/8196845)
-    // Ref: [关于oracle与mysql官方jdbc的一些区别](http://blog.csdn.net/seven_3306/article/details/9303979)
-    // For Mysql: 正常情况下MySQL的JDBC是不支持setFetchSize()方法设置的，总是一次性全部抓取到内存中，大表遍历时会遇到内存溢出问题
-    //    解决方法：
-    //    方法1，分页抓取以降低内存开销，问题，程序复杂，查询效率低
-    //    方法2，JDBC自动以流的方式进行数据抓取，statement.setFetchSize(Integer.MIN_VALUE);
-    //    方法3，尝试在JDBC的URL上加上参数"useCursorFetch=true"，可以按setFetchSize指定的数量批量抓取数据，
-    //          问题：支持MySQL 5.0 以上的Server/Connector。推荐以此方式解决这个问题
-    //          现场测试没有生效
-    //
-    if(jdbcIsBigTable){
-      if(jdbcDriver.equals("com.mysql.jdbc.Driver")){
-        if (!jdbcUrl.contains("useCursorFetch=true")){
-          logger.info(jdbcDriver + " with default fetchSize = " + stmt.getFetchSize + ", not found useCursorFetch=true in mysql url, so set fetchSize to Integer.MIN_VALUE")
-          stmt.setFetchSize(Integer.MIN_VALUE)
-          stmt.setFetchDirection(ResultSet.FETCH_FORWARD)
-        } else {
-          logger.info(jdbcDriver + " with default fetchSize = " + stmt.getFetchSize + ", found useCursorFetch=true in mysql url, so set fetchSize to " + batchLimit)
-          stmt.setFetchSize(batchLimit)
-        }
-      } else {
-        logger.info(jdbcDriver + " with default fetchSize = " + stmt.getFetchSize + ",  set fetchSize to " + batchLimit)
-        stmt.setFetchSize(batchLimit)
-      }
-    }
 
-    val sql = "select " + hashColumnNames.mkString(",") + "," +
-            valueColumnNames.mkString(",") +
-            " from " + jdbcTable
-    logger.info("SQL : "+sql)
-
-    val rs = stmt.executeQuery(sql)
-
-    while(rs.next()){
+    for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
       loadStatus.numScanned += 1
-
-      val hashNameValue = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(hashSeperator)
-      val fieldValues = for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)
 
       if(numInBatch == 0){
         batchArrayBuffer = new ArrayBuffer[String]()
       }
-      batchArrayBuffer.append(hashNameValue + columnSeperator + fieldValues.mkString(columnSeperator))
+      batchArrayBuffer.append(line)
       numInBatch += 1
 
       if(numInBatch == batchLimit){
         logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-        val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-          hashNamePrefix, Array(0),hashSeperator, fieldNames, (1 to valueColumnNamesLength).toArray,
+        val task = new Load2HashesThread0(batchArrayBuffer.toArray, columnSeperator,
+          hashNamePrefix, hashIdxes,hashSeperator, conversion10to16Idxes,
+          fieldName, valueIdx, valueMapEnabled, valueMap,
           jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
           FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
         val futureTask = new FutureTask[FutureTaskResult](task)
@@ -213,8 +155,9 @@ object Jdbc2Hashes {
     //遍历完数据后，提交没有达到batchLimit的batch任务
     if(numInBatch > 0){
       logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-      val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-        hashNamePrefix, Array(0),hashSeperator, fieldNames, (1 to valueColumnNamesLength).toArray,
+      val task = new Load2HashesThread0(batchArrayBuffer.toArray, columnSeperator,
+        hashNamePrefix, hashIdxes, hashSeperator, conversion10to16Idxes,
+        fieldName, valueIdx, valueMapEnabled, valueMap,
         jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
         FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
       val futureTask = new FutureTask[FutureTaskResult](task)
@@ -260,7 +203,6 @@ object Jdbc2Hashes {
     }
     jedisPools.foreach(_.close())
 
-    JdbcUtils.closeQuiet(rs, stmt, conn)
   }
 
   /**
@@ -282,29 +224,19 @@ object Jdbc2Hashes {
     val maxIdle = (conf \ "jedisPool" \ "maxIdle").text.trim
     val minIdle = (conf \ "jedisPool" \ "minIdle").text.trim
 
-
-    val jdbcPoolMaxActive = (conf \ "jdbcPool" \ "maxActive").text.trim
-    val jdbcPoolInitialSize =  (conf \ "jdbcPool" \ "initialSize").text.trim
-    val jdbcPoolMaxIdle = (conf \ "jdbcPool" \ "maxIdle").text.trim
-    val jdbcPoolMinIdle = (conf \ "jdbcPool" \ "minIdle").text.trim
-
-
     val from = (conf \ "load" \ "from").text.trim
 
-    val jdbcDriver = (conf \ "load" \ "driver").text.trim
-    val jdbcUrl = (conf \ "load" \ "url").text.trim
-    val jdbcUsername = (conf \ "load" \ "username").text.trim
-    val jdbcPassword = (conf \ "load" \ "password").text.trim
-    val jdbcTable = (conf \ "load" \ "table").text.trim
-    val jdbcIsBigTable =  (conf \ "load" \ "isBigTable").text.trim
+    val filename = (conf \ "load" \ "filename").text.trim
+    val fileEncode = (conf \ "load" \ "fileEncode").text.trim
+    val columnSeperator = (conf \ "load" \ "columnSeperator").text.trim
 
     val hashNamePrefix = (conf \ "load" \ "hashNamePrefix").text.trim
-    val hashColumnNames = (conf \ "load" \ "hashColumnNames").text.trim
+    val hashIdxes = (conf \ "load" \ "hashIdxes").text.trim
     val hashSeperator = (conf \ "load" \ "hashSeperator").text.trim
-    val valueColumnNames = (conf \ "load" \ "valueColumnNames").text.trim
-    val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
 
-    val fieldNames = (conf \ "load" \ "fieldNames").text.trim
+    val fieldName = (conf \ "load" \ "fieldName").text.trim
+    val valueIdx = (conf \ "load" \ "valueIdx").text.trim
+    //    val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
 
 
     val batchLimit = (conf \ "load" \ "batchLimit").text.trim
@@ -331,27 +263,18 @@ object Jdbc2Hashes {
     props.put("jedisPool.maxIdle", maxIdle)
     props.put("jedisPool.minIdle", minIdle)
 
-    props.put("jdbcPool.maxActive", jdbcPoolMaxActive)
-    props.put("jdbcPool.initialSize", jdbcPoolInitialSize)
-    props.put("jdbcPool.maxIdle", jdbcPoolMaxIdle)
-    props.put("jdbcPool.minIdle", jdbcPoolMinIdle)
-
-    props.put("load.driver", jdbcDriver)
-    props.put("load.url", jdbcUrl)
-    props.put("load.username", jdbcUsername)
-    props.put("load.password", jdbcPassword)
-    props.put("load.table", jdbcTable)
-    props.put("load.isBigTable", jdbcIsBigTable)
-
     props.put("load.from", from)
+    props.put("load.filename", filename)
+    props.put("load.fileEncode", fileEncode)
+    props.put("load.columnSeperator", columnSeperator)
 
     props.put("load.hashNamePrefix", hashNamePrefix)
-    props.put("load.hashColumnNames", hashColumnNames)
+    props.put("load.hashIdxes", hashIdxes)
     props.put("load.hashSeperator", hashSeperator)
-    props.put("load.valueColumnNames", valueColumnNames)
-    props.put("load.valueSeperator", valueSeperator)
 
-    props.put("load.fieldNames", fieldNames)
+    props.put("load.fieldName", fieldName)
+    props.put("load.valueIdx", valueIdx)
+    //    props.put("load.valueSeperator", valueSeperator)
 
     props.put("load.batchLimit", batchLimit)
     props.put("load.batchLimit.redis", batchLimitForRedis)
@@ -375,3 +298,7 @@ object Jdbc2Hashes {
   }
 
 }
+
+
+
+

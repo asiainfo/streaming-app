@@ -1,6 +1,4 @@
-package tools.redis.load
-
-import java.util.concurrent.Callable
+package tools.redis.load.prototype
 
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.JedisPool
@@ -9,23 +7,23 @@ import scala.collection.convert.wrapAsJava._
 import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.ArrayBuffer
 
+
 /**
- * Created by tsingfu on 15/6/9.
+ * Created by tsingfu on 15/6/7.
  */
 class Load2HashesThread(lines: Array[String], columnSeperator: String,
                         hashNamePrefix: String, hashIdxes: Array[Int], hashSeperator: String,
                         fieldNames: Array[String], valueIdxes: Array[Int],
                         jedisPool: JedisPool,
                         loadMethod:String, batchLimit:Int,
-                        overwrite: Boolean, appendSeperator: String,
-                        taskResult: FutureTaskResult) extends Callable[FutureTaskResult] with Thread.UncaughtExceptionHandler {
+                        overwrite: Boolean, appendSeperator: String) extends Runnable with Thread.UncaughtExceptionHandler {
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
-  override def call(): FutureTaskResult = {
+  override def run(): Unit = {
 
-    val jedis = jedisPool.getResource
-    val pipeline = jedis.pipelined()
+    var jedis = jedisPool.getResource
+    var pipeline = jedis.pipelined()
 
     var numProcessed = 0
     var numInBatch = 0
@@ -38,13 +36,10 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
 
     logger.info("batchSize = " + lines.length)
     for(line <- lines){
-      numProcessed += 1
-      logger.debug("numProcessed = "+numProcessed+", numBatches = "+ numBatches +", numInBatch = "+ numInBatch +", line => " + line.split(columnSeperator).mkString("[",",","]"))
-
+      logger.debug("numProcessed = "+numProcessed+",numBatches = "+ numBatches +", numInBatch = "+ numInBatch +", line => " + line.split(columnSeperator).mkString("[",",","]"))
       try{
         val lineArray = line.split(columnSeperator).map(_.trim)
         numInBatch += 1
-        //      logger.debug("[debug1] hashIdxes = " + hashIdxes.mkString("[",",","]") + " # " * 1  + "hashValues = " + (for (idx <- hashIdxes) yield lineArray(idx)).mkString("[",",","]"))
         val hashName = hashNamePrefix + (for (idx <- hashIdxes) yield lineArray(idx)).mkString(hashSeperator)
 
         fieldNames.zip(valueIdxes).foreach(kv => {
@@ -52,17 +47,17 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
           loadMethod match {
             case "hset" =>
               if(overwrite) {//如果 overwrite == true， 直接插入
-                logger.debug("hset(" + hashName +", "+k +","+lineArray(i)+")")
+                logger.debug("[debug2] hset(" + hashName +", "+k +","+lineArray(i)+")")
 
                 jedis.hset(hashName, k, lineArray(i))
               } else {//如果 overwrite != true， 先查询，检查是否含有要append的值，没有append，有则不做操作
               val value_exist = jedis.hget(hashName, k)
                 if(value_exist == null){
-                  logger.debug("hset(" + hashName +", "+k +","+lineArray(i)+")")
+                  logger.debug("[debug2] hset(" + hashName +", "+k +","+lineArray(i)+")")
                   jedis.hset(hashName, k, lineArray(i))
                 } else {
                   if(!value_exist.split(appendSeperator).contains(lineArray(i))){
-                    logger.debug("hset(" + hashName +", "+k +","+(value_exist + appendSeperator + lineArray(i))+")")
+                    logger.debug("[debug2] hset(" + hashName +", "+k +","+(value_exist + appendSeperator + lineArray(i))+")")
                     jedis.hset(hashName, k, value_exist + appendSeperator + lineArray(i))
                   }
                 }
@@ -90,21 +85,22 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
         loadMethod match {
           case "hset" =>
           case "hmset" => // 因为每一行的hashName不同，所以hmset操作比较特别，每行一次提交
-            if(overwrite){
+            if (overwrite) {
               jedis.hmset(hashName, fvMap)
-            } else { //如果overwrite != true, 批量获取已存在的值，如果值存在且不含有要加载的值，则追加，如果值存在且含有要加载的值，跳过；如果值不存在，插入
-            val values_exist = jedis.hmget(hashName, fieldArray: _*)
-              values_exist.zipWithIndex.foreach(v0idx=>{
+            } else {
+              //如果overwrite != true, 批量获取已存在的值，如果值存在且不含有要加载的值，则追加，如果值存在且含有要加载的值，跳过；如果值不存在，插入
+              val values_exist = jedis.hmget(hashName, fieldArray: _*)
+              values_exist.zipWithIndex.foreach(v0idx => {
                 val (v_exist, i) = v0idx
-                if(v_exist != null){
-                  if(!v_exist.split(appendSeperator).contains(valueArray(i))){
-                    fvMap.put(fieldArray(i), v_exist + appendSeperator+ valueArray(i))
+                if (v_exist != null) {
+                  if (!v_exist.split(appendSeperator).contains(valueArray(i))) {
+                    fvMap.put(fieldArray(i), v_exist + appendSeperator + valueArray(i))
                   } else {
                     fvMap.remove(fieldArray(i))
                   }
                 }
               })
-              if(fvMap.size > 0){
+              if (fvMap.size > 0) {
                 jedis.hmset(hashName, fvMap)
               }
             }
@@ -137,7 +133,6 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
                 })
               }
 
-              //TODO: 处理pipeline异常
               pipeline.sync()
               hashNameArray.clear()
               fieldArray.clear()
@@ -148,12 +143,13 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
           numBatches += 1
           numInBatch = 0
         }
+        numProcessed += 1
       }catch{
-      case e:Exception => e.printStackTrace()
-      case x: Throwable =>
-        println("= = " * 20)
-        logger.error("get unknown exception")
-        println("= = " * 20)
+        case e:Exception => e.printStackTrace()
+        case x: Throwable =>
+          println("= = " * 20)
+          logger.error("get unknown exception")
+          println("= = " * 20)
       }
     }
 
@@ -178,7 +174,6 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
               })
             }
 
-            //TODO: 处理pipeline异常
             pipeline.sync()
             hashNameArray.clear()
             fieldArray.clear()
@@ -196,13 +191,11 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
           println("= = " * 20)
       }
     }
-    logger.info("finished batchSize = " + lines.length)
 
+    logger.info("finished batchSize = " + lines.length)
 
     //回收资源，释放jedis，但不释放 jedisPool
     jedisPool.returnResourceObject(jedis)
-
-    taskResult.copy(numProcessed=numProcessed)
   }
 
   override def uncaughtException(thread: Thread, throwable: Throwable): Unit = {

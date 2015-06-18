@@ -11,9 +11,9 @@ import tools.jdbc.JdbcUtils
 import tools.redis.RedisUtils
 
 /**
- * Created by tsingfu on 15/6/8.
+ * Created by tsingfu on 15/6/14.
  */
-class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
+class Jdbc2OneHashSuite extends FunSuite with BeforeAndAfter {
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -152,12 +152,12 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
     val conn = ds.getConnection
     val stmt = conn.createStatement()
 
-    val tabName_test = "tab_test_jdbc2hashes"
+    val tabName_test = "tab_test_jdbc2singlehash"
 
 //    stmt.execute("create table if not exists "+tabName_test+" (id1 int, id2 int, col3 varchar(50), col4 varchar(50))")
 //    stmt.execute("truncate table "+tabName_test)
 //
-//    for(i <- 0 until 10; j<- 0 until 10){
+//    for(i <- 0 until 1000; j<- 0 until 1000){
 //      stmt.execute("insert into "+tabName_test+" value ("+i+","+j+",\"value-test-"+i+"\", \"value-test-"+j+"\")")
 //    }
 
@@ -172,50 +172,30 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
     println(rs.getString(4))
     assert(rs.getString(4)=="value-test-"+3)
 
-/*
-    //为 Jdbc2SingleHash准备数据
-    val tabName_test2="tab_test_jdbc2singlehash"
-    stmt.execute("create table if not exists "+tabName_test2 +" as select * from " + tabName_test)
-*/
-
-    val tabName_test3 = tabName_test + "_change"
-//    stmt.execute("create table if not exists "+tabName_test3+" (sync_flag int, id1 int, id2 int, col3 varchar(50), col4 varchar(50))")
-//    stmt.execute("truncate table "+tabName_test3)
-
-    val insertId = "11"
-    val updateId1 = "2"
-    val updateId2 = "3"
-    val deleteId1 = "3"
-    val deleteId2 = "2"
-
-    stmt.execute("insert into "+tabName_test3+" value (1," + insertId + ","+ insertId+",\"value-test-"+insertId+"\", \"value-test-"+insertId+"\")")
-    stmt.execute("insert into "+tabName_test3+" value (0," + updateId1 + ","+ updateId2+",\"value-test2-"+updateId1+"\", \"value-test2-"+updateId2+"\")")
-    stmt.execute("insert into "+tabName_test3+" value (-1," + deleteId1 + ","+ deleteId2+",\"value-test-"+deleteId1+"\", \"value-test-"+deleteId2+"\")")
-
     JdbcUtils.closeQuiet(rs, stmt, conn)
 
   }
 
 
-  test("2 测试 tools/conf/redis-load/jdbc2hashes-test.xml"){
+  test("2 测试 tools/conf/redis-load/jdbc2onehash-test.xml"){
 
     //测试数据，如：2,3,value-test-2,value-test-3
-    // 从mysql tab_test_jdbc2hashes表中导入id1,id2,col3,col4 4列数据到redis中,
-    // id1,id2取值使用冒号拼接，和前缀jdbc2hashes:共同组成hash名
-    // col3,col4取值作为value，属性名分别对应field1,field2
-    val confXmlFile = "tools/conf/redis-load/jdbc2hashes-test.xml"
-    Jdbc2Hashes.jdbc2Hashes(confXmlFile)
+    // 从mysql tab_test_jdbc2singlehash表中导入id1,id2,col3,col4 4列数据到redis中jdbc2singlehash中,
+    // id1,id2取值作为field名
+    // col3,col4取值作为value
+    val confXmlFile = "tools/conf/redis-load/jdbc2onehash-test.xml"
+    Jdbc2OneHash.jdbc2SingleHash(confXmlFile)
 
-    val props = Jdbc2Hashes.init_props_fromXml(confXmlFile)
-    val hashNamePrefix = props.getProperty("load.hashNamePrefix")
+    val props = Jdbc2OneHash.init_props_fromXml(confXmlFile)
+    val hashName = props.getProperty("load.hashName")
 
     //检查结果
-    println("hgetall " + hashNamePrefix + "\"2:3\"")
-    val rs1 = jedises(0).hgetAll(hashNamePrefix + "2:3")
+    println("hgetall " + hashName)
+    val rs1 = jedises(0).hgetAll(hashName)
     println("rs1 = "+rs1)
 
-    assert(rs1.get("field1")=="value-test-2")
-    assert(rs1.get("field2")=="value-test-3")
-    assert(rs1.size() == 2)
+    assert(rs1.get("2:3")=="value-test-2#value-test-3")
+    assert(rs1.size() == 100)
   }
+
 }
