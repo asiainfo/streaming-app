@@ -53,6 +53,7 @@ class Sync2OneHashHdelThread(lines: Array[String], columnSeperator: String,
             case "hset" =>
             case "hmset" =>
             case "pipeline_hset" => //如果 overwrite==true，批量覆盖；
+              //TODO: 处理pipeline异常
               pipeline.sync()
             case _ =>
               logger.error("Error: unsupported loadMethod = " + loadMethod)
@@ -76,6 +77,7 @@ class Sync2OneHashHdelThread(lines: Array[String], columnSeperator: String,
           case "hset" =>
           case "hmset" =>
           case "pipeline_hset" =>
+            //TODO: 处理pipeline异常
             pipeline.sync()
           case _ =>
             logger.error("Error: unsupported loadMethod = " + loadMethod)

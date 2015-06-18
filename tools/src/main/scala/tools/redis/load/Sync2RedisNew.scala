@@ -15,7 +15,7 @@ import scala.xml.XML
 /**
  * Created by tsingfu on 15/6/16.
  */
-object Sync2Redis {
+object Sync2RedisNew {
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -121,7 +121,7 @@ object Sync2Redis {
 
 
     //初始化线程池
-    val threadPool = Executors.newFixedThreadPool(numThreads)
+    var threadPool = Executors.newFixedThreadPool(numThreads)
     val threadPool2 = Executors.newFixedThreadPool(1)
 
 
@@ -254,6 +254,74 @@ object Sync2Redis {
 
             val syncColumnIdx = hashColumnNamesLength + valueColumnNamesLength + 1 //sync标识字段的位置索引
 
+
+            //存在一种update方式：先delete，在insert，这种情况多线程加载不能确保delete在insert之前执行，处理方法：先同步delete再同步insert和update
+            //先同步delete操作
+
+            if(syncIncrementEnabled && syncDeleteEnabled){
+              logger.info("do delete operations first")
+              while(rs.next()){
+                loadStatus.numScanned += 1
+
+                val hashNameValue = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(hashSeperator)
+                val fieldValues = for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)
+
+                  val syncFlag = rs.getString(syncColumnIdx)
+                  logger.debug("syncFlag = " + syncFlag)
+                  if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
+                    batchArrayBufferForDelete.append(hashNameValue + columnSeperator + fieldNames.mkString(columnSeperator))
+                    numInBatchForDelete += 1
+                  }
+
+                  if(numInBatchForDelete == batchLimit){
+                    logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                    val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                      hashNamePrefix, Array(0),hashSeperator, fieldNames,
+                      jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                      FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                    val futureTask = new FutureTask[FutureTaskResult](task)
+
+                    threadPool.submit(futureTask)
+                    taskMap.put(loadStatus.numBatches, futureTask)
+
+                    loadStatus.numBatches += 1
+                    numInBatchForDelete = 0
+
+                    batchArrayBufferForDelete = new ArrayBuffer[String]()
+                  }
+              }
+
+
+              //遍历完数据后，提交没有达到batchLimit的batch任务
+                if(numInBatchForDelete > 0){
+                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                  val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashNamePrefix, Array(0),hashSeperator, fieldNames,
+                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                  val futureTask = new FutureTask[FutureTaskResult](task)
+
+                  threadPool.submit(futureTask)
+                  taskMap.put(loadStatus.numBatches, futureTask)
+
+                  loadStatus.numBatches += 1
+                  numInBatchForDelete = 0
+                }
+
+              threadPool.shutdown()
+              threadPool.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
+
+              logger.info("delete operations done")
+
+              threadPool = Executors.newFixedThreadPool(numThreads)
+
+            }
+
+
+            //再同步update和insert
+            logger.info("do insert and update operations")
+            //rs.beforeFirst() //ResultSet.TYPE_FORWARD_ONLY情况下不支持
+            rs = stmt.executeQuery(sql)
             while(rs.next()){
               loadStatus.numScanned += 1
 
@@ -264,9 +332,8 @@ object Sync2Redis {
                 val syncFlag = rs.getString(syncColumnIdx)
                 logger.debug("syncFlag = " + syncFlag)
                 if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
-                  batchArrayBufferForDelete.append(hashNameValue + columnSeperator + fieldNames.mkString(columnSeperator))
-                  numInBatchForDelete += 1
-                } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
+
+                }else if (syncFlag == syncInsertFlag && syncInsertEnabled){
                   batchArrayBuffer.append(hashNameValue + columnSeperator + fieldValues.mkString(columnSeperator))
                   numInBatch += 1
                 } else if (syncFlag == syncUpdateFlag && syncUpdateEnabled){
@@ -297,25 +364,6 @@ object Sync2Redis {
 
                 batchArrayBuffer = new ArrayBuffer[String]()
               }
-
-              if(syncIncrementEnabled){
-                if(numInBatchForDelete == batchLimit){
-                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                  val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                    hashNamePrefix, Array(0),hashSeperator, fieldNames,
-                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
-                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
-                  val futureTask = new FutureTask[FutureTaskResult](task)
-
-                  threadPool.submit(futureTask)
-                  taskMap.put(loadStatus.numBatches, futureTask)
-
-                  loadStatus.numBatches += 1
-                  numInBatchForDelete = 0
-
-                  batchArrayBufferForDelete = new ArrayBuffer[String]()
-                }
-              }
             }
 
 
@@ -333,23 +381,6 @@ object Sync2Redis {
 
               loadStatus.numBatches += 1
               numInBatch = 0
-            }
-
-            if(syncIncrementEnabled){
-              if(numInBatchForDelete > 0){
-                logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                  hashNamePrefix, Array(0),hashSeperator, fieldNames,
-                  jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
-                  FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
-                val futureTask = new FutureTask[FutureTaskResult](task)
-
-                threadPool.submit(futureTask)
-                taskMap.put(loadStatus.numBatches, futureTask)
-
-                loadStatus.numBatches += 1
-                numInBatchForDelete = 0
-              }
             }
 
 
@@ -383,6 +414,74 @@ object Sync2Redis {
 
             val syncColumnIdx = fieldColumnNamesLength + valueColumnNamesLength + 1 //sync标识字段的位置索引
 
+            //存在一种update方式：先delete，在insert，这种情况多线程加载不能确保delete在insert之前执行，处理方法：先同步delete再同步insert和update
+            //先同步delete操作
+            if(syncIncrementEnabled && syncDeleteEnabled) {
+              logger.info("do delete operations first")
+              while (rs.next()) {
+                loadStatus.numScanned += 1
+
+                val field = (for (i <- 1 to fieldColumnNamesLength) yield rs.getString(i)).mkString(fieldSeperator)
+                val value = (for (i <- fieldColumnNamesLength + 1 to fieldColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(valueSeperator)
+
+                val syncFlag = rs.getString(syncColumnIdx)
+                if (syncFlag == syncDeleteFlag && syncDeleteEnabled) {
+                  batchArrayBufferForDelete.append(field + columnSeperator + value)
+                  numInBatchForDelete += 1
+                }
+
+
+                if (numInBatchForDelete == batchLimit) {
+                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch + "]")
+                  val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashName,
+                    Array(0), fieldSeperator,
+                    jedisPools(jedisPoolId), loadMethod, batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                  val futureTask = new FutureTask[FutureTaskResult](task)
+
+                  threadPool.submit(futureTask)
+                  taskMap.put(loadStatus.numBatches, futureTask)
+
+                  loadStatus.numBatches += 1
+                  numInBatchForDelete = 0
+
+                  batchArrayBufferForDelete = new ArrayBuffer[String]()
+                }
+
+              }
+
+              //遍历完数据后，提交没有达到batchLimit的batch任务
+              if (numInBatchForDelete > 0) {
+                logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch + "]")
+                val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                  hashName,
+                  Array(0), fieldSeperator,
+                  jedisPools(jedisPoolId), loadMethod, batchLimitForRedis,
+                  FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                val futureTask = new FutureTask[FutureTaskResult](task)
+
+                threadPool.submit(futureTask)
+                taskMap.put(loadStatus.numBatches, futureTask)
+
+                loadStatus.numBatches += 1
+                numInBatchForDelete = 0
+              }
+
+              threadPool.shutdown()
+              threadPool.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
+
+              logger.info("done delete operations")
+
+              threadPool = Executors.newFixedThreadPool(numThreads)
+            }
+
+
+
+            //再同步update和insert
+            logger.info("do insert and update operations")
+            //rs.beforeFirst() //ResultSet.TYPE_FORWARD_ONLY情况下不支持
+            rs = stmt.executeQuery(sql)
             while(rs.next()){
               loadStatus.numScanned += 1
 
@@ -392,8 +491,7 @@ object Sync2Redis {
               if(syncIncrementEnabled){
                 val syncFlag = rs.getString(syncColumnIdx)
                 if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
-                  batchArrayBufferForDelete.append(field + columnSeperator + value)
-                  numInBatchForDelete += 1
+
                 } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
                   batchArrayBuffer.append(field + columnSeperator + value)
                   numInBatch += 1
@@ -429,26 +527,6 @@ object Sync2Redis {
                 batchArrayBuffer = new ArrayBuffer[String]()
               }
 
-              if(syncIncrementEnabled){
-                if(numInBatchForDelete == batchLimit){
-                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                  val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                    hashName,
-                    Array(0), fieldSeperator,
-                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
-                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
-                  val futureTask = new FutureTask[FutureTaskResult](task)
-
-                  threadPool.submit(futureTask)
-                  taskMap.put(loadStatus.numBatches, futureTask)
-
-                  loadStatus.numBatches += 1
-                  numInBatchForDelete = 0
-
-                  batchArrayBufferForDelete = new ArrayBuffer[String]()
-                }
-              }
-
             }
 
 
@@ -468,24 +546,6 @@ object Sync2Redis {
 
               loadStatus.numBatches += 1
               numInBatch = 0
-            }
-
-            if(syncIncrementEnabled){
-              if(numInBatchForDelete > 0){
-                logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                  hashName,
-                  Array(0), fieldSeperator,
-                  jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
-                  FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
-                val futureTask = new FutureTask[FutureTaskResult](task)
-
-                threadPool.submit(futureTask)
-                taskMap.put(loadStatus.numBatches, futureTask)
-
-                loadStatus.numBatches += 1
-                numInBatchForDelete = 0
-              }
             }
         }
       case "file" =>
@@ -510,7 +570,74 @@ object Sync2Redis {
             val fieldNames = props.getProperty("load.fieldNames").trim.split(",").map(_.trim)
 
 
+            //存在一种update方式：先delete，在insert，这种情况多线程加载不能确保delete在insert之前执行，处理方法：先同步delete再同步insert和update
+            //先同步delete操作
             //遍历数据，，提交加载任务，之后等待加载完成
+            if(syncIncrementEnabled && syncDeleteEnabled){
+              logger.info("do delete operations first")
+              for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
+                loadStatus.numScanned += 1
+
+                  val lineArray = line.split(columnSeperator)
+                  val syncFlag = lineArray(syncIdx)
+
+                  if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
+                    batchArrayBufferForDelete.append(line)
+                    numInBatchForDelete += 1
+                  }
+
+                if(syncIncrementEnabled){
+                  if(numInBatchForDelete == batchLimit){
+                    logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                    val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                      hashNamePrefix, hashIdxes, hashSeperator,
+                      fieldNames,
+                      jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                      FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                    val futureTask = new FutureTask[FutureTaskResult](task)
+
+                    threadPool.submit(futureTask)
+                    taskMap.put(loadStatus.numBatches, futureTask)
+
+                    loadStatus.numBatches += 1
+                    numInBatchForDelete = 0
+
+                    batchArrayBufferForDelete = new ArrayBuffer[String]()
+                  }
+                }
+
+              }
+
+
+              //遍历完数据后，提交没有达到batchLimit的batch任务
+                if(numInBatchForDelete > 0){
+                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                  val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashNamePrefix, hashIdxes, hashSeperator,
+                    fieldNames,
+                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                  val futureTask = new FutureTask[FutureTaskResult](task)
+
+                  threadPool.submit(futureTask)
+                  taskMap.put(loadStatus.numBatches, futureTask)
+
+                  loadStatus.numBatches += 1
+                  numInBatchForDelete = 0
+
+                }
+
+              threadPool.shutdown()
+              threadPool.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
+
+              logger.info("done delete operations")
+
+              threadPool = Executors.newFixedThreadPool(numThreads)
+            }
+
+
+            logger.info("do insert and update operations")
+            //再同步update和insert
             for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
               loadStatus.numScanned += 1
 
@@ -519,8 +646,7 @@ object Sync2Redis {
                 val syncFlag = lineArray(syncIdx)
 
                 if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
-                  batchArrayBufferForDelete.append(line)
-                  numInBatchForDelete += 1
+
                 } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
                   batchArrayBuffer.append(line)
                   numInBatch += 1
@@ -555,26 +681,6 @@ object Sync2Redis {
                 batchArrayBuffer = new ArrayBuffer[String]()
               }
 
-              if(syncIncrementEnabled){
-                if(numInBatchForDelete == batchLimit){
-                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                  val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                    hashNamePrefix, hashIdxes, hashSeperator,
-                    fieldNames,
-                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
-                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
-                  val futureTask = new FutureTask[FutureTaskResult](task)
-
-                  threadPool.submit(futureTask)
-                  taskMap.put(loadStatus.numBatches, futureTask)
-
-                  loadStatus.numBatches += 1
-                  numInBatchForDelete = 0
-
-                  batchArrayBufferForDelete = new ArrayBuffer[String]()
-                }
-              }
-
             }
 
 
@@ -595,25 +701,6 @@ object Sync2Redis {
               numInBatch = 0
             }
 
-            if(syncIncrementEnabled){
-              if(numInBatchForDelete > 0){
-                logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                  hashNamePrefix, hashIdxes, hashSeperator,
-                  fieldNames,
-                  jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
-                  FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
-                val futureTask = new FutureTask[FutureTaskResult](task)
-
-                threadPool.submit(futureTask)
-                taskMap.put(loadStatus.numBatches, futureTask)
-
-                loadStatus.numBatches += 1
-                numInBatchForDelete = 0
-
-              }
-            }
-
 
           case "onehash" =>
             val hashName = props.getProperty("load.hashName").trim
@@ -623,7 +710,72 @@ object Sync2Redis {
             val valueSeperator = props.getProperty("load.valueSeperator").trim
 
 
+            //存在一种update方式：先delete，在insert，这种情况多线程加载不能确保delete在insert之前执行，处理方法：先同步delete再同步insert和update
+            //先同步delete操作
+            if(syncIncrementEnabled && syncDeleteEnabled) {
+              logger.info("do delete operations first")
 
+              //遍历数据，，提交加载任务，之后等待加载完成
+              for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
+                loadStatus.numScanned += 1
+
+                val lineArray = line.split(columnSeperator)
+                val syncFlag = lineArray(syncIdx)
+
+                if (syncFlag == syncDeleteFlag && syncDeleteEnabled) {
+                  batchArrayBufferForDelete.append(line)
+                  numInBatchForDelete += 1
+                }
+
+                if (numInBatchForDelete == batchLimit) {
+                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch + "]")
+                  val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashName,
+                    fieldIdxes, fieldSeperator,
+                    jedisPools(jedisPoolId), loadMethod, batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                  val futureTask = new FutureTask[FutureTaskResult](task)
+
+                  threadPool.submit(futureTask)
+                  taskMap.put(loadStatus.numBatches, futureTask)
+
+                  loadStatus.numBatches += 1
+                  numInBatch = 0
+
+                  batchArrayBufferForDelete = new ArrayBuffer[String]()
+                }
+
+              }
+
+                //遍历完数据后，提交没有达到batchLimit的batch任务
+
+                if (numInBatchForDelete > 0) {
+                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch + "]")
+                  val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashName,
+                    fieldIdxes, fieldSeperator,
+                    jedisPools(jedisPoolId), loadMethod, batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                  val futureTask = new FutureTask[FutureTaskResult](task)
+
+                  threadPool.submit(futureTask)
+                  taskMap.put(loadStatus.numBatches, futureTask)
+
+                  loadStatus.numBatches += 1
+                  numInBatch = 0
+
+                }
+
+              threadPool.shutdown()
+              threadPool.awaitTermination(Long.MaxValue, TimeUnit.DAYS)
+
+              logger.info("done delete operations")
+
+              threadPool = Executors.newFixedThreadPool(numThreads)
+            }
+
+            //再同步insert和update
+            logger.info("do insert and update operations")
             //遍历数据，，提交加载任务，之后等待加载完成
             for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
               loadStatus.numScanned += 1
@@ -633,8 +785,7 @@ object Sync2Redis {
                 val syncFlag = lineArray(syncIdx)
 
                 if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
-                  batchArrayBufferForDelete.append(line)
-                  numInBatchForDelete += 1
+
                 } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
                   batchArrayBuffer.append(line)
                   numInBatch += 1
@@ -669,25 +820,6 @@ object Sync2Redis {
                 batchArrayBuffer = new ArrayBuffer[String]()
               }
 
-              if(syncIncrementEnabled){
-                if(numInBatchForDelete == batchLimit){
-                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                  val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                    hashName,
-                    fieldIdxes, fieldSeperator,
-                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
-                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
-                  val futureTask = new FutureTask[FutureTaskResult](task)
-
-                  threadPool.submit(futureTask)
-                  taskMap.put(loadStatus.numBatches, futureTask)
-
-                  loadStatus.numBatches += 1
-                  numInBatch = 0
-
-                  batchArrayBufferForDelete = new ArrayBuffer[String]()
-                }
-              }
 
             }
 
@@ -710,24 +842,6 @@ object Sync2Redis {
               numInBatch = 0
             }
 
-            if(syncIncrementEnabled){
-              if(numInBatchForDelete > 0){
-                logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                  hashName,
-                  fieldIdxes, fieldSeperator,
-                  jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
-                  FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
-                val futureTask = new FutureTask[FutureTaskResult](task)
-
-                threadPool.submit(futureTask)
-                taskMap.put(loadStatus.numBatches, futureTask)
-
-                loadStatus.numBatches += 1
-                numInBatch = 0
-
-              }
-            }
         }
     }
 

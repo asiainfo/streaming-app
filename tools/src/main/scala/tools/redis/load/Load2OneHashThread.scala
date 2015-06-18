@@ -127,6 +127,7 @@ class Load2OneHashThread(lines: Array[String], columnSeperator: String,
                   })
                 }
 
+                //TODO: 处理pipeline异常
                 pipeline.sync()
                 fieldArray.clear()
                 valueArray.clear()
@@ -193,7 +194,7 @@ class Load2OneHashThread(lines: Array[String], columnSeperator: String,
                 }
               })
             }
-
+            //TODO: 处理pipeline异常
             pipeline.sync()
             fieldArray.clear()
             valueArray.clear()
