@@ -12,6 +12,8 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("cache_update_interval", 2
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("checkpoint_dir","streaming/checkpoint");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("morning8time","8:00:01");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("afternoon8time","23:30:00");
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("codisQryThreadNum",500);
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("pipeLineBatch",200);
 
 
 -- init EventSources

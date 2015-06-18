@@ -2,7 +2,9 @@ package com.asiainfo.ocdc.streaming.tool
 
 import java.nio.ByteBuffer
 import java.util
+import java.util.concurrent.FutureTask
 
+import com.asiainfo.ocdc.streaming.MainFrameConf
 import redis.clients.jedis.Jedis
 
 import scala.collection.convert.wrapAsJava.mapAsJavaMap
@@ -136,19 +138,19 @@ abstract class RedisCacheManager extends CacheManager {
   }
 
   //old method
-/*  override def setMultiCache(keysvalues: Map[String, Any]) {
-    val t1 = System.currentTimeMillis()
-    val seqlist = new ArrayList[Array[Byte]]()
-    val it = keysvalues.keySet.iterator
-    while (it.hasNext) {
-      val elem = it.next()
-      seqlist.add(elem.getBytes)
-      seqlist.add(getKryoTool.serialize(keysvalues(elem)).array())
-    }
-    val r = getConnection.mset(seqlist.toIndexedSeq: _*)
-    System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
-    r
-  }*/
+  /*  override def setMultiCache(keysvalues: Map[String, Any]) {
+      val t1 = System.currentTimeMillis()
+      val seqlist = new ArrayList[Array[Byte]]()
+      val it = keysvalues.keySet.iterator
+      while (it.hasNext) {
+        val elem = it.next()
+        seqlist.add(elem.getBytes)
+        seqlist.add(getKryoTool.serialize(keysvalues(elem)).array())
+      }
+      val r = getConnection.mset(seqlist.toIndexedSeq: _*)
+      System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
+      r
+    }*/
 
   //new method for pipeline
   override def setMultiCache(keysvalues: Map[String, Any]) {
@@ -157,24 +159,24 @@ abstract class RedisCacheManager extends CacheManager {
     val pl = getConnection.pipelined()
     while (it.hasNext) {
       val elem = it.next()
-      pl.set(elem.getBytes,getKryoTool.serialize(keysvalues(elem)).array())
+      pl.set(elem.getBytes, getKryoTool.serialize(keysvalues(elem)).array())
     }
     pl.sync()
     System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
   }
 
-//  override def setMultiCache(keysvalues: Map[String, Any]) {
-//    val t1 = System.currentTimeMillis()
-//    val it = keysvalues.keySet.iterator
-//    while (it.hasNext) {
-//      val elem = it.next()
-//      new Thread() {
-//        override def run() {
-//          getConnection.set(elem.getBytes,getKryoTool.serialize(keysvalues(elem)).array())
-//        }}.start()
-//    }
-//    System.out.println("MSETTest " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
-//  }
+  //  override def setMultiCache(keysvalues: Map[String, Any]) {
+  //    val t1 = System.currentTimeMillis()
+  //    val it = keysvalues.keySet.iterator
+  //    while (it.hasNext) {
+  //      val elem = it.next()
+  //      new Thread() {
+  //        override def run() {
+  //          getConnection.set(elem.getBytes,getKryoTool.serialize(keysvalues(elem)).array())
+  //        }}.start()
+  //    }
+  //    System.out.println("MSETTest " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
+  //  }
 
 
   //old method
@@ -206,7 +208,7 @@ abstract class RedisCacheManager extends CacheManager {
   }*/
 
   //new method for pipeline
-  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
+  /*override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
     val t1 = System.currentTimeMillis()
     val multimap = Map[String, Any]()
     val bytekeys = keys.map(x => x.getBytes).toSeq
@@ -214,6 +216,61 @@ abstract class RedisCacheManager extends CacheManager {
     val pgl = getConnection.pipelined()
     bytekeys.foreach(x => pgl.get(x))
     val cachedata = pgl.syncAndReturnAll().asInstanceOf[util.List[Array[Byte]]]
+
+    val t2 = System.currentTimeMillis()
+    System.out.println("MGET " + keys.size + " key cost " + (t2 - t1))
+
+    val anyvalues = cachedata.map(x => {
+      if (x != null && x.length > 0) {
+        val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
+        data
+      }
+      else null
+    }).toList
+
+    for (i <- 0 to keys.length - 1) {
+      multimap += (keys(i) -> anyvalues(i))
+    }
+
+    System.out.println("DESERIALIZED " + keys.size + " key cost " + (System.currentTimeMillis() - t2))
+
+    multimap
+  }*/
+
+  //new method for pipeline by multiThread
+  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
+    val t1 = System.currentTimeMillis()
+    val multimap = Map[String, Any]()
+    var bytekeys = keys.map(x => x.getBytes).toSeq
+
+    val miniBatch = MainFrameConf.getInt("pipeLineBatch")
+
+    val cachedata = new util.ArrayList[Array[Byte]]()
+
+    val taskMap = Map[Int, FutureTask[util.List[Array[Byte]]]]()
+    var index = 0
+    while (bytekeys.size > 0) {
+      val qrytask = new Qry(bytekeys.take(miniBatch))
+      val futuretask = new FutureTask[util.List[Array[Byte]]](qrytask)
+      CacheQryThreadPool.threadPool.submit(futuretask)
+      taskMap.put(index, futuretask)
+
+      bytekeys = bytekeys.drop(miniBatch)
+      index += 1
+    }
+
+    println("start thread : " + index)
+
+    while(taskMap.size > 0){
+      val keys = taskMap.keys
+      keys.foreach(key => {
+        val task = taskMap.get(key).get
+        if(task.isDone){
+          cachedata.addAll(task.get())
+          taskMap.remove(key)
+        }
+      })
+    }
 
     val t2 = System.currentTimeMillis()
     System.out.println("MGET " + keys.size + " key cost " + (t2 - t1))
