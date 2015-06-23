@@ -159,32 +159,44 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
           val minimap = mutable.Map[String, SourceObject]()
 
-//          val labelQryMap = mutable.Map[String, mutable.Set[String]]()
+          val labelQryKeysMap = mutable.Map[String, mutable.Set[String]]()
 
           while (iter.hasNext && totalFetch < conf.getInt("batchsize")) {
             val currentLine = iter.next()
             minimap += ("Label:" + currentLine.generateId -> currentLine)
+
+            labelRuleArray.foreach(labelRule => {
+              val labelId = labelRule.conf.get("id")
+              val qryKey = labelRule.getQryKeys(currentLine)
+              if (qryKey != null) {
+                labelQryKeysMap.get(labelId) match {
+                  case Some(v) => v += (qryKey)
+                  case None => labelQryKeysMap += (labelId -> (mutable.Set[String]() += (qryKey)))
+                }
+              }
+            })
+
             totalFetch += 1
             currentPos = 0
             result = true
-
-            /*labelRuleArray.foreach(labelRule => {
-              val labelId = labelRule.conf.get("id")
-              val qryKey = labelRule.getQryKey(currentLine)
-              labelQryMap.get(labelId) match {
-                case Some(v) => v += (qryKey)
-                case None => labelQryMap += (labelId -> (mutable.Set[String]() += (qryKey)))
-              }
-            })*/
-
           }
 
           println(" partition data size = " + totalFetch)
 
+          val f1 = System.currentTimeMillis()
           val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
           //          val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)
-
           val f2 = System.currentTimeMillis()
+          println(" query label cache data cost time : " + (f2 - f1) + " millis ! ")
+
+
+          val labelQryMap = mutable.Map[String, Map[String, Map[String, String]]]()
+          labelQryKeysMap.foreach(x => {
+            labelQryMap += (x._1 -> CacheFactory.getManager.hgetall(x._2.toList))
+          })
+          val f3 = System.currentTimeMillis()
+          println(" query label need data cost time : " + (f3 - f2) + " millis ! ")
+
           val cachemap_new = minimap.map(x => {
             val key = x._1
             val value = x._2
@@ -219,7 +231,25 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
               var old_cache: StreamingCache = null
               if (cacheOpt != None) old_cache = cacheOpt.get
 
-              val newcache = labelRule.attachLabel(value, old_cache)
+              val labelQryData = labelQryMap.get(labelRule.conf.get("id")) match {
+                case Some(v) => v
+                case None => null
+              }
+
+              /*println(" label " + labelRule.conf.get("id") + " qry datas : ")
+              val ite = labelQryData.iterator
+              if(ite.hasNext){
+                val v = ite.next()
+                println("key : " + v._1)
+                val ite2 = v._2.iterator
+                if(ite2.hasNext){
+                  val v2 = ite2.next()
+                  println("innerkey : " + v2._1)
+                  println("innervalue : " + v2._2)
+                }
+              }*/
+
+              val newcache = labelRule.attachLabel(value, old_cache, labelQryData)
               rule_caches = rule_caches.updated(labelRule.conf.get("id"), newcache)
 
             })
@@ -227,11 +257,14 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
             (key -> rule_caches.asInstanceOf[Any])
           })
-          println(" Exec labels cost time : " + (System.currentTimeMillis() - f2) + " millis ! ")
+
+          val f4 = System.currentTimeMillis()
+          println(" Exec labels cost time : " + (f4 - f3) + " millis ! ")
 
           //update caches to CacheManager
           CacheFactory.getManager.setMultiCache(cachemap_new)
           //          CacheFactory.getManager.setByteCacheString(cachemap_new.head._1,cachemap_new.head._2)
+          println(" update labels cache cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
 
           arrayBuffer = currentArrayBuffer.toArray
           result

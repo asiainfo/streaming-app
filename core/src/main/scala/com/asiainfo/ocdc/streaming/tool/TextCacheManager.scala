@@ -130,4 +130,7 @@ class TextCacheManager extends CacheManager {
     rmap
   }
 
+  override def hgetall(keys: List[String]): Map[String, Map[String, String]] = {
+    null
+  }
 }

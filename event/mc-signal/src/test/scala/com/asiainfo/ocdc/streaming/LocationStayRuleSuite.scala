@@ -1,3 +1,4 @@
+/*
 package com.asiainfo.ocdc.streaming
 
 import java.text.SimpleDateFormat
@@ -802,3 +803,4 @@ class LocationStayRuleSuite extends FunSuite with BeforeAndAfter {
   }
 }
 
+*/

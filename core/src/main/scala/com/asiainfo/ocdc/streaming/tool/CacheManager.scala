@@ -40,6 +40,8 @@ trait CacheManager extends org.apache.spark.Logging {
   def getMultiCacheByKeys(keys: List[String]): Map[String, Any]
 
   def setCommonCacheValue(cacheName: String, key: String, value: String)
+
+  def hgetall(keys: List[String]): Map[String, Map[String, String]]
 }
 
 
@@ -153,7 +155,7 @@ abstract class RedisCacheManager extends CacheManager {
     }*/
 
   //new method for pipeline
-  override def setMultiCache(keysvalues: Map[String, Any]) {
+  /*override def setMultiCache(keysvalues: Map[String, Any]) {
     val t1 = System.currentTimeMillis()
     val it = keysvalues.keySet.iterator
     val pl = getConnection.pipelined()
@@ -162,6 +164,39 @@ abstract class RedisCacheManager extends CacheManager {
       pl.set(elem.getBytes, getKryoTool.serialize(keysvalues(elem)).array())
     }
     pl.sync()
+    System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
+  }*/
+
+  //new set method for pipeline by multiThread
+  override def setMultiCache(keysvalues: Map[String, Any]) {
+    val t1 = System.currentTimeMillis()
+
+    val miniBatch = MainFrameConf.getInt("pipeLineBatch")
+    val taskMap = Map[Int, FutureTask[String]]()
+    var index = 0
+    var innermap = keysvalues
+    while (innermap.size > 0) {
+      val settask = new Insert(innermap.take(miniBatch))
+      val futuretask = new FutureTask[String](settask)
+      CacheQryThreadPool.threadPool.submit(futuretask)
+      taskMap.put(index, futuretask)
+      keysvalues
+      innermap = innermap.drop(miniBatch)
+      index += 1
+    }
+
+    println("start thread : " + index)
+
+    while (taskMap.size > 0) {
+      val keys = taskMap.keys
+      keys.foreach(key => {
+        val task = taskMap.get(key).get
+        if (task.isDone) {
+          taskMap.remove(key)
+        }
+      })
+    }
+
     System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
   }
 
@@ -237,15 +272,12 @@ abstract class RedisCacheManager extends CacheManager {
     multimap
   }*/
 
-  //new method for pipeline by multiThread
+  //new get method for pipeline by multiThread
   override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
-    val t1 = System.currentTimeMillis()
     val multimap = Map[String, Any]()
     var bytekeys = keys.map(x => x.getBytes).toSeq
 
     val miniBatch = MainFrameConf.getInt("pipeLineBatch")
-
-    val cachedata = new util.ArrayList[Array[Byte]]()
 
     val taskMap = Map[Int, FutureTask[util.List[Array[Byte]]]]()
     var index = 0
@@ -260,22 +292,26 @@ abstract class RedisCacheManager extends CacheManager {
     }
 
     println("start thread : " + index)
+    val cachedata = Map[Int, util.List[Array[Byte]]]()
 
-    while(taskMap.size > 0){
+    while (taskMap.size > 0) {
       val keys = taskMap.keys
       keys.foreach(key => {
         val task = taskMap.get(key).get
-        if(task.isDone){
-          cachedata.addAll(task.get())
+        if (task.isDone) {
+          cachedata += (key -> task.get())
           taskMap.remove(key)
         }
       })
     }
 
-    val t2 = System.currentTimeMillis()
-    System.out.println("MGET " + keys.size + " key cost " + (t2 - t1))
+    val flatdata = new util.ArrayList[Array[Byte]]()
 
-    val anyvalues = cachedata.map(x => {
+    cachedata.toList.sortBy(_._1).map(_._2).foreach(x => {
+      x.foreach(flatdata.add(_))
+    })
+
+    val anyvalues = flatdata.map(x => {
       if (x != null && x.length > 0) {
         val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
         data
@@ -286,13 +322,57 @@ abstract class RedisCacheManager extends CacheManager {
     for (i <- 0 to keys.length - 1) {
       multimap += (keys(i) -> anyvalues(i))
     }
-
-    System.out.println("DESERIALIZED " + keys.size + " key cost " + (System.currentTimeMillis() - t2))
-
     multimap
   }
 
   override def setCommonCacheValue(cacheName: String, key: String, value: String) = {
     getConnection.hset(cacheName, key, value)
+  }
+
+
+  //new get method for pipeline by multiThread
+  override def hgetall(keys: List[String]): Map[String, Map[String, String]] = {
+    val multimap = Map[String, Map[String, String]]()
+    var bytekeys = keys.toSeq
+
+    val miniBatch = MainFrameConf.getInt("pipeLineBatch")
+
+    val taskMap = Map[Int, FutureTask[util.List[util.Map[String, String]]]]()
+    var index = 0
+    while (bytekeys.size > 0) {
+      val qrytask = new QryHashall(bytekeys.take(miniBatch))
+      val futuretask = new FutureTask[util.List[util.Map[String, String]]](qrytask)
+      CacheQryThreadPool.threadPool.submit(futuretask)
+      taskMap.put(index, futuretask)
+
+      bytekeys = bytekeys.drop(miniBatch)
+      index += 1
+    }
+
+    val cachedata = Map[Int, util.List[util.Map[String, String]]]()
+
+    println("hgetall start thread : " + index)
+
+    while (taskMap.size > 0) {
+      val keys = taskMap.keys
+      keys.foreach(key => {
+        val task = taskMap.get(key).get
+        if (task.isDone) {
+          cachedata += (key -> task.get())
+          taskMap.remove(key)
+        }
+      })
+    }
+
+    val flatdata = new util.ArrayList[util.Map[String, String]]()
+
+    cachedata.toList.sortBy(_._1).map(_._2).foreach(x => {
+      x.foreach(flatdata.add(_))
+    })
+
+    for (i <- 0 to keys.length - 1) {
+      multimap += (keys(i) -> flatdata(i))
+    }
+    multimap
   }
 }

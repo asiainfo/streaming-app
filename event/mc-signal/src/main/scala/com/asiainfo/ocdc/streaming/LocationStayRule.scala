@@ -52,7 +52,7 @@ class LocationStayRule extends MCLabelRule {
   /**
    * 框架调用入口方法
    */
-  def attachMCLabel(mc: MCSourceObject, cache: StreamingCache): StreamingCache = {
+  def attachMCLabel(mc: MCSourceObject, cache: StreamingCache, labelQryData: Map[String, Map[String, String]]): StreamingCache = {
     //a. 获取locationStayRule的cache对象
     val cacheInstance = if (cache == null) new LabelProps
     else cache.asInstanceOf[LabelProps]

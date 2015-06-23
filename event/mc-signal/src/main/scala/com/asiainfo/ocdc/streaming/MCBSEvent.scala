@@ -40,6 +40,7 @@ class MCBSEvent extends BusinessEvent {
           message += value + delim
         }
         message = message.substring(0, (message.length - delim.length))
+        message = message + System.currentTimeMillis()
 
 //        println("Output Message --> " + message)
         (key, message)

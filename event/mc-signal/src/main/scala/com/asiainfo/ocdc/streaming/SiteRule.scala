@@ -5,6 +5,8 @@ import com.asiainfo.ocdc.streaming.constant.LabelConstant
 import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
 import com.asiainfo.ocdc.streaming.tool.CacheFactory
 
+import scala.collection.mutable.Map
+
 
 /**
  * @author surq
@@ -12,12 +14,13 @@ import com.asiainfo.ocdc.streaming.tool.CacheFactory
  * @comment 给mc信令标记区域标签
  */
 class SiteRule extends MCLabelRule {
-  def attachMCLabel(mcSourceObj: MCSourceObject, cache: StreamingCache): StreamingCache = {
+  def attachMCLabel(mcSourceObj: MCSourceObject, cache: StreamingCache, labelQryData: Map[String, Map[String, String]]): StreamingCache = {
     val lac = mcSourceObj.lac
     val ci = mcSourceObj.ci
 
     // 根据largeCell解析出所属区域
-    val cachedArea = CacheFactory.getManager.getHashCacheMap("lacci2area:" + lac + ":" + ci)
+    //    val cachedArea = CacheFactory.getManager.getHashCacheMap("lacci2area:" + lac + ":" + ci)
+    val cachedArea = labelQryData.get(getQryKeys(mcSourceObj)).get
 
     /*val onsiteList = largeCellAnalysis(lac, ci)
     val propMap = scala.collection.mutable.Map[String, String]()
@@ -40,5 +43,8 @@ class SiteRule extends MCLabelRule {
     if (cachedArea == null || cachedArea.isEmpty) List[String]() else cachedArea.split(",").toList
   }
 
-//  override def getQryKeys(mc: MCSourceObject): String = "lacci2area:" + mc.lac + ":" + mc.ci
+  override def getQryKeys(mc: SourceObject): String = {
+    val mcsource = mc.asInstanceOf[MCSourceObject]
+    "lacci2area:" + mcsource.lac + ":" + mcsource.ci
+  }
 }

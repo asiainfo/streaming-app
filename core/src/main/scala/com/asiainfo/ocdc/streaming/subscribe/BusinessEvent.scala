@@ -45,7 +45,7 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     val currentEvent = filtevents.iterator.next()._2
     val selectedData = currentEvent.selectExpr(selectExp: _*)
 
-    val checkedData = selectedData.map(row => {
+    /*val checkedData = selectedData.map(row => {
       var resultData: Option[Row] = None
       val currTime = System.currentTimeMillis()
       val hashkey = getHashKey(row)
@@ -96,7 +96,78 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
       }
 
       resultData
-    })
+    })*/
+
+
+    def execEvent(eventMap: Map[String, DataFrame]) {
+      val filtevents = eventMap.filter(x => eventRules.contains(x._1))
+      val currentEvent = filtevents.iterator.next()._2
+      val selectedData = currentEvent.selectExpr(selectExp: _*)
+
+      /*val hashKeys =
+      selectedData.foreach(row => {
+
+      })*/
+
+
+      val checkedData = selectedData.map(row => {
+        var resultData: Option[Row] = None
+        val currTime = System.currentTimeMillis()
+        val hashkey = getHashKey(row)
+        val time = getTime(row)
+        var status = CacheFactory.getManager.getHashCacheMap(hashkey)
+        // muti event source
+        if (eventSources.size > 1) {
+          if (status.size == 0) {
+            status = Map(sourceId -> time)
+            CacheFactory.getManager.setHashCacheMap(hashkey, status)
+          } else {
+            //          val lt = status.get(locktime).get.toLong
+            val lt = status.get(locktime).getOrElse("0").toLong
+            if (lt == 0) {
+              status += (sourceId -> time)
+              val maxTime = status.toList.sortBy(_._2).last._2
+              status.filter(_._2 + delayTime >= maxTime)
+
+              if (status.size == eventSources.size) status += (locktime -> currTime.toString)
+              CacheFactory.getManager.setHashCacheMap(hashkey, status)
+              resultData = Some(row)
+            } else {
+              if (lt + interval < currTime) {
+                status.clear()
+                status += (sourceId -> time)
+                CacheFactory.getManager.setHashCacheMap(hashkey, status)
+              }
+            }
+          }
+        }
+        // just single event source
+        else {
+          if (status.size == 0) {
+            status = Map(sourceId -> time)
+            status += (locktime -> currTime.toString)
+            CacheFactory.getManager.setHashCacheMap(hashkey, status)
+            resultData = Some(row)
+          } else {
+            val lt = status.get(locktime).getOrElse("0").toLong
+            if (lt + interval < currTime) {
+              status.clear()
+              status += (sourceId -> time)
+              status += (locktime -> currTime.toString)
+              CacheFactory.getManager.setHashCacheMap(hashkey, status)
+              resultData = Some(row)
+            }
+          }
+        }
+
+        resultData
+      })
+
+      //    val checkedData = selectedData.map(row => Option(row))
+
+      output(checkedData)
+
+    }
 
 //    val checkedData = selectedData.map(row => Option(row))
 

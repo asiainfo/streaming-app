@@ -2,6 +2,7 @@ package com.asiainfo.ocdc.streaming.labelrule
 
 import com.asiainfo.ocdc.streaming.SourceObject
 import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
+import scala.collection.mutable.Map
 
 /**
  * Created by tianyi on 3/26/15.
@@ -14,7 +15,7 @@ trait LabelRule extends Serializable {
     conf = lrconf
   }
 
-  def attachLabel(source: SourceObject, cache: StreamingCache): StreamingCache
+  def attachLabel(source: SourceObject, cache: StreamingCache, labelQryData: Map[String, Map[String, String]]): StreamingCache
 
-//  def getQryKey(source: SourceObject): String = null
+  def getQryKeys(source: SourceObject): String = null
 }

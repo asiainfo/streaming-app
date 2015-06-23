@@ -5,6 +5,6 @@ package com.asiainfo.ocdc.streaming.constant
  */
 object CommonConstant {
 
-  val commonConfFileName = "conf/common.xml"
+  val commonConfFileName = "common.xml"
 
 }
