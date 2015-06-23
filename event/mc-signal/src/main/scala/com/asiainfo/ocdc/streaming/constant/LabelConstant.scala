@@ -9,8 +9,10 @@ object LabelConstant {
   /**--------------------标签名称------------------------*/
   // user static fields
   val USER_BASE_INFO = "base_info"
-  // 区域标签
+  // 业务区域标签
   val LABEL_ONSITE = "onsite"
+      // 行政区域标签
+  val LABEL_AREA = "area"
   // 持续停留标签
   val LABEL_STAY = "stay"
 

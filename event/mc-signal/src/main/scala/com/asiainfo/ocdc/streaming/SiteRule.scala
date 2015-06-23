@@ -7,7 +7,6 @@ import com.asiainfo.ocdc.streaming.tool.CacheFactory
 
 import scala.collection.mutable.Map
 
-
 /**
  * @author surq
  * @since 2015.4.2
@@ -15,34 +14,27 @@ import scala.collection.mutable.Map
  */
 class SiteRule extends MCLabelRule {
   def attachMCLabel(mcSourceObj: MCSourceObject, cache: StreamingCache, labelQryData: Map[String, Map[String, String]]): StreamingCache = {
-    val lac = mcSourceObj.lac
-    val ci = mcSourceObj.ci
 
+    // 装载业务区域标签属性
+    val onSiteMap = scala.collection.mutable.Map[String, String]()
     // 根据largeCell解析出所属区域
-    //    val cachedArea = CacheFactory.getManager.getHashCacheMap("lacci2area:" + lac + ":" + ci)
     val cachedArea = labelQryData.get(getQryKeys(mcSourceObj)).get
+    if (cachedArea != None) {
+      var areas = cachedArea("areas").trim()
+      if (areas != "") areas.split(".").foreach(area => { onSiteMap += (area.trim -> "true") })
+    }
 
-    /*val onsiteList = largeCellAnalysis(lac, ci)
-    val propMap = scala.collection.mutable.Map[String, String]()
-    onsiteList.foreach(location => propMap += (location -> "true"))
-    mcSourceObj.setLabel(LabelConstant.LABEL_ONSITE, propMap)*/
-    mcSourceObj.setLabel(LabelConstant.LABEL_ONSITE, cachedArea)
+    // 标记业务区域标签
+    mcSourceObj.setLabel(LabelConstant.LABEL_ONSITE, onSiteMap)
+    // 标记行政区域标签
+    mcSourceObj.setLabel(LabelConstant.LABEL_AREA, cachedArea.filter(_._1 != "areas"))
     cache
   }
 
   /**
-   * 根据largeCell解析出所属区域
-   * @param lac:MC信令代码
-   * @param ci:MC信令代码
-   * @return 所属区域列表
+   * @param mc:MC信令对像
+   * @return codis数据库的key
    */
-  def largeCellAnalysis(lac: String, ci: String): List[String] = {
-    val cachedArea = CacheFactory.getManager.getCommonCacheValue("lacci2area", lac + ":" + ci)
-    //    val cachedArea = CacheFactory.getManager.getHashCacheMap("lacci2area", lac + ":" + ci)
-    //    val cachedArea = CacheCenter.getValue("lacci2area", lac + ":" + ci).asInstanceOf[String]
-    if (cachedArea == null || cachedArea.isEmpty) List[String]() else cachedArea.split(",").toList
-  }
-
   override def getQryKeys(mc: SourceObject): String = {
     val mcsource = mc.asInstanceOf[MCSourceObject]
     "lacci2area:" + mcsource.lac + ":" + mcsource.ci
