@@ -42,6 +42,8 @@ trait CacheManager extends org.apache.spark.Logging {
   def setCommonCacheValue(cacheName: String, key: String, value: String)
 
   def hgetall(keys: List[String]): Map[String, Map[String, String]]
+
+  def hmset(keyValues: Map[String, Map[String, String]])
 }
 
 
@@ -180,7 +182,6 @@ abstract class RedisCacheManager extends CacheManager {
       val futuretask = new FutureTask[String](settask)
       CacheQryThreadPool.threadPool.submit(futuretask)
       taskMap.put(index, futuretask)
-      keysvalues
       innermap = innermap.drop(miniBatch)
       index += 1
     }
@@ -374,5 +375,37 @@ abstract class RedisCacheManager extends CacheManager {
       multimap += (keys(i) -> flatdata(i))
     }
     multimap
+  }
+
+
+  def hmset(keyValues: Map[String, Map[String, String]]) {
+    val t1 = System.currentTimeMillis()
+
+    val miniBatch = MainFrameConf.getInt("pipeLineBatch")
+    val taskMap = Map[Int, FutureTask[String]]()
+    var index = 0
+    var innermap = keyValues
+    while (innermap.size > 0) {
+      val settask = new InsertHash(innermap.take(miniBatch))
+      val futuretask = new FutureTask[String](settask)
+      CacheQryThreadPool.threadPool.submit(futuretask)
+      taskMap.put(index, futuretask)
+      innermap = innermap.drop(miniBatch)
+      index += 1
+    }
+
+    println("start thread : " + index)
+
+    while (taskMap.size > 0) {
+      val keys = taskMap.keys
+      keys.foreach(key => {
+        val task = taskMap.get(key).get
+        if (task.isDone) {
+          taskMap.remove(key)
+        }
+      })
+    }
+
+    System.out.println("MSET " + keyValues.size + " key cost " + (System.currentTimeMillis() - t1))
   }
 }

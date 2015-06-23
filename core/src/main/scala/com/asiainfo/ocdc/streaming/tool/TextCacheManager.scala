@@ -133,4 +133,6 @@ class TextCacheManager extends CacheManager {
   override def hgetall(keys: List[String]): Map[String, Map[String, String]] = {
     null
   }
+
+  override def hmset(keyValues: Map[String, Map[String, String]]) {}
 }

@@ -12,7 +12,7 @@ import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
-import scala.collection.{immutable, mutable}
+import scala.collection.{mutable, immutable}
 import scala.collection.mutable.{ArrayBuffer, Map}
 
 abstract class EventSource() extends Serializable with org.apache.spark.Logging {
@@ -157,12 +157,14 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           var totalFetch = 0
           var result = false
 
+          val totaldata = mutable.MutableList[SourceObject]()
           val minimap = mutable.Map[String, SourceObject]()
 
           val labelQryKeysMap = mutable.Map[String, mutable.Set[String]]()
 
           while (iter.hasNext && totalFetch < conf.getInt("batchsize")) {
             val currentLine = iter.next()
+            totaldata += currentLine
             minimap += ("Label:" + currentLine.generateId -> currentLine)
 
             labelRuleArray.foreach(labelRule => {
@@ -197,9 +199,10 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           val f3 = System.currentTimeMillis()
           println(" query label need data cost time : " + (f3 - f2) + " millis ! ")
 
-          val cachemap_new = minimap.map(x => {
-            val key = x._1
-            val value = x._2
+          val cachemap_new = mutable.Map[String, Any]()
+          totaldata.foreach(x => {
+            val key = x.generateId
+            val value = x
 
             var rule_caches = cachemap_old.get(key).get match {
               case cache: immutable.Map[String, StreamingCache] => cache
@@ -255,7 +258,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
             })
             currentArrayBuffer.append(value)
 
-            (key -> rule_caches.asInstanceOf[Any])
+            cachemap_new += (key -> rule_caches.asInstanceOf[Any])
           })
 
           val f4 = System.currentTimeMillis()

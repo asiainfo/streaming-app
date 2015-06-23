@@ -6,6 +6,7 @@ import com.asiainfo.ocdc.streaming.tool.CacheFactory
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 
+import scala.collection.mutable
 import scala.collection.mutable.Map
 
 /**
@@ -40,12 +41,12 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     delayTime = conf.getLong("delaytime", EventConstant.DEFAULTDELAYTIME)
   }
 
-  def execEvent(eventMap: Map[String, DataFrame]) {
+  /*def execEvent(eventMap: Map[String, DataFrame]) {
     val filtevents = eventMap.filter(x => eventRules.contains(x._1))
     val currentEvent = filtevents.iterator.next()._2
     val selectedData = currentEvent.selectExpr(selectExp: _*)
 
-    /*val checkedData = selectedData.map(row => {
+    val checkedData = selectedData.map(row => {
       var resultData: Option[Row] = None
       val currTime = System.currentTimeMillis()
       val hashkey = getHashKey(row)
@@ -96,80 +97,95 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
       }
 
       resultData
-    })*/
+    })
+
+//    val checkedData = selectedData.map(row => Option(row))
+
+    output(checkedData)
+
+  }*/
 
 
-    def execEvent(eventMap: Map[String, DataFrame]) {
-      val filtevents = eventMap.filter(x => eventRules.contains(x._1))
-      val currentEvent = filtevents.iterator.next()._2
-      val selectedData = currentEvent.selectExpr(selectExp: _*)
+  def execEvent(eventMap: Map[String, DataFrame]) {
+    val filtevents = eventMap.filter(x => eventRules.contains(x._1))
+    val currentEvent = filtevents.iterator.next()._2
+    val selectedData = currentEvent.selectExpr(selectExp: _*)
 
-      /*val hashKeys =
-      selectedData.foreach(row => {
+    val hashKeys = mutable.Set[String]()
+    selectedData.foreach(row => {
+      val hashkey = getHashKey(row)
+      hashKeys += hashkey
+    })
 
-      })*/
+    val t1 = System.currentTimeMillis()
+    val old_cache = CacheFactory.getManager.hgetall(hashKeys.toList)
+    println(" query saled user data cost time : " + (System.currentTimeMillis() - t1) + " millis ! ")
 
+    val updateKeys = mutable.Set[String]()
 
-      val checkedData = selectedData.map(row => {
-        var resultData: Option[Row] = None
-        val currTime = System.currentTimeMillis()
-        val hashkey = getHashKey(row)
-        val time = getTime(row)
-        var status = CacheFactory.getManager.getHashCacheMap(hashkey)
-        // muti event source
-        if (eventSources.size > 1) {
-          if (status.size == 0) {
-            status = Map(sourceId -> time)
-            CacheFactory.getManager.setHashCacheMap(hashkey, status)
-          } else {
-            //          val lt = status.get(locktime).get.toLong
-            val lt = status.get(locktime).getOrElse("0").toLong
-            if (lt == 0) {
-              status += (sourceId -> time)
-              val maxTime = status.toList.sortBy(_._2).last._2
-              status.filter(_._2 + delayTime >= maxTime)
+    val checkedData = selectedData.map(row => {
+      var resultData: Option[Row] = None
+      val currTime = System.currentTimeMillis()
+      val hashkey = getHashKey(row)
+      val time = getTime(row)
+      var status = old_cache.get(hashkey).get
+      // muti event source
+      if (eventSources.size > 1) {
+        if (status.size == 0) {
+          status = Map(sourceId -> time)
+          old_cache.update(hashkey, status)
+          updateKeys += hashkey
+        } else {
+          //          val lt = status.get(locktime).get.toLong
+          val lt = status.get(locktime).getOrElse("0").toLong
+          if (lt == 0) {
+            status += (sourceId -> time)
+            val maxTime = status.toList.sortBy(_._2).last._2
+            status.filter(_._2 + delayTime >= maxTime)
 
-              if (status.size == eventSources.size) status += (locktime -> currTime.toString)
-              CacheFactory.getManager.setHashCacheMap(hashkey, status)
-              resultData = Some(row)
-            } else {
-              if (lt + interval < currTime) {
-                status.clear()
-                status += (sourceId -> time)
-                CacheFactory.getManager.setHashCacheMap(hashkey, status)
-              }
-            }
-          }
-        }
-        // just single event source
-        else {
-          if (status.size == 0) {
-            status = Map(sourceId -> time)
-            status += (locktime -> currTime.toString)
-            CacheFactory.getManager.setHashCacheMap(hashkey, status)
+            if (status.size == eventSources.size) status += (locktime -> currTime.toString)
+            old_cache.update(hashkey, status)
+            updateKeys += hashkey
             resultData = Some(row)
           } else {
-            val lt = status.get(locktime).getOrElse("0").toLong
             if (lt + interval < currTime) {
               status.clear()
               status += (sourceId -> time)
-              status += (locktime -> currTime.toString)
-              CacheFactory.getManager.setHashCacheMap(hashkey, status)
-              resultData = Some(row)
+              old_cache.update(hashkey, status)
+              updateKeys += hashkey
             }
           }
         }
+      }
+      // just single event source
+      else {
+        if (status.size == 0) {
+          status = Map(sourceId -> time)
+          status += (locktime -> currTime.toString)
+          old_cache.update(hashkey, status)
+          updateKeys += hashkey
+          resultData = Some(row)
+        } else {
+          val lt = status.get(locktime).getOrElse("0").toLong
+          if (lt + interval < currTime) {
+            status.clear()
+            status += (sourceId -> time)
+            status += (locktime -> currTime.toString)
+            old_cache.update(hashkey, status)
+            updateKeys += hashkey
+            resultData = Some(row)
+          }
+        }
+      }
 
-        resultData
-      })
+      resultData
+    })
 
-      //    val checkedData = selectedData.map(row => Option(row))
+    val updateData = old_cache.filter(x => updateKeys.contains(x._1))
 
-      output(checkedData)
-
-    }
-
-//    val checkedData = selectedData.map(row => Option(row))
+    val t2 = System.currentTimeMillis()
+    CacheFactory.getManager.hmset(updateData)
+    println(" update saled user data cost time : " + (System.currentTimeMillis() - t2) + " millis ! ")
 
     output(checkedData)
 
