@@ -74,7 +74,7 @@ abstract class RedisCacheManager extends CacheManager {
     currentJedis.remove()
   }
 
-  protected def getResource: Jedis
+  def getResource: Jedis
 
   override def getHashCacheList(key: String): List[String] = {
     getConnection.lrange(key, 0, -1).toList
@@ -178,7 +178,7 @@ abstract class RedisCacheManager extends CacheManager {
     var index = 0
     var innermap = keysvalues
     while (innermap.size > 0) {
-      val settask = new Insert(innermap.take(miniBatch))
+      val settask = new Insert(innermap.take(miniBatch), this)
       val futuretask = new FutureTask[String](settask)
       CacheQryThreadPool.threadPool.submit(futuretask)
       taskMap.put(index, futuretask)
@@ -283,7 +283,7 @@ abstract class RedisCacheManager extends CacheManager {
     val taskMap = Map[Int, FutureTask[util.List[Array[Byte]]]]()
     var index = 0
     while (bytekeys.size > 0) {
-      val qrytask = new Qry(bytekeys.take(miniBatch))
+      val qrytask = new Qry(bytekeys.take(miniBatch), this)
       val futuretask = new FutureTask[util.List[Array[Byte]]](qrytask)
       CacheQryThreadPool.threadPool.submit(futuretask)
       taskMap.put(index, futuretask)
@@ -341,7 +341,7 @@ abstract class RedisCacheManager extends CacheManager {
     val taskMap = Map[Int, FutureTask[util.List[util.Map[String, String]]]]()
     var index = 0
     while (bytekeys.size > 0) {
-      val qrytask = new QryHashall(bytekeys.take(miniBatch))
+      val qrytask = new QryHashall(bytekeys.take(miniBatch), this)
       val futuretask = new FutureTask[util.List[util.Map[String, String]]](qrytask)
       CacheQryThreadPool.threadPool.submit(futuretask)
       taskMap.put(index, futuretask)
@@ -386,7 +386,7 @@ abstract class RedisCacheManager extends CacheManager {
     var index = 0
     var innermap = keyValues
     while (innermap.size > 0) {
-      val settask = new InsertHash(innermap.take(miniBatch))
+      val settask = new InsertHash(innermap.take(miniBatch), this)
       val futuretask = new FutureTask[String](settask)
       CacheQryThreadPool.threadPool.submit(futuretask)
       taskMap.put(index, futuretask)
