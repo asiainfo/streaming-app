@@ -7,14 +7,19 @@ package com.asiainfo.ocdc.streaming.constant
  */
 object LabelConstant {
   /**--------------------标签名称------------------------*/
-  // user static fields
-  val USER_BASE_INFO = "base_info"
-  // 业务区域标签
-  val LABEL_ONSITE = "onsite"
-      // 行政区域标签
-  val LABEL_AREA = "area"
-  // 持续停留标签
-  val LABEL_STAY = "stay"
+  // --- user static fields ---
+  val USER_BASE_INFO = "user_info"
+
+  // --- lac,ci fields ---
+  val LABEL_ONSITE = "area_onsite"
+  // stay times
+  val LABEL_STAY = "area_onsite_stay"
+  // lac,ci static fields
+  val LABEL_AREA = "area_info"
+
+  // --- extern fields ---
+  val LABEL_LASTIMEI = "ext_last_imei"
+
 
   /**------------------- 标签属性 -----------------------*/
   /** ＝＝＝＝连续停留标签属性＝＝＝＝ */

@@ -18,10 +18,14 @@ class SiteRule extends MCLabelRule {
     // 装载业务区域标签属性
     val onSiteMap = scala.collection.mutable.Map[String, String]()
     // 根据largeCell解析出所属区域
+//    println("current lacci : " + getQryKeys(mcSourceObj))
     val cachedArea = labelQryData.get(getQryKeys(mcSourceObj)).get
-    if (cachedArea != None) {
-      var areas = cachedArea("areas").trim()
-      if (areas != "") areas.split(".").foreach(area => { onSiteMap += (area.trim -> "true") })
+    if (cachedArea.contains("areas")) {
+      val areas = cachedArea("areas").trim()
+      if (areas != "") areas.split(".").foreach(area => {
+//        println("current area : " + area)
+        onSiteMap += (area.trim -> "true")
+      })
     }
 
     // 标记业务区域标签

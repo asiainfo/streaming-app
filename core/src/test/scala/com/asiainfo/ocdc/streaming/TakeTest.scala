@@ -1,7 +1,5 @@
 package com.asiainfo.ocdc.streaming
 
-import java.util
-
 /**
  * Created by leo on 6/17/15.
  */
@@ -16,12 +14,15 @@ object TakeTest {
       Thread.sleep(2000)
     }*/
 
-    val index = 5
+    /*val index = 5
     val cachedata = new util.ArrayList[String](index)
 
     cachedata.add(0,"aaa")
 
-    println(cachedata.get(3))
+    println(cachedata.get(3))*/
+
+    val a = "abcd"
+    print(a.substring(0,2))
 
   }
 }

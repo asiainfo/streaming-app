@@ -201,7 +201,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
           val cachemap_new = mutable.Map[String, Any]()
           totaldata.foreach(x => {
-            val key = x.generateId
+            val key = "Label:" + x.generateId
             val value = x
 
             var rule_caches = cachemap_old.get(key).get match {
@@ -239,16 +239,18 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
                 case None => null
               }
 
-              /*println(" label " + labelRule.conf.get("id") + " qry datas : ")
-              val ite = labelQryData.iterator
-              if(ite.hasNext){
-                val v = ite.next()
-                println("key : " + v._1)
-                val ite2 = v._2.iterator
-                if(ite2.hasNext){
-                  val v2 = ite2.next()
-                  println("innerkey : " + v2._1)
-                  println("innervalue : " + v2._2)
+              /*if("5".eq(labelRule.conf.get("id"))){
+                println(" label " + labelRule.conf.get("id") + " qry datas : ")
+                val ite = labelQryData.iterator
+                if(ite.hasNext){
+                  val v = ite.next()
+                  println("key : " + v._1)
+                  val ite2 = v._2.iterator
+                  if(ite2.hasNext){
+                    val v2 = ite2.next()
+                    println("innerkey : " + v2._1)
+                    println("innervalue : " + v2._2)
+                  }
                 }
               }*/
 

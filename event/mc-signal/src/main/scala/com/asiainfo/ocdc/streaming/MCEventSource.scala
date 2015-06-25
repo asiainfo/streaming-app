@@ -26,6 +26,11 @@ class MCEventSource() extends EventSource() {
         val lac = DataConvertTool.convertHex(inputs(2))
         val ci = DataConvertTool.convertHex(inputs(3))
 
+        val callingimei = inputs(4).substring(0,14)
+        val calledimei = inputs(5).substring(0,14)
+        val callingimsi = inputs(6)
+        val calledimsi = inputs(7)
+
         val eventresult = inputs(8).toInt
         val alertstatus = inputs(9).toInt
         val assstatus = inputs(10).toInt
@@ -34,20 +39,29 @@ class MCEventSource() extends EventSource() {
         val xdrtype = inputs(13).toInt
         val issmsalone = inputs(14).toInt
 
-        val imei = inputs(4)
-
+        var imei = ""
         var imsi = ""
-        if (eventID == 3 || eventID == 5 || eventID == 7) {
-          imsi = inputs(7)
-        } else if (eventID == 8 || eventID == 9 || eventID == 10 || eventID == 26) {
-          if (issmsalone == 1) imsi = inputs(6)
-          else if (issmsalone == 2) imsi = inputs(7)
+
+        if (List(3,5,7).contains(eventID)) {
+          imei = calledimei
+          imsi = calledimsi
+        } else if (List(8,9,10,26).contains(eventID)) {
+          if (issmsalone == 1) {
+            imei = callingimei
+            imsi = callingimsi
+          }
+          else if (issmsalone == 2) {
+            imei = calledimei
+            imsi = calledimsi
+          }
           else None
         } else {
-          imsi = inputs(6)
+          imei = callingimei
+          imsi = callingimsi
         }
 
-        Some(new MCSourceObject(eventID, time, lac, ci, imsi, imei, eventresult, alertstatus, assstatus, clearstatus, relstatus, xdrtype, issmsalone))
+        Some(new MCSourceObject(eventID, time, lac, ci, callingimei, calledimei, callingimsi, calledimsi,
+          eventresult, alertstatus, assstatus, clearstatus, relstatus, xdrtype, issmsalone, imsi, imei))
       }
     } catch {
       case e: Exception => {

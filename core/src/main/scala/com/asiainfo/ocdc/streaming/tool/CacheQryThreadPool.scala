@@ -2,10 +2,10 @@ package com.asiainfo.ocdc.streaming.tool
 
 import java.util
 import java.util.concurrent.{Callable, ExecutorService, Executors}
-import redis.clients.jedis.Jedis
+
+import com.asiainfo.ocdc.streaming.MainFrameConf
 
 import scala.collection.JavaConverters._
-import com.asiainfo.ocdc.streaming.MainFrameConf
 import scala.collection.mutable.Map
 
 /**
@@ -18,7 +18,7 @@ object CacheQryThreadPool {
 
 }
 
-class CodisOperator(cacheManager: RedisCacheManager) {
+/*class CodisOperator(cacheManager: RedisCacheManager) {
 
   private val currentJedis = new ThreadLocal[Jedis] {
     override def initialValue = cacheManager.getResource
@@ -39,25 +39,25 @@ class CodisOperator(cacheManager: RedisCacheManager) {
     getConnection.close()
     currentJedis.remove()
   }
-}
+}*/
 
 
-class Qry(keys: Seq[Array[Byte]], cacheManager: RedisCacheManager) extends CodisOperator(cacheManager) with Callable[util.List[Array[Byte]]] {
+class Qry(keys: Seq[Array[Byte]]) extends Callable[util.List[Array[Byte]]] {
   override def call() = {
-    //    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    val conn = getConnection
+    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
+    //    val conn = getConnection
     val pgl = conn.pipelined()
     keys.foreach(x => pgl.get(x))
     val result = pgl.syncAndReturnAll().asInstanceOf[util.List[Array[Byte]]]
-    //    conn.close()
+    conn.close()
     result
   }
 }
 
-class Insert(value: Map[String, Any], cacheManager: RedisCacheManager) extends CodisOperator(cacheManager) with Callable[String] {
+class Insert(value: Map[String, Any]) extends Callable[String] {
   override def call() = {
-    //    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    val conn = getConnection
+    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
+    //    val conn = getConnection
     val pgl = conn.pipelined()
     val ite = value.iterator
     val kryotool = new KryoSerializerStreamAppTool
@@ -66,27 +66,27 @@ class Insert(value: Map[String, Any], cacheManager: RedisCacheManager) extends C
       pgl.set(elem._1.getBytes, kryotool.serialize(elem._2).array())
       pgl.sync()
     }
-    //    conn.close()
+    conn.close()
     ""
   }
 }
 
-class QryHashall(keys: Seq[String], cacheManager: RedisCacheManager) extends CodisOperator(cacheManager) with Callable[util.List[util.Map[String, String]]] {
+class QryHashall(keys: Seq[String]) extends Callable[util.List[util.Map[String, String]]] {
   override def call() = {
-    //    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    val conn = getConnection
+    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
+    //    val conn = getConnection
     val pgl = conn.pipelined()
     keys.foreach(x => pgl.hgetAll(x))
     val result = pgl.syncAndReturnAll().asInstanceOf[util.List[util.Map[String, String]]]
-    //    conn.close()
+    conn.close()
     result
   }
 }
 
-class InsertHash(value: Map[String, Map[String, String]], cacheManager: RedisCacheManager) extends CodisOperator(cacheManager) with Callable[String] {
+class InsertHash(value: Map[String, Map[String, String]]) extends Callable[String] {
   override def call() = {
-    //    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    val conn = getConnection
+    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
+    //    val conn = getConnection
     val pgl = conn.pipelined()
     val ite = value.iterator
     while (ite.hasNext) {
@@ -94,7 +94,7 @@ class InsertHash(value: Map[String, Map[String, String]], cacheManager: RedisCac
       pgl.hmset(elem._1, elem._2.asJava)
       pgl.sync()
     }
-    //    conn.close()
+    conn.close()
     ""
   }
 }

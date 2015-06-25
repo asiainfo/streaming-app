@@ -118,6 +118,8 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     })
 
     val t1 = System.currentTimeMillis()
+    println(" print ")
+    hashKeys.foreach(println(_))
     val old_cache = CacheFactory.getManager.hgetall(hashKeys.toList)
     println(" query saled user data cost time : " + (System.currentTimeMillis() - t1) + " millis ! ")
 
@@ -128,11 +130,14 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
       val currTime = System.currentTimeMillis()
       val hashkey = getHashKey(row)
       val time = getTime(row)
-      var status = old_cache.get(hashkey).get
+      var status = old_cache.get(hashkey) match {
+        case Some(v) => v
+        case None => Map[String,String]()
+      }
       // muti event source
       if (eventSources.size > 1) {
         if (status.size == 0) {
-          status = Map(sourceId -> time)
+          status += (sourceId -> time)
           old_cache.update(hashkey, status)
           updateKeys += hashkey
         } else {
@@ -160,7 +165,7 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
       // just single event source
       else {
         if (status.size == 0) {
-          status = Map(sourceId -> time)
+          status += (sourceId -> time)
           status += (locktime -> currTime.toString)
           old_cache.update(hashkey, status)
           updateKeys += hashkey
