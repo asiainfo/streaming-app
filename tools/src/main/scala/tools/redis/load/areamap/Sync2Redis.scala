@@ -8,15 +8,15 @@ import java.util.{HashMap => JHashMap, _}
 import org.slf4j.LoggerFactory
 import tools.jdbc.JdbcUtils
 import tools.redis.RedisUtils
-import tools.redis.load.{FutureTaskResult, LoadStatus, LoadStatusUpdateThread, MonitorTask}
+import tools.redis.load._
 
 import scala.collection.mutable.ArrayBuffer
 import scala.xml.XML
 
 /**
- * Created by tsingfu on 15/6/16.
+ * Created by tsingfu on 15/6/22.
  */
-object Load2Redis {
+object Sync2Redis {
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -57,6 +57,28 @@ object Load2Redis {
 
     val from = props.getProperty("load.from").trim
     val redisType = props.getProperty("load.redis.type").trim
+
+
+    val syncIncrementEnabled = props.getProperty("load.sync.incrementEnabled").trim.toBoolean
+
+    var syncInsertFlag: String = null
+    var syncUpdateFlag: String = null
+    var syncDeleteFlag: String = null
+    var syncInsertEnabled: Boolean = false
+    var syncUpdateEnabled: Boolean = false
+    var syncDeleteEnabled: Boolean = false
+    var syncColumnName: String = null
+    var syncIdx: Int = 0
+
+    if(syncIncrementEnabled){
+      syncInsertFlag = props.getProperty("load.sync.insertFlag").trim
+      syncUpdateFlag = props.getProperty("load.sync.updateFlag").trim
+      syncDeleteFlag = props.getProperty("load.sync.deleteFlag").trim
+
+      syncInsertEnabled = props.getProperty("load.sync.insertEnabled").trim.toBoolean
+      syncUpdateEnabled = props.getProperty("load.sync.updateEnabled").trim.toBoolean
+      syncDeleteEnabled = props.getProperty("load.sync.deleteEnabled").trim.toBoolean
+    }
 
 
     val batchLimit = props.getProperty("load.batchLimit").trim.toInt
@@ -128,7 +150,10 @@ object Load2Redis {
 
     //初始化遍历变量
     var numInBatch = 0
-    var batchArrayBuffer: ArrayBuffer[String] = null
+    var batchArrayBuffer: ArrayBuffer[String] = ArrayBuffer[String]() //For insert or update
+    var numInBatchForDelete = 0
+    var batchArrayBufferForDelete: ArrayBuffer[String] = ArrayBuffer[String]() //For delete
+    var numSyncFlagUnknown = 0
 
 
     from match {
@@ -146,6 +171,7 @@ object Load2Redis {
         val jdbcTable = props.getProperty("load.table").trim
         val jdbcIsBigTable = props.getProperty("load.isBigTable").trim.toBoolean
 
+        if(syncIncrementEnabled) syncColumnName=props.getProperty("load.sync.columnName").trim
 
         //初始化jdbc连接池，获取conn和stmt
         ds = JdbcUtils.init_dataSource(jdbcDriver, jdbcUrl, jdbcUsername, jdbcPassword,
@@ -223,13 +249,13 @@ object Load2Redis {
                       .split(valueMapEnabledWhereSperator).map(_.split(valueMapEnabledWhereValueSperator))
               valueMaps = props.getProperty("load.valueMaps").trim.split(",").map(_.trim)
 
-              logger.debug("= = " * 20)
+              logger.debug("= = " * 10)
               logger.debug("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).mkString("[", ",","]"))
               logger.debug("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).foreach(values=>{
                 println(values.split(valueMapEnabledWhereValueSperator).mkString("[", "-", "]"))
               }))
               logger.debug("valueMapEnabledWhere.length = " + valueMapEnabledWhere.length)
-              logger.debug("= = " * 20)
+              logger.debug("= = " * 10)
             }
 
 
@@ -257,26 +283,52 @@ object Load2Redis {
             }
 
 
-            val sql = "select " + hashColumnNames.mkString(",") + "," +
-                    valueColumnNames.mkString(",") +
-                    " from " + jdbcTable
+            val sql =
+              if (syncIncrementEnabled) {
+                "select " + hashColumnNames.mkString(",") + "," +
+                        valueColumnNames.mkString(",") +
+                        ", " + syncColumnName +
+                        " from " + jdbcTable
+              } else {
+                "select " + hashColumnNames.mkString(",") + "," +
+                        valueColumnNames.mkString(",") +
+                        " from " + jdbcTable
+              }
             logger.info("SQL : "+sql)
 
             rs = stmt.executeQuery(sql)
 
 
+            val syncColumnIdx = hashColumnNamesLength + valueColumnNamesLength + 1 //sync标识字段的位置索引
+
             while(rs.next()){
               loadStatus.numScanned += 1
 
               val hashNameValues = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
-              val fieldValues = (for (i <- 1 to valueColumnNamesLength) yield rs.getString(hashColumnNamesLength + i)).mkString(columnSeperator)
+              val fieldValues = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(hashColumnNamesLength + i)).mkString(columnSeperator)
 
 
-              if(numInBatch == 0){
-                batchArrayBuffer = new ArrayBuffer[String]()
+              if(syncIncrementEnabled){
+                val syncFlag = rs.getString(syncColumnIdx)
+                logger.debug("syncFlag = " + syncFlag)
+                if (syncFlag == syncDeleteFlag && syncDeleteEnabled) {
+                  batchArrayBufferForDelete.append(hashNameValues)
+                  numInBatchForDelete += 1
+                } else if(syncFlag == syncInsertFlag && syncInsertEnabled){
+                  batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues + columnSeperator + dummyEndMarker)
+                  numInBatch += 1
+                } else if (syncFlag == syncUpdateFlag && syncUpdateEnabled){
+                  batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues + columnSeperator + dummyEndMarker)
+                  numInBatch += 1
+                } else {
+                  logger.debug("found unknown syncFlag = " + syncFlag +" for line = " + hashNamePrefix+hashNameValues)
+                  numSyncFlagUnknown += 1
+                }
+              } else {
+                batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues + columnSeperator + dummyEndMarker)
+                numInBatch += 1
               }
-              batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues + columnSeperator + dummyEndMarker)
-              numInBatch += 1
+
 
               if(numInBatch == batchLimit){
                 logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
@@ -294,7 +346,31 @@ object Load2Redis {
 
                 loadStatus.numBatches += 1
                 numInBatch = 0
+
+                batchArrayBuffer = new ArrayBuffer[String]()
               }
+
+              if(syncIncrementEnabled){
+                if(numInBatchForDelete == batchLimit){
+                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                  val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
+                    fieldNames,
+                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+
+                  val futureTask = new FutureTask[FutureTaskResult](task)
+
+                  threadPool.submit(futureTask)
+                  taskMap.put(loadStatus.numBatches, futureTask)
+
+                  loadStatus.numBatches += 1
+                  numInBatchForDelete = 0
+
+                  batchArrayBufferForDelete = new ArrayBuffer[String]()
+                }
+              }
+
             }
 
 
@@ -317,6 +393,26 @@ object Load2Redis {
               numInBatch = 0
             }
 
+            if(syncIncrementEnabled){
+              if(numInBatchForDelete > 0){
+                logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                  hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
+                  fieldNames,
+                  jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                  FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+
+                val futureTask = new FutureTask[FutureTaskResult](task)
+
+                threadPool.submit(futureTask)
+                taskMap.put(loadStatus.numBatches, futureTask)
+
+                loadStatus.numBatches += 1
+                numInBatchForDelete = 0
+
+              }
+            }
+
 
           case "onehash" =>
 
@@ -326,6 +422,7 @@ object Load2Redis {
             val valueColumnName = props.getProperty("load.valueColumnName").trim
             val valueMapEnabled = props.getProperty("load.valueMapEnabled").trim.toBoolean
             val valueMap = props.getProperty("load.valueMap").trim
+
             val conversion10to16ColumnNames = props.getProperty("load.conversion10to16.columnNames").trim.split(",").map(_.trim)
 
             val conversion10to16ColumnIdxes = ArrayBuffer[Int]()
@@ -341,12 +438,22 @@ object Load2Redis {
             val columnSeperator = "Jdbc2OneHashSeperator"
 
 
-            val sql = "select " +fieldColumnNames.mkString(",") + "," +
-                    valueColumnName +
-                    " from " + jdbcTable
+            val sql =
+              if(syncIncrementEnabled){
+                "select " +fieldColumnNames.mkString(",") + "," +
+                        valueColumnName +
+                        "," + syncColumnName +
+                        " from " + jdbcTable
+              } else{
+                "select " +fieldColumnNames.mkString(",") + "," +
+                        valueColumnName +
+                        " from " + jdbcTable
+              }
             logger.debug("SQL: " + sql)
 
             rs = stmt.executeQuery(sql)
+
+            val syncColumnIdx = fieldColumnNamesLength + 1 + 1 //sync标识字段的位置索引
 
             while(rs.next()){
               loadStatus.numScanned += 1
@@ -354,11 +461,26 @@ object Load2Redis {
               val fields = (for (i <- 1 to fieldColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
               val value = rs.getString(fieldColumnNamesLength+1)
 
-              if(numInBatch == 0){
-                batchArrayBuffer = new ArrayBuffer[String]()
+              if(syncIncrementEnabled) {
+                val syncFlag = rs.getString(syncColumnIdx)
+
+                if (syncFlag == syncDeleteFlag && syncDeleteEnabled) {
+                  batchArrayBufferForDelete.append(fields + columnSeperator + value +columnSeperator +dummyEndMarker)
+                  numInBatchForDelete += 1
+                } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
+                  batchArrayBuffer.append(fields + columnSeperator + value +columnSeperator +dummyEndMarker)
+                  numInBatch += 1
+                } else if (syncFlag == syncUpdateFlag && syncUpdateEnabled){
+                  batchArrayBuffer.append(fields + columnSeperator + value +columnSeperator +dummyEndMarker)
+                  numInBatch += 1
+                } else {
+                  logger.debug("found unknown syncFlag = " + syncFlag +" for hash = " + hashName +" " + fields.mkString(fieldSeperator))
+                  numSyncFlagUnknown += 1
+                }
+              } else {
+                batchArrayBuffer.append(fields + columnSeperator + value +columnSeperator +dummyEndMarker)
+                numInBatch += 1
               }
-              batchArrayBuffer.append(fields + columnSeperator + value +columnSeperator +dummyEndMarker)
-              numInBatch += 1
 
               if(numInBatch == batchLimit){
                 val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
@@ -374,6 +496,28 @@ object Load2Redis {
 
                 loadStatus.numBatches += 1
                 numInBatch = 0
+
+                batchArrayBuffer = new ArrayBuffer[String]()
+              }
+
+              if(syncIncrementEnabled) {
+                if(numInBatchForDelete == batchLimit){
+                  val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashName,
+                    (0 until fieldColumnNamesLength).toArray, fieldSeperator,
+                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+
+                  val futureTask = new FutureTask[FutureTaskResult](task)
+
+                  threadPool.submit(futureTask)
+                  taskMap.put(loadStatus.numBatches, futureTask)
+
+                  loadStatus.numBatches += 1
+                  numInBatchForDelete = 0
+
+                  batchArrayBufferForDelete = new ArrayBuffer[String]()
+                }
               }
             }
 
@@ -394,12 +538,34 @@ object Load2Redis {
               loadStatus.numBatches += 1
               numInBatch = 0
             }
+
+            if(syncIncrementEnabled) {
+              if(numInBatchForDelete > 0){
+                val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                  hashName,
+                  (0 until fieldColumnNamesLength).toArray, fieldSeperator,
+                  jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                  FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+
+                val futureTask = new FutureTask[FutureTaskResult](task)
+
+                threadPool.submit(futureTask)
+                taskMap.put(loadStatus.numBatches, futureTask)
+
+                loadStatus.numBatches += 1
+                numInBatchForDelete = 0
+
+              }
+            }
+
         }
 
       case "file" =>
         val filename = props.getProperty("load.filename").trim
         val fileEncode = props.getProperty("load.fileEncode").trim
         val columnSeperator = props.getProperty("load.columnSeperator").trim
+
+        if(syncIncrementEnabled) syncIdx=props.getProperty("load.sync.idx").trim.toInt
 
         //获取要加载的记录数
         loadStatus.numTotal = scala.io.Source.fromFile(filename, fileEncode).getLines().length
@@ -430,13 +596,13 @@ object Load2Redis {
                       .split(valueMapEnabledWhereSperator).map(_.split(valueMapEnabledWhereValueSperator))
               valueMaps = props.getProperty("load.valueMaps").trim.split(",").map(_.trim)
 
-              logger.debug("= = " * 20)
+              logger.debug("= = " * 10)
               logger.debug("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).mkString("[", ",","]"))
               logger.debug("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).foreach(values=>{
-                logger.debug(values.split(valueMapEnabledWhereValueSperator).mkString("[", "-", "]"))
+                println(values.split(valueMapEnabledWhereValueSperator).mkString("[", "-", "]"))
               }))
               logger.debug("valueMapEnabledWhere.length = " + valueMapEnabledWhere.length)
-              logger.debug("= = " * 20)
+              logger.debug("= = " * 10)
             }
 
 
@@ -447,12 +613,27 @@ object Load2Redis {
             for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
               loadStatus.numScanned += 1
 
-              if(numInBatch == 0){
-                batchArrayBuffer = new ArrayBuffer[String]()
-              }
-              batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
+              if(syncIncrementEnabled) {
+                val lineArray = line.split(columnSeperator)
+                val syncFlag = lineArray(syncIdx)
 
-              numInBatch += 1
+                if (syncFlag == syncDeleteFlag && syncDeleteEnabled) {
+                  batchArrayBufferForDelete.append(line + columnSeperator + dummyEndMarker)
+                  numInBatchForDelete += 1
+                } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
+                  batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
+                  numInBatch += 1
+                } else if (syncFlag == syncUpdateFlag && syncUpdateEnabled){
+                  batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
+                  numInBatch += 1
+                } else {
+                  logger.debug("found unknown syncFlag = " + syncFlag +" for line = " + line)
+                  numSyncFlagUnknown += 1
+                }
+              } else {
+                batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
+                numInBatch += 1
+              }
 
               if(numInBatch == batchLimit){
                 logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
@@ -469,6 +650,28 @@ object Load2Redis {
 
                 loadStatus.numBatches += 1
                 numInBatch = 0
+
+                batchArrayBuffer = new ArrayBuffer[String]()
+              }
+
+              if(syncIncrementEnabled){
+                if(numInBatchForDelete == batchLimit){
+                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                  val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashNamePrefix, hashIdxes, hashSeperator,
+                    fieldNames,
+                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                  val futureTask = new FutureTask[FutureTaskResult](task)
+
+                  threadPool.submit(futureTask)
+                  taskMap.put(loadStatus.numBatches, futureTask)
+
+                  loadStatus.numBatches += 1
+                  numInBatchForDelete = 0
+
+                  batchArrayBufferForDelete = new ArrayBuffer[String]()
+                }
               }
             }
 
@@ -491,6 +694,25 @@ object Load2Redis {
               numInBatch = 0
             }
 
+            if(syncIncrementEnabled){
+              if(numInBatchForDelete == batchLimit){
+                logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                  hashNamePrefix, hashIdxes, hashSeperator,
+                  fieldNames,
+                  jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                  FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                val futureTask = new FutureTask[FutureTaskResult](task)
+
+                threadPool.submit(futureTask)
+                taskMap.put(loadStatus.numBatches, futureTask)
+
+                loadStatus.numBatches += 1
+                numInBatchForDelete = 0
+
+              }
+            }
+
 
           case "onehash" =>
             val hashName = props.getProperty("load.hashName").trim
@@ -506,12 +728,28 @@ object Load2Redis {
             for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
               loadStatus.numScanned += 1
 
-              if(numInBatch == 0){
-                batchArrayBuffer = new ArrayBuffer[String]()
-              }
-              batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
 
-              numInBatch += 1
+              if(syncIncrementEnabled){
+                val lineArray = line.split(columnSeperator)
+                val syncFlag = lineArray(syncIdx)
+
+                if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
+                  batchArrayBufferForDelete.append(line + columnSeperator + dummyEndMarker)
+                  numInBatchForDelete += 1
+                } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
+                  batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
+                  numInBatch += 1
+                } else if (syncFlag == syncUpdateFlag && syncUpdateEnabled){
+                  batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
+                  numInBatch += 1
+                } else {
+                  logger.debug("found unknown syncFlag = " + syncFlag +" for line = " + line)
+                  numSyncFlagUnknown += 1
+                }
+              } else {
+                batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
+                numInBatch += 1
+              }
 
               if(numInBatch == batchLimit){
                 logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
@@ -528,6 +766,29 @@ object Load2Redis {
 
                 loadStatus.numBatches += 1
                 numInBatch = 0
+
+                batchArrayBuffer = new ArrayBuffer[String]()
+              }
+
+
+              if(syncIncrementEnabled){
+                if(numInBatchForDelete == batchLimit){
+                  logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                  val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashName,
+                    fieldIdxes, fieldSeperator,
+                    jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                  val futureTask = new FutureTask[FutureTaskResult](task)
+
+                  threadPool.submit(futureTask)
+                  taskMap.put(loadStatus.numBatches, futureTask)
+
+                  loadStatus.numBatches += 1
+                  numInBatch = 0
+
+                  batchArrayBufferForDelete = new ArrayBuffer[String]()
+                }
               }
             }
 
@@ -548,6 +809,25 @@ object Load2Redis {
 
               loadStatus.numBatches += 1
               numInBatch = 0
+            }
+
+            if(syncIncrementEnabled){
+              if(numInBatchForDelete == batchLimit){
+                logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                  hashName,
+                  fieldIdxes, fieldSeperator,
+                  jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
+                  FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                val futureTask = new FutureTask[FutureTaskResult](task)
+
+                threadPool.submit(futureTask)
+                taskMap.put(loadStatus.numBatches, futureTask)
+
+                loadStatus.numBatches += 1
+                numInBatch = 0
+
+              }
             }
         }
     }
@@ -608,7 +888,7 @@ object Load2Redis {
     props.put("redis.servers", servers)
     props.put("redis.database", database)
     props.put("redis.timeout", timeout)
-    props.put("redis.password", password)
+    if(password != null || password == "") props.put("redis.password", password)
 
 
     val maxTotal = (conf \ "jedisPool" \ "maxTotal").text.trim
@@ -624,6 +904,39 @@ object Load2Redis {
     val redisType = (conf \ "load" \ "redis.type").text.trim
     props.put("load.from", from)
     props.put("load.redis.type", redisType)
+
+    val syncIncrementEnabled = (conf \ "load" \ "sync.incrementEnabled").text.trim
+    props.put("load.sync.incrementEnabled", syncIncrementEnabled)
+
+    syncIncrementEnabled match {
+      case "false" =>
+      case "true" =>
+        val syncInsertFlag = (conf \ "load" \ "sync.insertFlag").text.trim
+        val syncUpdateFlag = (conf \ "load" \ "sync.updateFlag").text.trim
+        val syncDeleteFlag = (conf \ "load" \ "sync.deleteFlag").text.trim
+
+        val syncInsertEnabled = (conf \ "load" \ "sync.insertEnabled").text.trim
+        val syncUpdateEnabled = (conf \ "load" \ "sync.updateEnabled").text.trim
+        val syncDeleteEnabled = (conf \ "load" \ "sync.deleteEnabled").text.trim
+
+        props.put("load.sync.insertFlag", syncInsertFlag)
+        props.put("load.sync.updateFlag", syncUpdateFlag)
+        props.put("load.sync.deleteFlag", syncDeleteFlag)
+
+        props.put("load.sync.insertEnabled", syncInsertEnabled)
+        props.put("load.sync.updateEnabled", syncUpdateEnabled)
+        props.put("load.sync.deleteEnabled", syncDeleteEnabled)
+
+        from match {
+          case "db" =>
+            val syncColumnName = (conf \ "load" \ "sync.columnName").text.trim
+            props.put("load.sync.columnName", syncColumnName)
+          case "file" =>
+            val syncIdx = (conf \ "load" \ "sync.idx").text.trim
+            props.put("load.sync.idx", syncIdx)
+
+        }
+    }
 
 
     from match {
@@ -670,6 +983,7 @@ object Load2Redis {
             props.put("load.hashNamePrefix", hashNamePrefix)
             props.put("load.hashColumnNames", hashColumnNames)
             props.put("load.hashSeperator", hashSeperator)
+
             props.put("load.conversion10to16.columnNames", conversion10to16ColumnNames)
 
             props.put("load.fieldNames", fieldNames)
@@ -694,6 +1008,7 @@ object Load2Redis {
             val hashName = (conf \ "load" \ "hashName").text.trim
             val fieldColumnNames = (conf \ "load" \ "fieldColumnNames").text.trim
             val fieldSeperator = (conf \ "load" \ "fieldSeperator").text.trim
+
             val conversion10to16ColumnNames = (conf \ "load" \ "conversion10to16.columnNames").text.trim
 
             val valueColumnName = (conf \ "load" \ "valueColumnName").text.trim
@@ -704,6 +1019,7 @@ object Load2Redis {
             props.put("load.hashName", hashName)
             props.put("load.fieldColumnNames", fieldColumnNames)
             props.put("load.fieldSeperator", fieldSeperator)
+
             props.put("load.conversion10to16.columnNames", conversion10to16ColumnNames)
 
             props.put("load.valueColumnName", valueColumnName)

@@ -1,21 +1,22 @@
-package tools.redis.load
+package tools.redis.load.areamap
 
 import java.sql.{Connection, ResultSet, Statement}
 import java.text.SimpleDateFormat
 import java.util.concurrent.{Executors, FutureTask, TimeUnit}
-import java.util.{Date, Properties, Timer}
+import java.util.{HashMap => JHashMap, _}
 
 import org.slf4j.LoggerFactory
 import tools.jdbc.JdbcUtils
 import tools.redis.RedisUtils
+import tools.redis.load.{FutureTaskResult, LoadStatus, LoadStatusUpdateThread, MonitorTask}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.xml.XML
 
 /**
- * Created by tsingfu on 15/6/15.
+ * Created by tsingfu on 15/6/23.
  */
-object Load2Redis {
+object Load2RedisNew {
 
   val logger = LoggerFactory.getLogger(this.getClass)
   val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
@@ -37,11 +38,11 @@ object Load2Redis {
   def jdbc2Hashes(confXmlFile: String): Unit ={
 
     val dummyEndMarker = "dummyEndMarker" //处理scala string1.split 陷阱问题
-
     //解析配置
+
     val props = init_props_fromXml(confXmlFile)
 
-    val redisServers = props.getProperty("redis.servers")
+    val redisServers = props.getProperty("redis.servers").trim
     val redisDatabase = props.getProperty("redis.database").trim.toInt
     val redisTimeout = props.getProperty("redis.timeout").trim.toInt
     val redisPassword = props.getProperty("redis.password") match {
@@ -53,9 +54,9 @@ object Load2Redis {
     val jedisPoolMaxIdle = props.getProperty("jedisPool.maxIdle").trim.toInt
     val jedisPoolMinIdle = props.getProperty("jedisPool.minIdle").trim.toInt
 
+
     val from = props.getProperty("load.from").trim
     val redisType = props.getProperty("load.redis.type").trim
-
 
 
     val batchLimit = props.getProperty("load.batchLimit").trim.toInt
@@ -65,7 +66,7 @@ object Load2Redis {
     val loadMethod = props.getProperty("load.method", "hset").trim
 
     val overwrite = props.getProperty("load.overwrite").trim.toBoolean
-    val appendSeperator = props.getProperty("load.appendSeperator").trim
+    val appendSeperator = props.getProperty("load.appendSeperator")
 
     val reportEnabled = props.getProperty("load.report.enabled").trim.toBoolean
     val reportDelaySeconds = (props.getProperty("load.report.delay.seconds") match{
@@ -83,7 +84,6 @@ object Load2Redis {
     //记录开始时间
     loadStatus.startTimeMs = System.currentTimeMillis()
     logger.info("startTimeMs = " + loadStatus.startTimeMs + "")
-
 
 
     //初始化 jedisPool, jedis, pipeline
@@ -133,11 +133,11 @@ object Load2Redis {
 
     from match {
       case "db" =>
-
         val jdbcPoolMaxActive = props.getProperty("jdbcPool.maxActive").trim.toInt
         val jdbcPoolInitialSize = props.getProperty("jdbcPool.initialSize").trim.toInt
         val jdbcPoolMaxIdle = props.getProperty("jdbcPool.maxIdle").trim.toInt
         val jdbcPoolMinIdle = props.getProperty("jdbcPool.minIdle").trim.toInt
+
 
         val jdbcDriver = props.getProperty("load.driver").trim
         val jdbcUrl = props.getProperty("load.url").trim
@@ -153,7 +153,6 @@ object Load2Redis {
 
         conn = ds.getConnection
         stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
-
 
 
         //获取要加载的记录数
@@ -205,48 +204,125 @@ object Load2Redis {
             val hashColumnNames = props.getProperty("load.hashColumnNames").trim.split(",").map(_.trim)
             val hashSeperator = props.getProperty("load.hashSeperator").trim
 
-            val valueColumnNames = props.getProperty("load.valueColumnNames").trim.split(",").map(_.trim)
             val fieldNames = props.getProperty("load.fieldNames").trim.split(",").map(_.trim)
+//            val valueColumnNames = props.getProperty("load.valueColumnNames").trim.split(",").map(_.trim)
+
+            val valueColumnNames = props.getProperty("load.valueColumnNames").trim.split(",")
+                    .map(_.trim.split(":").map(_.trim))
+            val valueSeperator = props.getProperty("load.valueSeperator").trim
+
+            val valueMapEnabled = props.getProperty("load.valueMapEnabled").trim.toBoolean
+
+            var valueMapEnabledColumnNames: Array[String] = Array[String]()
+            var valueMapEnabledWhereSperator: String = null
+            var valueMapEnabledWhereValueSperator: String = null
+            var valueMapEnabledWhere: Array[Array[String]] = Array[Array[String]](Array[String]())
+            var valueMaps: Array[String] = Array[String]()
+
+            if(valueMapEnabled){
+              valueMapEnabledColumnNames = props.getProperty("load.valueMapEnabled.columnNames").split(",").map(_.trim)
+              valueMapEnabledWhereSperator = props.getProperty("load.valueMapEnabled.where.seperator").trim
+              valueMapEnabledWhereValueSperator = props.getProperty("load.valueMapEnabled.where.valueSeperator").trim
+              valueMapEnabledWhere = props.getProperty("load.valueMapEnabled.where")
+                      .split(valueMapEnabledWhereSperator).map(_.split(valueMapEnabledWhereValueSperator))
+              valueMaps = props.getProperty("load.valueMaps").trim.split(",").map(_.trim)
+
+              logger.debug("= = " * 20)
+              logger.debug("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).mkString("[", ",","]"))
+              logger.debug("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).foreach(values=>{
+                println(values.split(valueMapEnabledWhereValueSperator).mkString("[", "-", "]"))
+              }))
+              logger.debug("valueMapEnabledWhere.length = " + valueMapEnabledWhere.length)
+              logger.debug("= = " * 20)
+            }
+
+
+            val conversion10to16ColumnNames = props.getProperty("load.conversion10to16.columnNames").trim.split(",").map(_.trim)
 
 
             //遍历数据准备，初始化构造线程任务处理批量数据的信息
             //格式： Array[String]
             //      String格式: hashNameValue, fieldValue1, fieldValue2 ,... fieldValuen
             val hashColumnNamesLength = hashColumnNames.length
-            val valueColumnNamesLength = valueColumnNames.length
-            val columnSeperator = "Jdbc2MultiHashesSeperator"
+//            val valueColumnNamesLength = valueColumnNames.length
+            val valueColumnNamesLength = valueColumnNames.flatMap(x => x).length
+
+            val columnSeperator = "Jdbc2HashesSeperator"
+
+
+            val conversion10to16ColumnIdxes = ArrayBuffer[Int]()
+            for(colIdx<-hashColumnNames.zipWithIndex){
+              val (col, idx) = colIdx
+              if (conversion10to16ColumnNames.contains(col)) conversion10to16ColumnIdxes.append(idx)
+            }
+
+            val valueMapEnabledColumnIdxes = ArrayBuffer[Int]()
+//            for(colIdx<-valueColumnNames.zipWithIndex){
+//              val (col, idx) = colIdx
+//              if (valueMapEnabledColumnNames.contains(col)) valueMapEnabledColumnIdxes.append(hashColumnNamesLength + idx)
+//            }
+
+            var tmpIdx = hashColumnNamesLength //记录字段名在resultset的位置索引，从1开始计算
+//            val valueIdxes: ArrayBuffer[Array[Int]] = ArrayBuffer[Array[Int]]()
+//
+//            for(columns<-valueColumnNames){
+//              val valueIdxArray = ArrayBuffer[Int]()
+//
+//              for((col, idx) <- columns.zipWithIndex){
+//                tmpIdx += 1
+//                valueIdxArray.append(tmpIdx)
+//                if (valueMapEnabledColumnNames.contains(col)) valueMapEnabledColumnIdxes.append(tmpIdx)
+//              }
+//              valueIdxes.append(valueIdxArray.toArray)
+//            }
+
+
+            val valueIdxes = //记录配置中value字段名对应在batchArrayBuffer中的位置索引，从0开始计算
+              for (columns <- valueColumnNames) yield {
+                for ((col, idx) <- columns.zipWithIndex) yield {
+                  tmpIdx += 1
+                  if (valueMapEnabledColumnNames.contains(col)) valueMapEnabledColumnIdxes.append(tmpIdx)
+                  tmpIdx - 1
+                }
+              }
+
+            valueIdxes.foreach(idxes=>println(" = =" * 10 +idxes.mkString(",")))
 
 
 
+//            val sql = "select " + hashColumnNames.mkString(",") + "," +
+//                    valueColumnNames.mkString(",") +
+//                    " from " + jdbcTable
             val sql = "select " + hashColumnNames.mkString(",") + "," +
-                    valueColumnNames.mkString(",") +
+                    valueColumnNames.flatMap(col=>col).mkString(",") +
                     " from " + jdbcTable
             logger.info("SQL : "+sql)
 
             rs = stmt.executeQuery(sql)
 
 
-
             while(rs.next()){
               loadStatus.numScanned += 1
 
-              val hashNameValues = for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)
-              val hashNameValue = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(hashSeperator)
-              val fieldValues = for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)
+              val hashNameValues = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
+//              val fieldValues = (for (i <- 1 to valueColumnNamesLength) yield rs.getString(hashColumnNamesLength + i)).mkString(columnSeperator)
 
+              val fieldValues = (for (i <- 1 to valueColumnNamesLength) yield rs.getString(hashColumnNamesLength + i)).mkString(columnSeperator)
 
               if(numInBatch == 0){
                 batchArrayBuffer = new ArrayBuffer[String]()
               }
-              batchArrayBuffer.append(hashNameValues.mkString(columnSeperator) + columnSeperator + fieldValues.mkString(columnSeperator) + columnSeperator + dummyEndMarker)
+//              batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues + columnSeperator + dummyEndMarker)
+              batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues + columnSeperator + dummyEndMarker)
               numInBatch += 1
 
               if(numInBatch == batchLimit){
                 logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-                  hashNamePrefix, (0 until hashColumnNamesLength).toArray ,hashSeperator,
+                val task = new Load2HashesThreadNew(batchArrayBuffer.toArray, columnSeperator,
+                  hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator, conversion10to16ColumnIdxes.toArray,
                   fieldNames,
-                  (hashColumnNamesLength until (hashColumnNamesLength + valueColumnNamesLength)).toArray,
+                  valueIdxes, valueSeperator,
+                  valueMapEnabledColumnIdxes.toArray, valueMapEnabledWhere, valueMaps,
                   jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                   FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                 val futureTask = new FutureTask[FutureTaskResult](task)
@@ -260,14 +336,14 @@ object Load2Redis {
             }
 
 
-
             //遍历完数据后，提交没有达到batchLimit的batch任务
             if(numInBatch > 0){
               logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-              val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-                hashNamePrefix, (0 until hashColumnNamesLength).toArray ,hashSeperator,
+              val task = new Load2HashesThreadNew(batchArrayBuffer.toArray, columnSeperator,
+                hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator, conversion10to16ColumnIdxes.toArray,
                 fieldNames,
-                (hashColumnNamesLength until (hashColumnNamesLength + valueColumnNamesLength)).toArray,
+                valueIdxes, valueSeperator,
+                valueMapEnabledColumnIdxes.toArray, valueMapEnabledWhere, valueMaps,
                 jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                 FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
               val futureTask = new FutureTask[FutureTaskResult](task)
@@ -279,51 +355,54 @@ object Load2Redis {
               numInBatch = 0
             }
 
+
           case "onehash" =>
+
             val hashName = props.getProperty("load.hashName").trim
             val fieldColumnNames = props.getProperty("load.fieldColumnNames").trim.split(",").map(_.trim)
             val fieldSeperator = props.getProperty("load.fieldSeperator").trim
+            val valueColumnName = props.getProperty("load.valueColumnName").trim
+            val valueMapEnabled = props.getProperty("load.valueMapEnabled").trim.toBoolean
+            val valueMap = props.getProperty("load.valueMap").trim
+            val conversion10to16ColumnNames = props.getProperty("load.conversion10to16.columnNames").trim.split(",").map(_.trim)
 
-            val valueColumnNames = props.getProperty("load.valueColumnNames").trim.split(",").map(_.trim)
-            val valueSeperator = props.getProperty("load.valueSeperator").trim
+            val conversion10to16ColumnIdxes = ArrayBuffer[Int]()
+            for(colIdx<-fieldColumnNames.zipWithIndex){
+              val (col, idx) = colIdx
+              if (conversion10to16ColumnNames.contains(col)) conversion10to16ColumnIdxes.append(idx)
+            }
 
             //遍历数据准备，初始化构造线程任务处理批量数据的信息
             //格式： Array[String]
-            //      String格式: field1, value1
+            //      String格式: field1,field2 value
             val fieldColumnNamesLength = fieldColumnNames.length
-            val valueColumnNamesLength = valueColumnNames.length
             val columnSeperator = "Jdbc2OneHashSeperator"
 
 
             val sql = "select " +fieldColumnNames.mkString(",") + "," +
-                    valueColumnNames.mkString(",") +
+                    valueColumnName +
                     " from " + jdbcTable
-            logger.info("SQL: " + sql)
+            logger.debug("SQL: " + sql)
 
             rs = stmt.executeQuery(sql)
 
             while(rs.next()){
               loadStatus.numScanned += 1
 
-              val field = (for (i <- 1 to fieldColumnNamesLength) yield rs.getString(i)).mkString(fieldSeperator)
-              val value = (for (i <- fieldColumnNamesLength + 1 to fieldColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(valueSeperator)
-
               val fields = (for (i <- 1 to fieldColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
-              val values = (for (i <- fieldColumnNamesLength + 1 to fieldColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
-
+              val value = rs.getString(fieldColumnNamesLength+1)
 
               if(numInBatch == 0){
                 batchArrayBuffer = new ArrayBuffer[String]()
               }
-              batchArrayBuffer.append(fields + columnSeperator + values  + columnSeperator + dummyEndMarker)
+              batchArrayBuffer.append(fields + columnSeperator + value +columnSeperator +dummyEndMarker)
               numInBatch += 1
 
               if(numInBatch == batchLimit){
-                logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
                 val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
                   hashName,
-                  (0 until fieldColumnNamesLength).toArray, fieldSeperator,
-                  (fieldColumnNamesLength until (fieldColumnNamesLength + valueColumnNamesLength)).toArray, valueSeperator,
+                  (0 until fieldColumnNamesLength).toArray, fieldSeperator, conversion10to16ColumnIdxes.toArray,
+                  fieldColumnNamesLength, valueMapEnabled, valueMap,
                   jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                   FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                 val futureTask = new FutureTask[FutureTaskResult](task)
@@ -339,11 +418,10 @@ object Load2Redis {
 
             //遍历完数据后，提交没有达到batchLimit的batch任务
             if(numInBatch > 0){
-              logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
               val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
                 hashName,
-                (0 until fieldColumnNamesLength).toArray, fieldSeperator,
-                (fieldColumnNamesLength until (fieldColumnNamesLength + valueColumnNamesLength)).toArray, valueSeperator,
+                (0 until fieldColumnNamesLength).toArray, fieldSeperator, conversion10to16ColumnIdxes.toArray,
+                fieldColumnNamesLength, valueMapEnabled, valueMap,
                 jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                 FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
               val futureTask = new FutureTask[FutureTaskResult](task)
@@ -354,13 +432,12 @@ object Load2Redis {
               loadStatus.numBatches += 1
               numInBatch = 0
             }
-
         }
+
       case "file" =>
         val filename = props.getProperty("load.filename").trim
         val fileEncode = props.getProperty("load.fileEncode").trim
         val columnSeperator = props.getProperty("load.columnSeperator").trim
-
 
         //获取要加载的记录数
         loadStatus.numTotal = scala.io.Source.fromFile(filename, fileEncode).getLines().length
@@ -368,14 +445,44 @@ object Load2Redis {
 
         redisType match {
           case "multihashes" =>
-
             val hashNamePrefix = props.getProperty("load.hashNamePrefix").trim
             val hashIdxes = props.getProperty("load.hashIdxes").trim.split(",").map(_.trim.toInt)
             val hashSeperator = props.getProperty("load.hashSeperator").trim
 
-            val valueIdxes = props.getProperty("load.valueIdxes").trim.split(",").map(_.trim.toInt)
             val fieldNames = props.getProperty("load.fieldNames").trim.split(",").map(_.trim)
+//            val valueIdxes = props.getProperty("load.valueIdxes").trim.split(",").map(_.trim.toInt)
 
+            val valueIdxes = props.getProperty("load.valueIdxes").trim.split(",").map(_.trim.split(":").map(_.trim.toInt))
+            val valueSeperator = props.getProperty("load.valueSeperator").trim
+
+            val valueMapEnabled = props.getProperty("load.valueMapEnabled").trim.toBoolean
+
+            var valueMapEnabledIdxes: Array[Int] = Array[Int]()
+            var valueMapEnabledWhereSperator: String = null
+            var valueMapEnabledWhereValueSperator: String = null
+            var valueMapEnabledWhere: Array[Array[String]] = Array[Array[String]](Array[String]())
+            var valueMaps: Array[String] = Array[String]()
+
+            if(valueMapEnabled){
+              valueMapEnabledIdxes = props.getProperty("load.valueMapEnabled.idxes").split(",").map(_.trim.toInt)
+              valueMapEnabledWhereSperator = props.getProperty("load.valueMapEnabled.where.seperator").trim
+              valueMapEnabledWhereValueSperator = props.getProperty("load.valueMapEnabled.where.valueSeperator").trim
+              valueMapEnabledWhere = props.getProperty("load.valueMapEnabled.where")
+                      .split(valueMapEnabledWhereSperator).map(_.split(valueMapEnabledWhereValueSperator))
+              valueMaps = props.getProperty("load.valueMaps").trim.split(",").map(_.trim)
+
+              logger.debug("= = " * 20)
+              logger.debug("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).mkString("[", ",","]"))
+              logger.debug("valueMapEnabledWhere=" + props.getProperty("load.valueMapEnabled.where").split(valueMapEnabledWhereSperator).foreach(values=>{
+                logger.debug(values.split(valueMapEnabledWhereValueSperator).mkString("[", "-", "]"))
+              }))
+              logger.debug("valueMapEnabledWhere.length = " + valueMapEnabledWhere.length)
+              logger.debug("= = " * 20)
+            }
+
+
+
+            val conversion10to16Idxes = props.getProperty("load.conversion10to16.idxes").trim.split(",").map(_.trim.toInt)
 
             //遍历数据，，提交加载任务，之后等待加载完成
             for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
@@ -385,13 +492,16 @@ object Load2Redis {
                 batchArrayBuffer = new ArrayBuffer[String]()
               }
               batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
+
               numInBatch += 1
 
               if(numInBatch == batchLimit){
                 logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-                  hashNamePrefix, hashIdxes, hashSeperator,
-                  fieldNames, valueIdxes,
+                val task = new Load2HashesThreadNew(batchArrayBuffer.toArray,columnSeperator,
+                  hashNamePrefix, hashIdxes, hashSeperator, conversion10to16Idxes,
+                  fieldNames,
+                  valueIdxes, valueSeperator,
+                  valueMapEnabledIdxes, valueMapEnabledWhere, valueMaps,
                   jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                   FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                 val futureTask = new FutureTask[FutureTaskResult](task)
@@ -408,9 +518,11 @@ object Load2Redis {
             //遍历完数据后，提交没有达到batchLimit的batch任务
             if(numInBatch > 0){
               logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-              val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-                hashNamePrefix, hashIdxes, hashSeperator,
-                fieldNames, valueIdxes,
+              val task = new Load2HashesThreadNew(batchArrayBuffer.toArray,columnSeperator,
+                hashNamePrefix, hashIdxes, hashSeperator, conversion10to16Idxes,
+                fieldNames,
+                valueIdxes, valueSeperator,
+                valueMapEnabledIdxes, valueMapEnabledWhere, valueMaps,
                 jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                 FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
               val futureTask = new FutureTask[FutureTaskResult](task)
@@ -427,8 +539,11 @@ object Load2Redis {
             val hashName = props.getProperty("load.hashName").trim
             val fieldIdxes = props.getProperty("load.fieldIdxes").trim.split(",").map(_.trim.toInt)
             val fieldSeperator = props.getProperty("load.fieldSeperator").trim
-            val valueIdxes = props.getProperty("load.valueIdxes").trim.split(",").map(_.trim.toInt)
-            val valueSeperator = props.getProperty("load.valueSeperator").trim
+            val valueIdx = props.getProperty("load.valueIdx").trim.toInt
+            val valueMapEnabled = props.getProperty("load.valueMapEnabled").trim.toBoolean
+            val valueMap = props.getProperty("load.valueMap").trim
+            val conversion10to16Idxes = props.getProperty("load.conversion10to16.idxes").trim.split(",").map(_.trim.toInt)
+
 
             //遍历数据，，提交加载任务，之后等待加载完成
             for (line <- scala.io.Source.fromFile(filename, fileEncode).getLines()) {
@@ -438,14 +553,15 @@ object Load2Redis {
                 batchArrayBuffer = new ArrayBuffer[String]()
               }
               batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
+
               numInBatch += 1
 
               if(numInBatch == batchLimit){
                 logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-                val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
+                val task = new Load2OneHashThread(batchArrayBuffer.toArray,columnSeperator,
                   hashName,
-                  fieldIdxes, fieldSeperator,
-                  valueIdxes, valueSeperator,
+                  fieldIdxes, fieldSeperator, conversion10to16Idxes,
+                  valueIdx, valueMapEnabled, valueMap,
                   jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                   FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                 val futureTask = new FutureTask[FutureTaskResult](task)
@@ -462,10 +578,10 @@ object Load2Redis {
             //遍历完数据后，提交没有达到batchLimit的batch任务
             if(numInBatch > 0){
               logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
-              val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
+              val task = new Load2OneHashThread(batchArrayBuffer.toArray,columnSeperator,
                 hashName,
-                fieldIdxes, fieldSeperator,
-                valueIdxes, valueSeperator,
+                fieldIdxes, fieldSeperator, conversion10to16Idxes,
+                valueIdx, valueMapEnabled, valueMap,
                 jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                 FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
               val futureTask = new FutureTask[FutureTaskResult](task)
@@ -476,10 +592,8 @@ object Load2Redis {
               loadStatus.numBatches += 1
               numInBatch = 0
             }
-
         }
     }
-
 
 
     //提交完加载任务后，等待所有加载线程任务完成
@@ -532,14 +646,12 @@ object Load2Redis {
     val servers = (conf \ "redis" \ "servers").text.trim
     val database = (conf \ "redis" \ "database").text.trim
     val timeout = (conf \ "redis" \ "timeout").text.trim
-    val passwd = (conf \ "redis" \ "password").text.trim
-    val password = if (passwd == "" || passwd == null) null else passwd
+    val password = (conf \ "redis" \ "password").text.trim
 
     props.put("redis.servers", servers)
     props.put("redis.database", database)
     props.put("redis.timeout", timeout)
-
-    if(password != null || password == "") props.put("redis.password", password)
+    props.put("redis.password", password)
 
 
     val maxTotal = (conf \ "jedisPool" \ "maxTotal").text.trim
@@ -555,6 +667,7 @@ object Load2Redis {
     val redisType = (conf \ "load" \ "redis.type").text.trim
     props.put("load.from", from)
     props.put("load.redis.type", redisType)
+
 
     from match {
       case "db" =>
@@ -586,33 +699,61 @@ object Load2Redis {
 
         redisType match {
           case "multihashes" =>
-
             val hashNamePrefix = (conf \ "load" \ "hashNamePrefix").text.trim
             val hashColumnNames = (conf \ "load" \ "hashColumnNames").text.trim
             val hashSeperator = (conf \ "load" \ "hashSeperator").text.trim
+
+            val conversion10to16ColumnNames = (conf \ "load" \ "conversion10to16.columnNames").text.trim
+
+            val fieldNames = (conf \ "load" \ "fieldNames").text.trim
             val valueColumnNames = (conf \ "load" \ "valueColumnNames").text.trim
             val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
-            val fieldNames = (conf \ "load" \ "fieldNames").text.trim
+            val valueMapEnabled = (conf \ "load" \ "valueMapEnabled").text.trim
+
 
             props.put("load.hashNamePrefix", hashNamePrefix)
             props.put("load.hashColumnNames", hashColumnNames)
             props.put("load.hashSeperator", hashSeperator)
+            props.put("load.conversion10to16.columnNames", conversion10to16ColumnNames)
+
+            props.put("load.fieldNames", fieldNames)
             props.put("load.valueColumnNames", valueColumnNames)
             props.put("load.valueSeperator", valueSeperator)
-            props.put("load.fieldNames", fieldNames)
+            props.put("load.valueMapEnabled", valueMapEnabled)
+
+            if(valueMapEnabled.toBoolean){
+              val valueMapEnabledColumnNames = (conf \ "load" \ "valueMapEnabled.columnNames").text.trim
+              val valueMapEnabledWhere = (conf \ "load" \ "valueMapEnabled.where").text.trim
+              val valueMapEnabledWhereSeperator = (conf \ "load" \ "valueMapEnabled.where.seperator").text.trim
+              val valueMapEnabledWhereValueSeperator = (conf \ "load" \ "valueMapEnabled.where.valueSeperator").text.trim
+              val valueMaps = (conf \ "load" \ "valueMaps").text.trim
+
+              props.put("load.valueMapEnabled.columnNames", valueMapEnabledColumnNames)
+              props.put("load.valueMapEnabled.where", valueMapEnabledWhere)
+              props.put("load.valueMapEnabled.where.seperator", valueMapEnabledWhereSeperator)
+              props.put("load.valueMapEnabled.where.valueSeperator", valueMapEnabledWhereValueSeperator)
+              props.put("load.valueMaps", valueMaps)
+            }
 
           case "onehash" =>
             val hashName = (conf \ "load" \ "hashName").text.trim
             val fieldColumnNames = (conf \ "load" \ "fieldColumnNames").text.trim
             val fieldSeperator = (conf \ "load" \ "fieldSeperator").text.trim
-            val valueColumnNames = (conf \ "load" \ "valueColumnNames").text.trim
-            val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
+            val conversion10to16ColumnNames = (conf \ "load" \ "conversion10to16.columnNames").text.trim
+
+            val valueColumnName = (conf \ "load" \ "valueColumnName").text.trim
+            val valueMapEnabled = (conf \ "load" \ "valueMapEnabled").text.trim
+            val valueMap = (conf \ "load" \ "valueMap").text.trim
+
 
             props.put("load.hashName", hashName)
             props.put("load.fieldColumnNames", fieldColumnNames)
             props.put("load.fieldSeperator", fieldSeperator)
-            props.put("load.valueColumnNames", valueColumnNames)
-            props.put("load.valueSeperator", valueSeperator)
+            props.put("load.conversion10to16.columnNames", conversion10to16ColumnNames)
+
+            props.put("load.valueColumnName", valueColumnName)
+            props.put("load.valueMapEnabled", valueMapEnabled)
+            props.put("load.valueMap", valueMap)
         }
 
       case "file" =>
@@ -626,42 +767,71 @@ object Load2Redis {
 
         redisType match {
           case "multihashes" =>
-
             val hashNamePrefix = (conf \ "load" \ "hashNamePrefix").text.trim
             val hashIdxes = (conf \ "load" \ "hashIdxes").text.trim
             val hashSeperator = (conf \ "load" \ "hashSeperator").text.trim
-            val valueIdxes = (conf \ "load" \ "valueIdxes").text.trim
+
+            val conversion10to16Idxes = (conf \ "load" \ "conversion10to16.idxes").text
+
             val fieldNames = (conf \ "load" \ "fieldNames").text.trim
+            val valueIdxes = (conf \ "load" \ "valueIdxes").text.trim
+            val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
+            val valueMapEnabled = (conf \ "load" \ "valueMapEnabled").text.trim
+
 
             props.put("load.hashNamePrefix", hashNamePrefix)
             props.put("load.hashIdxes", hashIdxes)
             props.put("load.hashSeperator", hashSeperator)
-            props.put("load.valueIdxes", valueIdxes)
+            props.put("load.conversion10to16.idxes", conversion10to16Idxes)
+
             props.put("load.fieldNames", fieldNames)
+            props.put("load.valueIdxes", valueIdxes)
+            props.put("load.valueSeperator", valueSeperator)
+            props.put("load.valueMapEnabled", valueMapEnabled)
+
+
+            if(valueMapEnabled.toBoolean){
+              val valueMapEnabledIdxes = (conf \ "load" \ "valueMapEnabled.idxes").text.trim
+              val valueMapEnabledWhere = (conf \ "load" \ "valueMapEnabled.where").text.trim
+              val valueMapEnabledWhereSeperator = (conf \ "load" \ "valueMapEnabled.where.seperator").text.trim
+              val valueMapEnabledWhereValueSeperator = (conf \ "load" \ "valueMapEnabled.where.valueSeperator").text.trim
+              val valueMaps = (conf \ "load" \ "valueMaps").text.trim
+
+              props.put("load.valueMapEnabled.idxes", valueMapEnabledIdxes)
+              props.put("load.valueMapEnabled.where", valueMapEnabledWhere)
+              props.put("load.valueMapEnabled.where.seperator", valueMapEnabledWhereSeperator)
+              props.put("load.valueMapEnabled.where.valueSeperator", valueMapEnabledWhereValueSeperator)
+              props.put("load.valueMaps", valueMaps)
+            }
 
           case "onehash" =>
             val hashName = (conf \ "load" \ "hashName").text.trim
             val fieldIdxes = (conf \ "load" \ "fieldIdxes").text.trim
             val fieldSeperator = (conf \ "load" \ "fieldSeperator").text.trim
-            val valueIdxes = (conf \ "load" \ "valueIdxes").text.trim
-            val valueSeperator = (conf \ "load" \ "valueSeperator").text.trim
+            val valueIdx = (conf \ "load" \ "valueIdx").text.trim
+            val valueMapEnabled = (conf \ "load" \ "valueMapEnabled").text.trim
+            val valueMap = (conf \ "load" \ "valueMap").text.trim
+
+            val conversion10to16Idxes = (conf \ "load" \ "conversion10to16.idxes").text.trim
 
             props.put("load.hashName", hashName)
             props.put("load.fieldIdxes", fieldIdxes)
             props.put("load.fieldSeperator", fieldSeperator)
-            props.put("load.valueIdxes", valueIdxes)
-            props.put("load.valueSeperator", valueSeperator)
+            props.put("load.valueIdx", valueIdx)
+            props.put("load.valueMapEnabled", valueMapEnabled)
+            props.put("load.valueMap", valueMap)
+            props.put("load.conversion10to16.idxes", conversion10to16Idxes)
         }
 
     }
 
 
+
+    val numThreads = (conf \ "load" \ "numThreads").text.trim
     val batchLimit = (conf \ "load" \ "batchLimit").text.trim
     val batchLimitForRedis = (conf \ "load" \ "batchLimit.redis").text.trim
-    val numThreads = (conf \ "load" \ "numThreads").text.trim
 
     val loadMethod = (conf \ "load" \ "method").text.trim
-
     val overwrite = (conf \ "load" \ "overwrite").text.trim
     val appendSeperator = (conf \ "load" \ "appendSeperator").text.trim
 
@@ -670,9 +840,9 @@ object Load2Redis {
     val reportIntervalSeconds = (conf \ "load" \ "report.interval.seconds").text.trim
 
 
+    props.put("load.numThreads", numThreads)
     props.put("load.batchLimit", batchLimit)
     props.put("load.batchLimit.redis", batchLimitForRedis)
-    props.put("load.numThreads", numThreads)
 
     props.put("load.method", loadMethod)
     props.put("load.overwrite", overwrite)
@@ -691,3 +861,4 @@ object Load2Redis {
   }
 
 }
+

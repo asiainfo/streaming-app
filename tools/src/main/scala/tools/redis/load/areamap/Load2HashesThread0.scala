@@ -13,6 +13,9 @@ import scala.collection.convert.wrapAsScala._
 
 /**
  * Created by tsingfu on 15/6/12.
+ * 适用情景：
+ * 情景1：每行记录格式： hashCol1, hashCol2, valueCol1, valueCol2
+ *       可以指定hashCol1，hashCol2两列数据的取值与一个指定前缀拼接为hashkey， 指定valueCol1 分别作为指定field1的取值
  */
 class Load2HashesThread0(lines: Array[String], columnSeperator: String,
                         hashNamePrefix: String, hashIdxes: Array[Int], hashSeperator: String, conversion10to16Idxes: Array[Int],

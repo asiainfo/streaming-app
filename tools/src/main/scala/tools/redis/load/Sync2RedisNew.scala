@@ -36,6 +36,8 @@ object Sync2RedisNew {
 
   def jdbc2Hashes(confXmlFile: String): Unit ={
 
+    val dummyEndMarker = "dummyEndMarker" //处理scala string1.split 陷阱问题
+
     //解析配置
     val props = init_props_fromXml(confXmlFile)
 
@@ -263,20 +265,24 @@ object Sync2RedisNew {
               while(rs.next()){
                 loadStatus.numScanned += 1
 
-                val hashNameValue = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(hashSeperator)
-                val fieldValues = for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)
+//                val hashNameValue = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(hashSeperator)
+//                val fieldValues = for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)
 
-                  val syncFlag = rs.getString(syncColumnIdx)
+                val hashNameValues = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
+//                val fieldValuesString = (for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
+
+                val syncFlag = rs.getString(syncColumnIdx)
                   logger.debug("syncFlag = " + syncFlag)
                   if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
-                    batchArrayBufferForDelete.append(hashNameValue + columnSeperator + fieldNames.mkString(columnSeperator))
+                    batchArrayBufferForDelete.append(hashNameValues + columnSeperator + fieldNames.mkString(columnSeperator))
                     numInBatchForDelete += 1
                   }
 
                   if(numInBatchForDelete == batchLimit){
                     logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
                     val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                      hashNamePrefix, Array(0),hashSeperator, fieldNames,
+                      hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
+                      fieldNames,
                       jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
                       FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                     val futureTask = new FutureTask[FutureTaskResult](task)
@@ -296,7 +302,8 @@ object Sync2RedisNew {
                 if(numInBatchForDelete > 0){
                   logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
                   val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
-                    hashNamePrefix, Array(0),hashSeperator, fieldNames,
+                    hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
+                    fieldNames,
                     jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
                     FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                   val futureTask = new FutureTask[FutureTaskResult](task)
@@ -326,7 +333,9 @@ object Sync2RedisNew {
               loadStatus.numScanned += 1
 
               val hashNameValue = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(hashSeperator)
-              val fieldValues = for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)
+
+              val hashNameValues = (for (i <- 1 to hashColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
+              val fieldValues = (for (i <- hashColumnNamesLength + 1 to hashColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
 
               if(syncIncrementEnabled){
                 val syncFlag = rs.getString(syncColumnIdx)
@@ -334,24 +343,26 @@ object Sync2RedisNew {
                 if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
 
                 }else if (syncFlag == syncInsertFlag && syncInsertEnabled){
-                  batchArrayBuffer.append(hashNameValue + columnSeperator + fieldValues.mkString(columnSeperator))
+                  batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues + columnSeperator + dummyEndMarker)
                   numInBatch += 1
                 } else if (syncFlag == syncUpdateFlag && syncUpdateEnabled){
-                  batchArrayBuffer.append(hashNameValue + columnSeperator + fieldValues.mkString(columnSeperator))
+                  batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues + columnSeperator + dummyEndMarker)
                   numInBatch += 1
                 } else {
                   logger.debug("found unknown syncFlag = " + syncFlag +" for line = " + hashNamePrefix+hashNameValue)
                   numSyncFlagUnknown += 1
                 }
               } else {
-                batchArrayBuffer.append(hashNameValue + columnSeperator + fieldValues.mkString(columnSeperator))
+                batchArrayBuffer.append(hashNameValues + columnSeperator + fieldValues + columnSeperator + dummyEndMarker)
                 numInBatch += 1
               }
 
               if(numInBatch == batchLimit){
                 logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
                 val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-                  hashNamePrefix, Array(0),hashSeperator, fieldNames, (1 to valueColumnNamesLength).toArray,
+                  hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
+                  fieldNames,
+                  (hashColumnNamesLength until (hashColumnNamesLength + valueColumnNamesLength)).toArray,
                   jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                   FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                 val futureTask = new FutureTask[FutureTaskResult](task)
@@ -371,7 +382,9 @@ object Sync2RedisNew {
             if(numInBatch > 0){
               logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
               val task = new Load2HashesThread(batchArrayBuffer.toArray, columnSeperator,
-                hashNamePrefix, Array(0),hashSeperator, fieldNames, (1 to valueColumnNamesLength).toArray,
+                hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
+                fieldNames,
+                (hashColumnNamesLength until (hashColumnNamesLength + valueColumnNamesLength)).toArray,
                 jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                 FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
               val futureTask = new FutureTask[FutureTaskResult](task)
@@ -421,12 +434,13 @@ object Sync2RedisNew {
               while (rs.next()) {
                 loadStatus.numScanned += 1
 
-                val field = (for (i <- 1 to fieldColumnNamesLength) yield rs.getString(i)).mkString(fieldSeperator)
-                val value = (for (i <- fieldColumnNamesLength + 1 to fieldColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(valueSeperator)
+                val fields = (for (i <- 1 to fieldColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
+                val values = (for (i <- fieldColumnNamesLength + 1 to fieldColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
+
 
                 val syncFlag = rs.getString(syncColumnIdx)
                 if (syncFlag == syncDeleteFlag && syncDeleteEnabled) {
-                  batchArrayBufferForDelete.append(field + columnSeperator + value)
+                  batchArrayBufferForDelete.append(fields + columnSeperator + values + columnSeperator + dummyEndMarker)
                   numInBatchForDelete += 1
                 }
 
@@ -435,7 +449,7 @@ object Sync2RedisNew {
                   logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch + "]")
                   val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
                     hashName,
-                    Array(0), fieldSeperator,
+                    (0 until fieldColumnNamesLength).toArray, fieldSeperator,
                     jedisPools(jedisPoolId), loadMethod, batchLimitForRedis,
                     FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                   val futureTask = new FutureTask[FutureTaskResult](task)
@@ -456,7 +470,7 @@ object Sync2RedisNew {
                 logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch + "]")
                 val task = new Sync2OneHashHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
                   hashName,
-                  Array(0), fieldSeperator,
+                  (0 until fieldColumnNamesLength).toArray, fieldSeperator,
                   jedisPools(jedisPoolId), loadMethod, batchLimitForRedis,
                   FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                 val futureTask = new FutureTask[FutureTaskResult](task)
@@ -486,24 +500,27 @@ object Sync2RedisNew {
               loadStatus.numScanned += 1
 
               val field = (for (i <- 1 to fieldColumnNamesLength) yield rs.getString(i)).mkString(fieldSeperator)
-              val value = (for (i <- fieldColumnNamesLength + 1 to fieldColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(valueSeperator)
+
+              val fields = (for (i <- 1 to fieldColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
+              val values = (for (i <- fieldColumnNamesLength + 1 to fieldColumnNamesLength + valueColumnNamesLength) yield rs.getString(i)).mkString(columnSeperator)
+
 
               if(syncIncrementEnabled){
                 val syncFlag = rs.getString(syncColumnIdx)
                 if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
 
                 } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
-                  batchArrayBuffer.append(field + columnSeperator + value)
+                  batchArrayBuffer.append(fields + columnSeperator + values + columnSeperator + dummyEndMarker)
                   numInBatch += 1
                 } else if (syncFlag == syncUpdateFlag && syncUpdateEnabled){
-                  batchArrayBuffer.append(field + columnSeperator + value)
+                  batchArrayBuffer.append(fields + columnSeperator + values + columnSeperator + dummyEndMarker)
                   numInBatch += 1
                 } else {
                   logger.debug("found unknown syncFlag = " + syncFlag +" for hash = " + hashName +" " + field)
                   numSyncFlagUnknown += 1
                 }
               } else {
-                batchArrayBuffer.append(field + columnSeperator + value)
+                batchArrayBuffer.append(fields + columnSeperator + values + columnSeperator + dummyEndMarker)
                 numInBatch += 1
               }
 
@@ -512,8 +529,8 @@ object Sync2RedisNew {
                 logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
                 val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
                   hashName,
-                  Array(0), fieldSeperator,
-                  Array(1), valueSeperator,
+                  (0 until fieldColumnNamesLength).toArray, fieldSeperator,
+                  (fieldColumnNamesLength until (fieldColumnNamesLength + valueColumnNamesLength)).toArray, valueSeperator,
                   jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                   FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
                 val futureTask = new FutureTask[FutureTaskResult](task)
@@ -535,8 +552,8 @@ object Sync2RedisNew {
               logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
               val task = new Load2OneHashThread(batchArrayBuffer.toArray, columnSeperator,
                 hashName,
-                Array(0), fieldSeperator,
-                Array(1), valueSeperator,
+                (0 until fieldColumnNamesLength).toArray, fieldSeperator,
+                (fieldColumnNamesLength until (fieldColumnNamesLength + valueColumnNamesLength)).toArray, valueSeperator,
                 jedisPools(jedisPoolId),loadMethod, batchLimitForRedis, overwrite, appendSeperator,
                 FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
               val futureTask = new FutureTask[FutureTaskResult](task)
@@ -582,7 +599,7 @@ object Sync2RedisNew {
                   val syncFlag = lineArray(syncIdx)
 
                   if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
-                    batchArrayBufferForDelete.append(line)
+                    batchArrayBufferForDelete.append(line + columnSeperator + dummyEndMarker)
                     numInBatchForDelete += 1
                   }
 
@@ -648,17 +665,17 @@ object Sync2RedisNew {
                 if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
 
                 } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
-                  batchArrayBuffer.append(line)
+                  batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
                   numInBatch += 1
                 } else if (syncFlag == syncUpdateFlag && syncUpdateEnabled){
-                  batchArrayBuffer.append(line)
+                  batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
                   numInBatch += 1
                 } else {
                   logger.debug("found unknown syncFlag = " + syncFlag +" for line = " + line)
                   numSyncFlagUnknown += 1
                 }
               } else {
-                batchArrayBuffer.append(line)
+                batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
                 numInBatch += 1
               }
 
@@ -723,7 +740,7 @@ object Sync2RedisNew {
                 val syncFlag = lineArray(syncIdx)
 
                 if (syncFlag == syncDeleteFlag && syncDeleteEnabled) {
-                  batchArrayBufferForDelete.append(line)
+                  batchArrayBufferForDelete.append(line + columnSeperator + dummyEndMarker)
                   numInBatchForDelete += 1
                 }
 
@@ -787,17 +804,17 @@ object Sync2RedisNew {
                 if(syncFlag == syncDeleteFlag && syncDeleteEnabled){
 
                 } else if (syncFlag == syncInsertFlag && syncInsertEnabled){
-                  batchArrayBuffer.append(line)
+                  batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
                   numInBatch += 1
                 } else if (syncFlag == syncUpdateFlag && syncUpdateEnabled){
-                  batchArrayBuffer.append(line)
+                  batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
                   numInBatch += 1
                 } else {
                   logger.debug("found unknown syncFlag = " + syncFlag +" for line = " + line)
                   numSyncFlagUnknown += 1
                 }
               } else {
-                batchArrayBuffer.append(line)
+                batchArrayBuffer.append(line + columnSeperator + dummyEndMarker)
                 numInBatch += 1
               }
 
@@ -865,7 +882,7 @@ object Sync2RedisNew {
     println(sdf.format(new Date()) + " [INFO] finished load, statistics: numTotal = "+loadStatus.numTotal+ ", numScanned = " + loadStatus.numScanned +", numBatches = "+loadStatus.numBatches +
             ", numProcessed = " + loadStatus.numProcessed + ", numProcessedBatches = "+loadStatus.numBatchesProcessed+
             ", runningTime = " + runningTimeMs +" ms <=> " + runningTimeMs / 1000.0  +" s <=> " + runningTimeMs / 1000.0 / 60 +" min" +
-            ", loadSpeed = " + loadSpeedPerSec +", records/s => " + (loadSpeedPerSec * 60) + " records/min <=> " + (loadSpeedPerSec * 60 * 60) +" records/h" +
+            ", loadSpeed = " + loadSpeedPerSec +" records/s => " + (loadSpeedPerSec * 60) + " records/min <=> " + (loadSpeedPerSec * 60 * 60) +" records/h" +
             ", loadSpeedLastMonitored = " + loadSpeedPerSecLastMonitored +" records/s <=> " + loadSpeedPerSecLastMonitored * 60 +" records/min  " +
             "<=> " + (loadSpeedPerSecLastMonitored * 60 * 60) +" records/h" +
             ", loadProgress percent of numProcessed = " + loadStatus.numProcessed * 1.0 / loadStatus.numTotal * 100 +"%" +

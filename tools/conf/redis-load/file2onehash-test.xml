@@ -21,6 +21,8 @@
 
         <redis.type>onehash</redis.type>
 
+        <sync.incrementEnabled>false</sync.incrementEnabled> <!-- 设置加载的类型，false全量加载, true增量加载-->
+
         <!--load into onehash form file-->
         <hashName>file2onehash</hashName> <!-- 设置hashkey名 -->
 

@@ -105,8 +105,9 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
 
   test("1 生成测试数据"){
 
-    val confXmlFile = "tools/conf/redis-load/jdbc2hashes-test.xml"
-    val props = Load2Redis.init_props_fromXml(confXmlFile)
+//    val confXmlFile = "tools/conf/redis-load/jdbc2hashes-test.xml"
+    val confXmlFile = "tools/conf/redis-load/areamap-new-jdbc2hashes-test.xml"
+    val props = Sync2Redis.init_props_fromXml(confXmlFile)
 
     val redisServers = props.getProperty("redis.servers")
     val redisDatabase = props.getProperty("redis.database").trim.toInt
@@ -202,6 +203,15 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
 //    stmt.execute("insert into "+tabName_test3+" value (-1,"+(100+deleteId1)+","+(100+deleteId2)+"," + ((deleteId1+deleteId2)%2)+", \""+("WLAN2"*(((-1)*deleteId1+deleteId2)%2))+"\")")
 
 
+    val tabName_test_new = "tab_areamap_jdbc2hashes_new"
+
+        stmt.execute("create table if not exists "+tabName_test_new+" (id1 int, id2 int, col3 varchar(50), col4 varchar(50), col5 varchar(50))")
+        stmt.execute("truncate table "+tabName_test_new)
+
+        for(i <- 0 until 10; j<- 0 until 10){
+          stmt.execute("insert into "+tabName_test_new+" value ("+(100+i)+","+(100+j)+", \"area-" +((i+j)%10)+ "\", " + (i%10)+", "+(j%10)+")")
+        }
+
     JdbcUtils.closeQuiet(rs, stmt, conn)
 
   }
@@ -214,9 +224,9 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
     // id1,id2取值使用冒号拼接，和前缀jdbc2hashes:共同组成hash名
     // col3,col4取值作为value，属性名分别对应field1,field2
     val confXmlFile = "tools/conf/redis-load/areamap-jdbc2hashes-test.xml"
-    Load2Redis.jdbc2Hashes(confXmlFile)
+    Sync2Redis.jdbc2Hashes(confXmlFile)
 
-    val props = Load2Redis.init_props_fromXml(confXmlFile)
+    val props = Sync2Redis.init_props_fromXml(confXmlFile)
     val hashNamePrefix = props.getProperty("load.hashNamePrefix")
 
     //检查结果
