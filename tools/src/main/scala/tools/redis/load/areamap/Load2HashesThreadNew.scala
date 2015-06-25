@@ -12,15 +12,17 @@ import scala.collection.convert.wrapAsJava._
 import scala.collection.convert.wrapAsScala._
 
 /**
- * Created by tsingfu on 15/6/12.
+ * Created by tsingfu on 15/6/23.
  * 适用情景：
  * 情景1：每行记录格式： hashCol1, hashCol2, valueCol1, valueCol2
- *       可以指定hashCol1，hashCol2两列数据的取值与一个指定前缀拼接为hashkey， 指定valueCol1, valueCol2 分别作为指定field1, field2的取值
+ *       可以指定hashCol1，hashCol2两列数据的取值与一个指定前缀拼接为hashkey， 指定valueCol1, valueCol2 两列数据拼接作为指定field1的取值
  */
-class Load2HashesThread(lines: Array[String], columnSeperator: String,
+class Load2HashesThreadNew(lines: Array[String], columnSeperator: String,
                         hashNamePrefix: String, hashIdxes: Array[Int], hashSeperator: String, conversion10to16Idxes: Array[Int],
                         fieldNames: Array[String],
-                        valueIdxes: Array[Int], valueMapEnabledColumnIdxes: Array[Int], valueMapEnabledWhere: Array[Array[String]], valueMaps: Array[String],
+                        valueIdxes: Array[Array[Int]], valueSeperator: String,
+//                        valueIdxes: Array[Int],
+                        valueMapEnabledColumnIdxes: Array[Int], valueMapEnabledWhere: Array[Array[String]], valueMaps: Array[String],
                         jedisPool: JedisPool,
                         loadMethod:String, batchLimit:Int,
                         overwrite: Boolean, appendSeperator: String,
@@ -57,7 +59,8 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
           else lineArray(idx)
                 ).mkString(hashSeperator)
 
-//        assert(fieldNames.length==valueIdxes.length, "found fieldNames.length not equal valueIdxes.length, fieldNames.length=" + fieldNames.length +", valueIdxes.length = " + valueIdxes)
+        //        assert(fieldNames.length==valueIdxes.length, "found fieldNames.length not equal valueIdxes.length, fieldNames.length=" + fieldNames.length +", valueIdxes.length = " + valueIdxes)
+/*
 
         val values = for(fieldNameValueIdx <- fieldNames.zip(valueIdxes)) yield {
           val (fieldName, valueIdx) = fieldNameValueIdx
@@ -70,6 +73,25 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
             lineArray(valueIdx)
           }
         }
+*/
+
+        val values = //记录fieldNames对应的取值
+          for (fieldNameValueIdxes <- fieldNames.zip(valueIdxes)) yield {
+            val (fieldName, valueIdxes2) = fieldNameValueIdxes
+            val value =
+              (for (valueIdx <- valueIdxes2) yield {
+                val mappedIdx = valueMapEnabledColumnIdxes.indexOf(valueIdx)
+                if (mappedIdx > -1) {
+                  if (valueMapEnabledWhere(mappedIdx).contains(lineArray(valueIdx))) {
+                    valueMaps(mappedIdx)
+                  } else null
+                } else {
+                  lineArray(valueIdx)
+                }
+              }).filter(_ != null).mkString(valueSeperator)
+
+            value
+          }
 
         for(fieldNamevalue<-fieldNames.zip(values)){
 
@@ -242,5 +264,4 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
     throw throwable
   }
 }
-
 
