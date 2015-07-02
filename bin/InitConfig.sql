@@ -14,7 +14,7 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("morning8time","8:00:01");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("afternoon8time","23:30:00");
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("codisQryThreadNum",500);
 INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("pipeLineBatch",200);
-
+INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("BaseConfUpdateInteval",1*60*60*1000);
 
 -- init EventSources
 --INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`) VALUES ("MC_Kafka","kafka",",","100","com.asiainfo.ocdc.streaming.MCEventSource");

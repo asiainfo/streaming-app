@@ -29,6 +29,8 @@ object MainFrame {
     val interval = MainFrameConf.getInternal
     val ssc = new StreamingContext(sparkConf, Seconds(interval))
 
+    ssc.addStreamingListener(new ReceiveRecordNumListener)
+
     // init all the eventsources
     val eventSourceList = MainFrameConf.sources.map(conf => {
       // use reflect to create all eventsources

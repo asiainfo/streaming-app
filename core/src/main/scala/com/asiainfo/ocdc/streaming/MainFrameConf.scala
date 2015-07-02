@@ -14,6 +14,8 @@ import scala.collection.mutable.Map
 
 object MainFrameConf extends BaseConf {
 
+  var updateTime: Long = 0L
+
   var sources: Array[EventSourceConf] = null
   var sourceLabelRules = Map[String, Seq[LabelRuleConf]]()
   var sourceEventRules = Map[String, Seq[EventRuleConf]]()
@@ -46,6 +48,11 @@ object MainFrameConf extends BaseConf {
     initBusinessEventConf
 
     initBsEvent2EventRules
+  }
+
+  def update(updateTime: Long){
+    init()
+    this.updateTime = updateTime
   }
 
   init()

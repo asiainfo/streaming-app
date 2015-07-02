@@ -117,8 +117,6 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     })
 
     val t1 = System.currentTimeMillis()
-    println(" print ")
-    hashKeys.foreach(println(_))
     val old_cache = CacheFactory.getManager.hgetall(hashKeys.toList)
     println(" query saled user data cost time : " + (System.currentTimeMillis() - t1) + " millis ! ")
 
