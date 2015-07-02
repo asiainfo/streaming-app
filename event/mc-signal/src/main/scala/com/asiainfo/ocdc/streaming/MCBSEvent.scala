@@ -30,7 +30,7 @@ class MCBSEvent extends BusinessEvent {
     val kafka_key = conf.getInt("kafkakeycol")
     val delim = getDelim
 
-    data.collect {
+    data.filter(_ != None).map {
       case Some(row: Row) => {
         val key: String = row.get(kafka_key).toString
         var message: String = ""
@@ -42,7 +42,7 @@ class MCBSEvent extends BusinessEvent {
         message = message.substring(0, (message.length - delim.length))
         message = message + System.currentTimeMillis()
 
-//        println("Output Message --> " + message)
+        //        println("Output Message --> " + message)
         (key, message)
       }
     }

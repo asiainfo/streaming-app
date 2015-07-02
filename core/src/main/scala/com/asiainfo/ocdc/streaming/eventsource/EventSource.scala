@@ -61,6 +61,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   final def process(ssc: StreamingContext) = {
     val sqlContext = new SQLContext(ssc.sparkContext)
     val inputStream = readSource(ssc)
+
     inputStream.foreachRDD { rdd =>
       val currtime = timesdf.parse(timesdf.format(System.currentTimeMillis())).getTime
 
@@ -74,11 +75,21 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
         if (sourceRDD.partitions.length > 0) {
           val labeledRDD = execLabelRule(sourceRDD: RDD[SourceObject])
+          if (labeledRDD.partitions.length > 0) {
+            val df = transformDF(sqlContext, labeledRDD)
+            // cache data
+            df.persist
 
-          val eventMap = makeEvents(sqlContext, labeledRDD)
+//            df.map(x => x).count()
 
-          subscribeEvents(eventMap)
+//            df.printSchema()
 
+            val eventMap = makeEvents(df)
+
+            subscribeEvents(eventMap)
+
+            df.unpersist()
+          }
         }
       }
     }
@@ -105,28 +116,28 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     }
   }
 
-  def makeEvents(sqlContext: SQLContext, labeledRDD: RDD[SourceObject]) = {
+  def makeEvents(df: DataFrame) = {
     val eventMap: Map[String, DataFrame] = Map[String, DataFrame]()
-    if (labeledRDD.partitions.length > 0) {
-      println(" Begin exec evets : " + System.currentTimeMillis())
-      val df = transformDF(sqlContext, labeledRDD)
-      // cache data
-      df.persist
-      df.printSchema()
+    //    if (labeledRDD.partitions.length > 0) {
+    println(" Begin exec evets : " + System.currentTimeMillis())
+    /*val df = transformDF(sqlContext, labeledRDD)
+    // cache data
+    df.persist
+    df.printSchema()*/
 
-      val f4 = System.currentTimeMillis()
-      val eventRuleIter = eventRules.iterator
+    val f4 = System.currentTimeMillis()
+    val eventRuleIter = eventRules.iterator
 
-      while (eventRuleIter.hasNext) {
-        val eventRule = eventRuleIter.next
-        // handle filter first
-        val filteredData = df.filter(eventRule.filterExp)
-        eventMap += (eventRule.conf.get("id") -> filteredData)
-      }
-      logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
-
-      df.unpersist()
+    while (eventRuleIter.hasNext) {
+      val eventRule = eventRuleIter.next
+      // handle filter first
+      val filteredData = df.filter(eventRule.filterExp)
+      eventMap += (eventRule.conf.get("id") -> filteredData)
     }
+    logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
+
+    //      df.unpersist()
+    //    }
     eventMap
   }
 
@@ -134,7 +145,6 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     println(" Begin exec labes : " + System.currentTimeMillis())
 
     val labelRuleArray = labelRules.toArray
-
     sourceRDD.mapPartitions(iter => {
       new Iterator[SourceObject] {
         private[this] var currentRow: SourceObject = _

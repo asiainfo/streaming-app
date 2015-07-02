@@ -5,9 +5,7 @@ import com.asiainfo.ocdc.streaming.constant.EventConstant
 import com.asiainfo.ocdc.streaming.tool.CacheFactory
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
-
 import scala.collection.mutable
-import scala.collection.mutable.Map
 
 /**
  * Created by leo on 5/11/15.
@@ -106,15 +104,16 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
   }*/
 
 
-  def execEvent(eventMap: Map[String, DataFrame]) {
+  def execEvent(eventMap: mutable.Map[String, DataFrame]) {
     val filtevents = eventMap.filter(x => eventRules.contains(x._1))
     val currentEvent = filtevents.iterator.next()._2
     val selectedData = currentEvent.selectExpr(selectExp: _*)
 
     val hashKeys = mutable.Set[String]()
-    selectedData.foreach(row => {
+    val cdata = selectedData.map(row => {
       val hashkey = getHashKey(row)
       hashKeys += hashkey
+      row
     })
 
     val t1 = System.currentTimeMillis()
@@ -125,14 +124,14 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 
     val updateKeys = mutable.Set[String]()
 
-    val checkedData = selectedData.map(row => {
+    val checkedData = cdata.map(row => {
       var resultData: Option[Row] = None
       val currTime = System.currentTimeMillis()
       val hashkey = getHashKey(row)
       val time = getTime(row)
       var status = old_cache.get(hashkey) match {
         case Some(v) => v
-        case None => Map[String,String]()
+        case None => mutable.Map[String, String]()
       }
       // muti event source
       if (eventSources.size > 1) {

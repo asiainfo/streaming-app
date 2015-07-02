@@ -26,8 +26,12 @@ class MCEventSource() extends EventSource() {
         val lac = DataConvertTool.convertHex(inputs(2))
         val ci = DataConvertTool.convertHex(inputs(3))
 
-        val callingimei = inputs(4).substring(0,14)
-        val calledimei = inputs(5).substring(0,14)
+        var callingimei = inputs(4)
+        if (inputs(4).length > 14) callingimei = callingimei.substring(0, 14)
+
+        var calledimei = inputs(5)
+        if (inputs(4).length > 14) calledimei = calledimei.substring(0, 14)
+
         val callingimsi = inputs(6)
         val calledimsi = inputs(7)
 
@@ -42,10 +46,10 @@ class MCEventSource() extends EventSource() {
         var imei = ""
         var imsi = ""
 
-        if (List(3,5,7).contains(eventID)) {
+        if (List(3, 5, 7).contains(eventID)) {
           imei = calledimei
           imsi = calledimsi
-        } else if (List(8,9,10,26).contains(eventID)) {
+        } else if (List(8, 9, 10, 26).contains(eventID)) {
           if (issmsalone == 1) {
             imei = callingimei
             imsi = callingimsi
