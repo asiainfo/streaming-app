@@ -3,7 +3,7 @@ DROP TABLE IF EXISTS `MainFrameProp`;
 CREATE TABLE `MainFrameProp` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(30) NOT NULL,
-  `pvalue` varchar(50) NOT NULL,
+  `pvalue` varchar(200) NOT NULL,
   PRIMARY KEY (`id`)
 );
 
@@ -26,7 +26,7 @@ DROP TABLE IF EXISTS `EventSourceProp`;
 CREATE TABLE `EventSourceProp` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(30) NOT NULL,
-  `pvalue` varchar(50) NOT NULL,
+  `pvalue` varchar(200) NOT NULL,
   `esourceid` int NOT NULL,
   PRIMARY KEY (`id`)
 );
@@ -49,7 +49,7 @@ DROP TABLE IF EXISTS `LabelRulesProp`;
 CREATE TABLE `LabelRulesProp` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(30) NOT NULL,
-  `pvalue` varchar(50) NOT NULL,
+  `pvalue` varchar(200) NOT NULL,
   `lrid` int NOT NULL,
   PRIMARY KEY (`id`)
 );

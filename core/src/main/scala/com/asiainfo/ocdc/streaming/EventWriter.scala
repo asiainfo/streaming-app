@@ -1,9 +1,8 @@
 package com.asiainfo.ocdc.streaming
 
-import java.util.Properties
-
 import com.asiainfo.ocdc.streaming.subscribe.BusinessEventConf
-import kafka.producer.{KeyedMessage, Producer, ProducerConfig}
+import com.asiainfo.ocdc.streaming.tool.KafkaSendTool
+import kafka.producer.KeyedMessage
 import org.apache.spark.rdd.RDD
 
 /**
@@ -15,10 +14,10 @@ object EventWriter {
     if ("kafka".equals(outputType)) {
       data.mapPartitions(p => {
         val topic = conf.get("output_topic")
-        val props = new Properties()
+        /*val props = new Properties()
         props.put("metadata.broker.list", conf.get("brokerlist"))
         props.put("serializer.class", conf.get("serializerclass"))
-        val producer = new Producer[String, String](new ProducerConfig(props))
+        val producer = new Producer[String, String](new ProducerConfig(props))*/
         var message = List[KeyedMessage[String, String]]()
         p.foreach(x => {
           val key = x._1
@@ -27,13 +26,8 @@ object EventWriter {
           message = new KeyedMessage[String, String](topic, key, out) :: message
           x
         })
-
-        producer.send(message: _*)
-
-        /*message.foreach(x => {
-          println("Output data : " + x.message + " to kafka " + topic)
-        })*/
-
+        KafkaSendTool.sendMessage(message)
+//        producer.send(message: _*)
         p
       }).count()
     } else if ("hdfs".equals(outputType)) {

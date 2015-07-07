@@ -13,7 +13,7 @@ class MCEventSource() extends EventSource() {
     // 事件ID,时间,LAC,CI,主叫IMEI,被叫IMEI,主叫IMSI,被叫IMSI
     try {
       if (inputs(6) == "000000000000000" && inputs(7) == "000000000000000") {
-        logError(" Emsi is wrong ! ")
+//        logError(" Emsi is wrong ! ")
         None
       } else {
         val sdf = new SimpleDateFormat("yyyymmdd hh:mm:ss")
@@ -27,10 +27,10 @@ class MCEventSource() extends EventSource() {
         val ci = DataConvertTool.convertHex(inputs(3))
 
         var callingimei = inputs(4)
-        if (inputs(4).length > 14) callingimei = callingimei.substring(0, 14)
+        if (callingimei.length > 14) callingimei = callingimei.substring(0, 14)
 
         var calledimei = inputs(5)
-        if (inputs(4).length > 14) calledimei = calledimei.substring(0, 14)
+        if (calledimei.length > 14) calledimei = calledimei.substring(0, 14)
 
         val callingimsi = inputs(6)
         val calledimsi = inputs(7)
@@ -69,7 +69,7 @@ class MCEventSource() extends EventSource() {
       }
     } catch {
       case e: Exception => {
-        logError(" Source columns have wrong type ! ")
+//        logError(" Source columns have wrong type ! ")
         e.printStackTrace()
         None
       }
