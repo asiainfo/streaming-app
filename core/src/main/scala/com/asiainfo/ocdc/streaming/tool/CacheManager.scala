@@ -172,7 +172,6 @@ abstract class RedisCacheManager extends CacheManager {
   //new set method for pipeline by multiThread
   override def setMultiCache(keysvalues: Map[String, Any]) {
     val t1 = System.currentTimeMillis()
-
     val miniBatch = MainFrameConf.getInt("pipeLineBatch")
     val taskMap = Map[Int, FutureTask[String]]()
     var index = 0
@@ -300,8 +299,15 @@ abstract class RedisCacheManager extends CacheManager {
       keys.foreach(key => {
         val task = taskMap.get(key).get
         if (task.isDone) {
-          cachedata += (key -> task.get())
-          taskMap.remove(key)
+          try {
+            cachedata += (key -> task.get())
+          } catch {
+            case e: Exception => {
+              e.printStackTrace()
+            }
+          } finally {
+            taskMap.remove(key)
+          }
         }
       })
     }
@@ -359,8 +365,15 @@ abstract class RedisCacheManager extends CacheManager {
       keys.foreach(key => {
         val task = taskMap.get(key).get
         if (task.isDone) {
-          cachedata += (key -> task.get())
-          taskMap.remove(key)
+          try {
+            cachedata += (key -> task.get())
+          } catch {
+            case e: Exception => {
+              e.printStackTrace()
+            }
+          } finally {
+            taskMap.remove(key)
+          }
         }
       })
     }
