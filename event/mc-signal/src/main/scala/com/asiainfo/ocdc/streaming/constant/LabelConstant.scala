@@ -20,6 +20,8 @@ object LabelConstant {
   // --- extern fields ---
   val LABEL_LASTIMEI = "ext_last_imei"
 
+  val LABEL_TRACK = "ext_usertrack"
+
 
   /**------------------- 标签属性 -----------------------*/
   /** ＝＝＝＝连续停留标签属性＝＝＝＝ */
