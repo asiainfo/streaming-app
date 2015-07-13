@@ -2,15 +2,19 @@ package com.asiainfo.ocdc.streaming.subscribe
 
 import com.asiainfo.ocdc.streaming.MainFrameConf
 import com.asiainfo.ocdc.streaming.constant.EventConstant
-import com.asiainfo.ocdc.streaming.tool.CacheFactory
+import com.asiainfo.ocdc.streaming.tool.{DateFormatUtils, CacheFactory}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
+
 import scala.collection.mutable
 
 /**
  * Created by leo on 5/11/15.
  */
 abstract class BusinessEvent extends Serializable with org.apache.spark.Logging {
+
+  val datePattern = "yyyyMMdd HH:mm:ss"
+
 
   var id: String = null
   var sourceId: String = null
@@ -142,8 +146,16 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
           val lt = status.get(locktime).getOrElse("0").toLong
           if (lt == 0) {
             status += (sourceId -> time)
-            val maxTime = status.toList.sortBy(_._2).last._2
-            status.filter(_._2 + delayTime >= maxTime)
+//            val maxTime = status.toList.sortBy(_._2).last._2
+
+            val maxTime = status.map(sourceId2activeTimeStr => {
+              val activeTimeStr = sourceId2activeTimeStr._2
+              DateFormatUtils.dateStr2Ms(activeTimeStr, "yyyyMMdd HH:mm:ss.SSS")
+            }).toList.max
+
+            status = status.filter(sourceId2activeTimeStr=>{
+              DateFormatUtils.dateStr2Ms(sourceId2activeTimeStr._2, "yyyyMMdd HH:mm:ss.SSS") + delayTime >= maxTime
+            })
 
             if (status.size == eventSources.size) status += (locktime -> currTime.toString)
             old_cache.update(hashkey, status)

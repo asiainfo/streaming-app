@@ -93,60 +93,6 @@ class Load2OneHashThread(lines: Array[String], columnSeperator: String,
               logger.error("Error: unsupported loadMethod = " + loadMethod)
           }
 
-          if(numInBatch == batchLimit){ // numInbatch对pipeline_hset，hmset有效，hset每个set一次提交
-            loadMethod match {
-              case "hset" =>
-              case "hmset" =>
-                if(overwrite){//如果 overwrite==true，批量覆盖；
-                  jedis.hmset(hashName, fvMap)
-                } else {//如果overwrite!=true，批量获取已存在值，如果值存在且不含有要加载的值，则追加，如果值存在且含有要加载的值，跳过；如果值不存在，插入
-                val values_exist = jedis.hmget(hashName, fieldArray: _*)
-                  values_exist.zipWithIndex.foreach(v0idx=>{
-                    val (v_exist, i) = v0idx
-                    if(v_exist != null){
-                      if(!v_exist.split(appendSeperator).contains(valueArray(i))){
-                        fvMap.put(fieldArray(i), v_exist + appendSeperator+ valueArray(i))
-                      } else {
-                        fvMap.remove(fieldArray(i))
-                      }
-                    }
-                  })
-                  if(fvMap.size > 0){
-                    jedis.hmset(hashName, fvMap)
-                  }
-                }
-
-                fvMap.clear()
-                fieldArray.clear()
-                valueArray.clear()
-
-              case "pipeline_hset" => //如果 overwrite==true，批量覆盖；
-                if(!overwrite){//如果overwrite!=true，批量获取已存在值，如果值存在且不含有要加载的值，则追加，如果值存在且含有要加载的值，跳过；如果值不存在，插入
-                val values_exist = pipeline.syncAndReturnAll().asInstanceOf[List[String]]
-                  values_exist.zipWithIndex.foreach(v0idx=>{
-                    val (v_exist, i) = v0idx
-                    if(v_exist !=null){
-                      if(!v_exist.split(appendSeperator).contains(valueArray(i))){
-                        pipeline.hset(hashName, fieldArray(i), v_exist + appendSeperator + valueArray(i))
-                      }
-                    } else {
-                      pipeline.hset(hashName, fieldArray(i), valueArray(i))
-                    }
-                  })
-                }
-
-                pipeline.sync()
-                fieldArray.clear()
-                valueArray.clear()
-
-              case _ =>
-                logger.error("Error: unsupported loadMethod = " + loadMethod)
-            }
-
-            numBatches += 1
-            numInBatch = 0
-          }
-
         } else {
           logger.debug("filtered record = " + line)
           numInBatch -= 1
@@ -157,6 +103,60 @@ class Load2OneHashThread(lines: Array[String], columnSeperator: String,
           println("= = " * 20)
           logger.error("get unknown exception")
           println("= = " * 20)
+      }
+
+      if(numInBatch == batchLimit){ // numInbatch对pipeline_hset，hmset有效，hset每个set一次提交
+        loadMethod match {
+          case "hset" =>
+          case "hmset" =>
+            if(overwrite){//如果 overwrite==true，批量覆盖；
+              jedis.hmset(hashName, fvMap)
+            } else {//如果overwrite!=true，批量获取已存在值，如果值存在且不含有要加载的值，则追加，如果值存在且含有要加载的值，跳过；如果值不存在，插入
+            val values_exist = jedis.hmget(hashName, fieldArray: _*)
+              values_exist.zipWithIndex.foreach(v0idx=>{
+                val (v_exist, i) = v0idx
+                if(v_exist != null){
+                  if(!v_exist.split(appendSeperator).contains(valueArray(i))){
+                    fvMap.put(fieldArray(i), v_exist + appendSeperator+ valueArray(i))
+                  } else {
+                    fvMap.remove(fieldArray(i))
+                  }
+                }
+              })
+              if(fvMap.size > 0){
+                jedis.hmset(hashName, fvMap)
+              }
+            }
+
+            fvMap.clear()
+            fieldArray.clear()
+            valueArray.clear()
+
+          case "pipeline_hset" => //如果 overwrite==true，批量覆盖；
+            if(!overwrite){//如果overwrite!=true，批量获取已存在值，如果值存在且不含有要加载的值，则追加，如果值存在且含有要加载的值，跳过；如果值不存在，插入
+            val values_exist = pipeline.syncAndReturnAll().asInstanceOf[java.util.List[String]]
+              values_exist.zipWithIndex.foreach(v0idx=>{
+                val (v_exist, i) = v0idx
+                if(v_exist !=null){
+                  if(!v_exist.split(appendSeperator).contains(valueArray(i))){
+                    pipeline.hset(hashName, fieldArray(i), v_exist + appendSeperator + valueArray(i))
+                  }
+                } else {
+                  pipeline.hset(hashName, fieldArray(i), valueArray(i))
+                }
+              })
+            }
+
+            pipeline.sync()
+            fieldArray.clear()
+            valueArray.clear()
+
+          case _ =>
+            logger.error("Error: unsupported loadMethod = " + loadMethod)
+        }
+
+        numBatches += 1
+        numInBatch = 0
       }
     }
 
@@ -190,7 +190,7 @@ class Load2OneHashThread(lines: Array[String], columnSeperator: String,
             valueArray.clear()
           case "pipeline_hset" =>
             if(!overwrite){
-              val values_exist = pipeline.syncAndReturnAll().asInstanceOf[List[String]]
+              val values_exist = pipeline.syncAndReturnAll().asInstanceOf[java.util.List[String]]
               values_exist.zipWithIndex.foreach(v0idx=>{
                 val (v_exist, i) = v0idx
                 if(v_exist !=null){

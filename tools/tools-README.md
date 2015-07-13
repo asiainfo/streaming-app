@@ -63,6 +63,7 @@ tar zxf tools-redis-soft.tar.gz
 \#git clone https://github.com/asiainfo/streaming-app
 git pull
 cd streaming-app
+mvn clean package -DskipTests -pl tools
    ```
       
    复制tools/target/streaming-tools-0.1.0-SNAPSHOT.jar到到CLASSPATH下

@@ -144,35 +144,6 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
                 logger.error("Error: unsupported loadMethod = " + loadMethod)
             }
 
-            if(numInBatch == batchLimit){ // numInbatch对pipeline_hset有效，hset每个set一次提交；hmset每行一次提交
-              loadMethod match {
-                case "hset" =>
-                case "hmset" =>
-                case "pipeline_hset" => //如果 overwrite==true，批量覆盖；
-                  if(!overwrite){ //如果overwrite!=true，批量获取已存在值，如果值存在且不含有要加载的值，则追加，如果值存在且含有要加载的值，跳过；如果值不存在，插入
-                  val values_exist = pipeline.syncAndReturnAll().asInstanceOf[List[String]]
-                    values_exist.zipWithIndex.foreach(v0idx=>{
-                      val (v_exist, i) = v0idx
-                      if(v_exist !=null){
-                        if(!v_exist.split(appendSeperator).contains(valueArray(i))){
-                          pipeline.hset(hashNameArray(i), fieldArray(i), v_exist + appendSeperator + valueArray(i))
-                        }
-                      } else {
-                        pipeline.hset(hashNameArray(i), fieldArray(i), valueArray(i))
-                      }
-                    })
-                  }
-
-                  pipeline.sync()
-                  hashNameArray.clear()
-                  fieldArray.clear()
-                  valueArray.clear()
-                case _ =>
-                  logger.error("Error: unsupported loadMethod = " + loadMethod)
-              }
-              numBatches += 1
-              numInBatch = 0
-            }
           } else {
             logger.debug("filtered record = " + line)
             numInBatch -= 1
@@ -187,6 +158,41 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
           logger.error("get unknown exception: " + x.getMessage)
           println("= = " * 20)
       }
+
+
+      if(numInBatch == batchLimit){ // numInbatch对pipeline_hset有效，hset每个set一次提交；hmset每行一次提交
+        loadMethod match {
+          case "hset" =>
+          case "hmset" =>
+          case "pipeline_hset" => //如果 overwrite==true，批量覆盖；
+            if(!overwrite){ //如果overwrite!=true，批量获取已存在值，如果值存在且不含有要加载的值，则追加，如果值存在且含有要加载的值，跳过；如果值不存在，插入
+              //TODO: bug修复, java.util.List 不能转换为 scala.util.List, 临时处理方式方法: 使用hset或hmset
+
+              val values_exist = pipeline.syncAndReturnAll().asInstanceOf[java.util.List[String]]
+              println("= = " * 20 +"  values_exist.size="+values_exist.size() + ", values_exit=" + values_exist.mkString("[", ",", "]"))
+              values_exist.zipWithIndex.foreach(v0idx=>{
+                val (v_exist, i) = v0idx
+                if(v_exist !=null){
+                  if(!v_exist.split(appendSeperator).contains(valueArray(i))){
+                    pipeline.hset(hashNameArray(i), fieldArray(i), v_exist + appendSeperator + valueArray(i))
+                  }
+                } else {
+                  pipeline.hset(hashNameArray(i), fieldArray(i), valueArray(i))
+                }
+              })
+            }
+
+            pipeline.sync()
+            hashNameArray.clear()
+            fieldArray.clear()
+            valueArray.clear()
+          case _ =>
+            logger.error("Error: unsupported loadMethod = " + loadMethod)
+        }
+        numBatches += 1
+        numInBatch = 0
+      }
+
     }
 
 
@@ -197,7 +203,7 @@ class Load2HashesThread(lines: Array[String], columnSeperator: String,
           case "hmset" =>
           case "pipeline_hset" =>
             if(!overwrite){
-              val values_exist = pipeline.syncAndReturnAll().asInstanceOf[List[String]]
+              val values_exist = pipeline.syncAndReturnAll().asInstanceOf[java.util.List[String]]
               values_exist.zipWithIndex.foreach(v0idx=>{
                 val (v_exist, i) = v0idx
                 if(v_exist !=null){

@@ -104,6 +104,11 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
 
   test("1 生成测试数据"){
 
+    threadPool.shutdownNow()
+    threadPool2.shutdownNow()
+    if(reportEnabled) timer.cancel()
+
+
     val confXmlFile = "tools/conf/redis-load/jdbc2hashes-test.xml"
     val props = Jdbc2Hashes.init_props_fromXml(confXmlFile)
 
@@ -172,11 +177,10 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
     println(rs.getString(4))
     assert(rs.getString(4)=="value-test-"+3)
 
-/*
+
     //为 Jdbc2SingleHash准备数据
     val tabName_test2="tab_test_jdbc2singlehash"
     stmt.execute("create table if not exists "+tabName_test2 +" as select * from " + tabName_test)
-*/
 
     val tabName_test3 = tabName_test + "_change"
 //    stmt.execute("create table if not exists "+tabName_test3+" (sync_flag int, id1 int, id2 int, col3 varchar(50), col4 varchar(50))")
@@ -193,8 +197,8 @@ class Jdbc2HashesSuite extends FunSuite with BeforeAndAfter{
     stmt.execute("insert into "+tabName_test3+" value (-1," + deleteId1 + ","+ deleteId2+",\"value-test-"+deleteId1+"\", \"value-test-"+deleteId2+"\")")
 
     JdbcUtils.closeQuiet(rs, stmt, conn)
-
   }
+
 
 
   test("2 测试 tools/conf/redis-load/jdbc2hashes-test.xml"){

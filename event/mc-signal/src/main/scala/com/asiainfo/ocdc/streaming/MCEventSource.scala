@@ -1,7 +1,5 @@
 package com.asiainfo.ocdc.streaming
 
-import java.text.SimpleDateFormat
-
 import com.asiainfo.ocdc.streaming.eventsource.EventSource
 import com.asiainfo.ocdc.streaming.tool.DataConvertTool
 import org.apache.spark.rdd.RDD
@@ -16,9 +14,9 @@ class MCEventSource() extends EventSource() {
 //        logError(" Emsi is wrong ! ")
         None
       } else {
-        val sdf = new SimpleDateFormat("yyyymmdd hh:mm:ss")
         val eventID = inputs(0).toInt
-        val time = sdf.parse(inputs(1)).getTime
+//        val time = DateFormatUtils.dateStr2Ms(inputs(1), "yyyyMMdd HH:mm:ss.SSS")
+        val time = inputs(1)
 
         // FIXME lac ci need convert to 16 , test is 10
         /*val lac = inputs(2).toInt

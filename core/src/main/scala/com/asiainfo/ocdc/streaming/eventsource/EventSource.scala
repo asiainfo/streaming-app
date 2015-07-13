@@ -1,19 +1,18 @@
 package com.asiainfo.ocdc.streaming.eventsource
 
-import java.text.SimpleDateFormat
-
 import com.asiainfo.ocdc.streaming._
 import com.asiainfo.ocdc.streaming.eventrule.{EventRule, StreamingCache}
 import com.asiainfo.ocdc.streaming.labelrule.LabelRule
 import com.asiainfo.ocdc.streaming.subscribe.BusinessEvent
-import com.asiainfo.ocdc.streaming.tool.CacheFactory
+import com.asiainfo.ocdc.streaming.tool.{CacheFactory, DateFormatUtils}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
-import scala.collection.{mutable, immutable}
 import scala.collection.mutable.{ArrayBuffer, Map}
+import scala.collection.{immutable, mutable}
+
 
 abstract class EventSource() extends Serializable with org.apache.spark.Logging {
   var id: String = null
@@ -23,10 +22,14 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   var beginTime = MainFrameConf.get("morning8time")
   var endTime = MainFrameConf.get("afternoon8time")
 
-  val timesdf = new SimpleDateFormat("HH:mm:ss")
+//  val timesdf = new SimpleDateFormat("HH:mm:ss")
 
-  val morning8Time = timesdf.parse(beginTime).getTime
-  val afternoon8Time = timesdf.parse(endTime).getTime
+//  val morning8Time = timesdf.parse(beginTime).getTime
+//  val afternoon8Time = timesdf.parse(endTime).getTime
+
+  val timePattern = "HH:mm:ss"
+  val morning8Time = DateFormatUtils.dateStr2Ms(beginTime, timePattern)
+  val afternoon8Time = DateFormatUtils.dateStr2Ms(endTime, timePattern)
 
   protected val labelRules = new ArrayBuffer[LabelRule]
   protected val eventRules = new ArrayBuffer[EventRule]
@@ -63,9 +66,12 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     val inputStream = readSource(ssc)
 
     inputStream.foreachRDD { rdd =>
-      val currtime = timesdf.parse(timesdf.format(System.currentTimeMillis())).getTime
+//      val currtime = timesdf.parse(timesdf.format(System.currentTimeMillis())).getTime
+      val currtime = DateFormatUtils.dateStr2Ms(DateFormatUtils.dateMs2Str(System.currentTimeMillis(), timePattern), timePattern)
 
-      if (currtime > morning8Time && currtime < afternoon8Time && rdd.partitions.length > 0) {
+//      val currtime = System.currentTimeMillis()
+//      if (currtime > morning8Time && currtime < afternoon8Time && rdd.partitions.length > 0) {
+      if (rdd.partitions.length > 0) {
         val sourceRDD = rdd.map(transform).collect {
           case Some(source: SourceObject) => source
         }

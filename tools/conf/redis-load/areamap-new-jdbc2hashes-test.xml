@@ -13,7 +13,7 @@
     </jedisPool>
 
     <jdbcPool>
-        <maxActive>100</maxActive>
+        <maxActive>300</maxActive>
         <initialSize>10</initialSize>
         <maxIdle>100</maxIdle>
         <minIdle>10</minIdle>
@@ -21,13 +21,14 @@
     </jdbcPool>
 
     <load>
-        <from>file</from>
+        <from>db</from>
 
-        <filename>tools/src/test/resources/areamap-file2hashes-test.data</filename> <!-- 设置数据文件的路径 -->
-        <!--<filename>tools/src/test/resources/loadAreaMap-thread-notMapped-test.data</filename>-->
-        <fileEncode>UTF-8</fileEncode> <!-- 设置数据文件的编码格式 -->
-        <columnSeperator>,</columnSeperator> <!-- 设置数据文件字段分隔符 -->
-
+        <driver>com.mysql.jdbc.Driver</driver>
+        <url>jdbc:mysql://mysql1:3306/test?useCursorFetch=true</url> <!-- 设置数据库的URL -->
+        <username>root</username>
+        <password>mysql123</password>
+        <table>tab_areamap_jdbc2hashes_new</table>
+        <isBigTable>true</isBigTable>
 
         <redis.type>multihashes</redis.type> <!--设置加载到redis的类型，onehash:OneHashPerRecord, multihashes:OneHashAllRecords -->
 
@@ -42,30 +43,32 @@
         <sync.updateEnabled>true</sync.updateEnabled>
         <sync.deleteEnabled>true</sync.deleteEnabled>
 
-        <!--load into multihashes from file-->
-        <hashNamePrefix>file2hashes:areamap:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
-        <hashIdxes>0,1</hashIdxes> <!-- 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔 -->
+
+
+        <hashNamePrefix>areamap:jdbc2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
+        <hashColumnNames>id1,id2</hashColumnNames> <!-- 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔 -->
         <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
 
-        <conversion10to16.idxes>0,1</conversion10to16.idxes> <!-- 设置取值时需要进制转换的字段索引 -->
+        <conversion10to16.columnNames>id1,id2</conversion10to16.columnNames> <!-- 设置取值时需要进制转换的字段索引 -->
 
-        <fieldNames>areas,area_codes</fieldNames> <!-- 设置加载数据时Redis中对应的的hash属性名 -->
+        <fieldNames>areas,tmpIds</fieldNames> <!-- 设置加载数据时Redis中对应的的hash属性名 -->
 
-        <valueIdxes>4,5</valueIdxes> <!-- 设置加载列的列名，可以加载多个列数据，使用逗号分隔 -->
+        <valueColumnNames>col3,col4:col5</valueColumnNames> <!-- 设置加载列的列名，可以加载多个列数据，使用逗号分隔 -->
+        <valueSeperator>:</valueSeperator>
         <valueMapEnabled>false</valueMapEnabled>
-        <valueMapEnabled.idxes>3</valueMapEnabled.idxes> <!-- 设置需要进行value取值映射的列名 -->
+        <valueMapEnabled.columnNames>col4</valueMapEnabled.columnNames> <!-- 设置需要进行value取值映射的列名 -->
         <valueMapEnabled.where>WLAN;wlan</valueMapEnabled.where> <!-- 设置需要进行value取值映射的取值条件 -->
         <valueMapEnabled.where.seperator>,</valueMapEnabled.where.seperator> <!-- 设置不同value的映射取值条件的分隔符 -->
         <valueMapEnabled.where.valueSeperator>;</valueMapEnabled.where.valueSeperator> <!-- 设置value的映射取值条件多个取值的分隔符 -->
         <valueMaps>1</valueMaps> <!-- 设置value的映射值 -->
 
-        <numThreads>1</numThreads> <!-- 设置并行线程数-->
+        <numThreads>2</numThreads> <!-- 设置并行线程数-->
         <batchLimit>30</batchLimit> <!-- 设置每个线程每批次加载的记录数量 -->
-        <method>hset</method> <!-- 设置加载方法 hset, hmset, pipeline_hset  -->
-        <!--<method>pipeline_hset</method>-->
+        <method>hmset</method> <!-- 设置加载方法 hset, hmset, pipeline_hset  -->
+        <!--<method>pipeline_hset</method> -->
         <batchLimit.redis>6</batchLimit.redis> <!-- 设置redis每批次加载(pipeline_hset, hmset)的记录数量 -->
 
-        <overwrite>false</overwrite> <!-- 设置加载过程中采用覆盖，还是追加 -->
+        <overwrite>true</overwrite> <!-- 设置加载过程中采用覆盖，还是追加 -->
         <appendSeperator>,</appendSeperator> <!-- 设置加载过程中追加时使用的分隔符 -->
 
         <report.enabled>true</report.enabled>

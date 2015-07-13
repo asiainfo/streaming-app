@@ -1,6 +1,7 @@
 package com.asiainfo.ocdc.streaming
 
 import com.asiainfo.ocdc.streaming.subscribe.BusinessEvent
+import com.asiainfo.ocdc.streaming.tool.DateFormatUtils
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 
@@ -14,7 +15,8 @@ class MCBSEvent extends BusinessEvent {
     "MC_" + id + ":" + imsi
   }
 
-  override def getTime(row: Row): String = row.getLong(1).toString
+//  override def getTime(row: Row): String = DateFormatUtils.dateMs2Str(row.getLong(1), datePattern)
+  override def getTime(row: Row): String = row.getString(1)
 
   override def output(data: RDD[Option[Row]]) {
     val output_msg = transforEvent2Message(data)
@@ -39,8 +41,8 @@ class MCBSEvent extends BusinessEvent {
           if (row.get(i) != null) value = row.get(i).toString
           message += value + delim
         }
-        message = message.substring(0, (message.length - delim.length))
-        message = message + "," + System.currentTimeMillis()
+        message = message.substring(0, message.length - delim.length)
+        message = message + "," + DateFormatUtils.dateMs2Str(System.currentTimeMillis(), "yyyyMMdd HH:mm:ss.SSS")
 
         //        println("Output Message --> " + message)
         (key, message)

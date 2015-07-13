@@ -2,6 +2,7 @@ package com.asiainfo.ocdc.streaming
 
 import com.asiainfo.ocdc.streaming.constant.LabelConstant
 import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
+import com.asiainfo.ocdc.streaming.tool.DateFormatUtils
 import scala.collection.mutable.Map
 
 /**
@@ -42,7 +43,8 @@ class LabelTrack extends MCLabelRule {
 
     /**Contract last appear lac_id, cell_id: */
     val last_lacCi = mcSourceObj.lac + mcSourceObj.ci
-    val speed = distance / (mcSourceObj.time - time_old.toDouble)
+    val timeMs = DateFormatUtils.dateStr2Ms(mcSourceObj.time, "yyyyMMdd HH:mm:ss.SSS")
+    val speed = distance / (timeMs - time_old.toDouble)
 
     /**Extended stream label: 扩展实时标签到流数据()*/
     mcSourceObj.setLabel(LabelConstant.LABEL_TRACK, Map[String, String](
@@ -51,7 +53,7 @@ class LabelTrack extends MCLabelRule {
 
     /**Update Codis Realtime Object: 更新Codis(用户实时标签对象表)*/
     labelTrackCache.cacheTrack = Map[String, String](
-      "geo_longitude"->geo_longitude_new, "geo_latitude"->geo_latitude_new, "time"->mcSourceObj.time.toString
+      "geo_longitude"->geo_longitude_new, "geo_latitude"->geo_latitude_new, "time"->timeMs.toString
     )
     labelTrackCache
   }

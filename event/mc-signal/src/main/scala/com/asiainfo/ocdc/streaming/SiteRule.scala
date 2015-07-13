@@ -1,18 +1,20 @@
 package com.asiainfo.ocdc.streaming
 
-import com.asiainfo.ocdc.streaming.cache.CacheCenter
 import com.asiainfo.ocdc.streaming.constant.LabelConstant
 import com.asiainfo.ocdc.streaming.eventrule.StreamingCache
-import com.asiainfo.ocdc.streaming.tool.CacheFactory
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.Map
 
 /**
  * @author surq
  * @since 2015.4.2
- * @comment 给mc信令标记区域标签
+ *  给mc信令标记区域标签
  */
 class SiteRule extends MCLabelRule {
+
+  val logger = LoggerFactory.getLogger(this.getClass)
+
   def attachMCLabel(mcSourceObj: MCSourceObject, cache: StreamingCache, labelQryData: Map[String, Map[String, String]]): StreamingCache = {
 
     // 装载业务区域标签属性
@@ -20,13 +22,16 @@ class SiteRule extends MCLabelRule {
     // 根据largeCell解析出所属区域
 //    println("current lacci : " + getQryKeys(mcSourceObj))
     val cachedArea = labelQryData.get(getQryKeys(mcSourceObj)).get
+    logger.debug("= = " * 20 + " cachedArea = " + cachedArea.mkString("[", ",", "]"))
     if (cachedArea.contains("areas")) {
       val areas = cachedArea("areas").trim()
-      if (areas != "") areas.split(".").foreach(area => {
+      if (areas != "") areas.split(",").foreach(area => {
 //        println("current area : " + area)
         onSiteMap += (area.trim -> "true")
       })
     }
+
+    logger.debug("= = " * 20 + " onSiteMap = " + onSiteMap.mkString("[", ",", "]"))
 
     // 标记业务区域标签
     mcSourceObj.setLabel(LabelConstant.LABEL_ONSITE, onSiteMap)

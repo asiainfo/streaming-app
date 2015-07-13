@@ -104,6 +104,10 @@ class Jdbc2OneHashSuite extends FunSuite with BeforeAndAfter {
 
   test("1 生成测试数据"){
 
+    threadPool.shutdownNow()
+    threadPool2.shutdownNow()
+    if(reportEnabled) timer.cancel()
+
     val confXmlFile = "tools/conf/redis-load/jdbc2hashes-test.xml"
     val props = Jdbc2Hashes.init_props_fromXml(confXmlFile)
 

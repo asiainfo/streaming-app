@@ -5,6 +5,7 @@ import java.util
 import java.util.concurrent.FutureTask
 
 import com.asiainfo.ocdc.streaming.MainFrameConf
+import org.slf4j.LoggerFactory
 import redis.clients.jedis.Jedis
 
 import scala.collection.convert.wrapAsJava.mapAsJavaMap
@@ -48,6 +49,8 @@ trait CacheManager extends org.apache.spark.Logging {
 
 
 abstract class RedisCacheManager extends CacheManager {
+
+  val logger = LoggerFactory.getLogger(this.getClass)
 
   private val currentJedis = new ThreadLocal[Jedis] {
     override def initialValue = getResource
@@ -294,6 +297,7 @@ abstract class RedisCacheManager extends CacheManager {
     println("start thread : " + index)
     val cachedata = Map[Int, util.List[Array[Byte]]]()
 
+    var errorFlag = false
     while (taskMap.size > 0) {
       val keys = taskMap.keys
       keys.foreach(key => {
@@ -303,6 +307,8 @@ abstract class RedisCacheManager extends CacheManager {
             cachedata += (key -> task.get())
           } catch {
             case e: Exception => {
+              logger.error("= = " * 15 + "found error in  RedisCacheManager.getMultiCacheByKeys")
+              errorFlag = true
               e.printStackTrace()
             }
           } finally {
@@ -311,6 +317,7 @@ abstract class RedisCacheManager extends CacheManager {
         }
       })
     }
+    if(errorFlag) logger.error("= = " * 15 +"out of loop with errorFlag = " + errorFlag)
 
     val flatdata = new util.ArrayList[Array[Byte]]()
 

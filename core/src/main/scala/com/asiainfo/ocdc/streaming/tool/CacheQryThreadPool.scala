@@ -3,6 +3,7 @@ package com.asiainfo.ocdc.streaming.tool
 import java.util
 import java.util.concurrent.{Callable, ExecutorService, Executors}
 import com.asiainfo.ocdc.streaming.MainFrameConf
+import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.collection.mutable.Map
 
@@ -98,58 +99,102 @@ class InsertHash(cacheManager: RedisCacheManager, value: Map[String, Map[String,
 
 
 class Qry(keys: Seq[Array[Byte]]) extends Callable[util.List[Array[Byte]]] {
+  val logger = LoggerFactory.getLogger(this.getClass)
+
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    //    val conn = getConnection
-    val pgl = conn.pipelined()
-    keys.foreach(x => pgl.get(x))
-    val result = pgl.syncAndReturnAll().asInstanceOf[util.List[Array[Byte]]]
-    conn.close()
+    var result : java.util.List[Array[Byte]] = null
+    try{
+      //    val conn = getConnection
+      val pgl = conn.pipelined()
+      keys.foreach(x => pgl.get(x))
+      result = pgl.syncAndReturnAll().asInstanceOf[util.List[Array[Byte]]]
+    } catch {
+      case ex: Exception =>
+        logger.error("= = " * 15 +"found error in Qry.call()")
+    } finally{
+      conn.close()
+    }
+
     result
   }
 }
 
 class Insert(value: Map[String, Any]) extends Callable[String] {
+  val logger = LoggerFactory.getLogger(this.getClass)
+
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    //    val conn = getConnection
-    val pgl = conn.pipelined()
-    val ite = value.iterator
-    val kryotool = new KryoSerializerStreamAppTool
-    while (ite.hasNext) {
-      val elem = ite.next()
-      pgl.set(elem._1.getBytes, kryotool.serialize(elem._2).array())
-      pgl.sync()
+    try{
+      //    val conn = getConnection
+      val pgl = conn.pipelined()
+      val ite = value.iterator
+      val kryotool = new KryoSerializerStreamAppTool
+      while (ite.hasNext) {
+        val elem = ite.next()
+        pgl.set(elem._1.getBytes, kryotool.serialize(elem._2).array())
+        pgl.sync()
+//        conn.close()
+//        ""
+      }
+    } catch {
+      case ex: Exception =>
+        logger.error("= = " * 15 +"found error in Qry.call()")
+    } finally{
+      conn.close()
     }
-    conn.close()
     ""
   }
 }
 
 class QryHashall(keys: Seq[String]) extends Callable[util.List[util.Map[String, String]]] {
+  val logger = LoggerFactory.getLogger(this.getClass)
+
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    //    val conn = getConnection
-    val pgl = conn.pipelined()
-    keys.foreach(x => pgl.hgetAll(x))
-    val result = pgl.syncAndReturnAll().asInstanceOf[util.List[util.Map[String, String]]]
-    conn.close()
+    var result : java.util.List[java.util.Map[String, String]] = null
+    try{
+      //    val conn = getConnection
+      val pgl = conn.pipelined()
+      keys.foreach(x => pgl.hgetAll(x))
+      result = pgl.syncAndReturnAll().asInstanceOf[util.List[util.Map[String, String]]]
+//      conn.close()
+//      result
+    }catch {
+      case ex: Exception =>
+        logger.error("= = " * 15 +"found error in Qry.call()")
+    } finally{
+      conn.close()
+    }
+
     result
   }
 }
 
 class InsertHash(value: Map[String, Map[String, String]]) extends Callable[String] {
+  val logger = LoggerFactory.getLogger(this.getClass)
+
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    //    val conn = getConnection
-    val pgl = conn.pipelined()
-    val ite = value.iterator
-    while (ite.hasNext) {
-      val elem = ite.next()
-      pgl.hmset(elem._1, elem._2.asJava)
-      pgl.sync()
+
+    try{
+      //    val conn = getConnection
+      val pgl = conn.pipelined()
+      val ite = value.iterator
+      while (ite.hasNext) {
+        val elem = ite.next()
+        pgl.hmset(elem._1, elem._2.asJava)
+        pgl.sync()
+//        conn.close()
+//        ""
+      }
+    }catch {
+      case ex: Exception =>
+        logger.error("= = " * 15 +"found error in Qry.call()")
+    } finally{
+      conn.close()
     }
-    conn.close()
+
     ""
   }
 }
