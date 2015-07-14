@@ -199,10 +199,9 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           println(" partition data size = " + totalFetch)
 
           val f1 = System.currentTimeMillis()
-          var cachemap_old2: Map[String, Any] = null
-          val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+          var cachemap_old: Map[String, Any] = null
           try{
-            cachemap_old2  = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+            cachemap_old  = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
           } catch {
             case ex: Exception =>
               logError("= = " * 15 +" got exception in EventSource while get cache")
