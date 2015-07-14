@@ -13,9 +13,6 @@ import scala.collection.mutable
  */
 abstract class BusinessEvent extends Serializable with org.apache.spark.Logging {
 
-  val datePattern = "yyyyMMdd HH:mm:ss"
-
-
   var id: String = null
   var sourceId: String = null
   var conf: BusinessEventConf = null
