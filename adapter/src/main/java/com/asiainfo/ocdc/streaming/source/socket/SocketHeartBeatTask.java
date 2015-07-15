@@ -70,8 +70,8 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 					}
 					OutputStream outputStream = socket.getOutputStream();
 					outputStream.write(socketUtil.getHeartBeatInfo());
-					outputStream.flush();
 					Thread.sleep(15000);
+					outputStream.flush();
 					// 设定socket连通状态
 					setInterrupted(false);
 				} catch (SocketException e) {
