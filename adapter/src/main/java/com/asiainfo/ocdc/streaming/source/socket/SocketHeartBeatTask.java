@@ -77,6 +77,7 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 				} catch (SocketException e) {
 					// 设定socket中断状态
 					setInterrupted(true);
+					socket.close();
 					e.printStackTrace();
 				}
 			}
