@@ -33,7 +33,7 @@ public class SocketAutoProducer {
 	private static HashMap<String,Long> countMap = new HashMap<String,Long>();
 	// 打印socket接收速度任务
 	private static SpeedCompute speedCompute = null;
-	
+	private static SocketHeartBeatTask socketHeartBeat = null;
 	@SuppressWarnings("static-access")
 	public static void main(String args[]) {
 		
@@ -66,7 +66,7 @@ public class SocketAutoProducer {
 		
 		// 开启SocketHeartBeat 任务
 		ExecutorService executor = sendutil.getExecutorPool();
-		SocketHeartBeatTask socketHeartBeat = new SocketHeartBeatTask(socketIp, port);
+		socketHeartBeat = new SocketHeartBeatTask(socketIp, port);
 		executor.submit(socketHeartBeat);
 		
 		try {
@@ -119,7 +119,7 @@ public class SocketAutoProducer {
 			status = null;
 			index = null;
 			int count = 0;
-			while (true) {
+			while (!socketHeartBeat.isInterrupted()) {
 				byte[] type = new byte[2];
 				byte[] varInfo = new byte[2];
 				// flag
