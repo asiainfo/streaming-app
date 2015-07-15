@@ -15,7 +15,6 @@ class MCBSEvent extends BusinessEvent {
     "MC_" + id + ":" + imsi
   }
 
-//  override def getTime(row: Row): String = DateFormatUtils.dateMs2Str(row.getLong(1), datePattern)
   override def getTime(row: Row): String = row.getString(1)
 
   override def output(data: RDD[Option[Row]]) {

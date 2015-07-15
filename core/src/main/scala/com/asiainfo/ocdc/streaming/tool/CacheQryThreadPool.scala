@@ -139,7 +139,7 @@ class Insert(value: Map[String, Any]) extends Callable[String] {
       }
     } catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in Qry.call()")
+        logger.error("= = " * 15 +"found error in Insert.call()")
     } finally{
       conn.close()
     }
@@ -162,7 +162,7 @@ class QryHashall(keys: Seq[String]) extends Callable[util.List[util.Map[String, 
 //      result
     }catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in Qry.call()")
+        logger.error("= = " * 15 +"found error in QryHashall.call()")
     } finally{
       conn.close()
     }
@@ -190,7 +190,7 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
       }
     }catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in Qry.call()")
+        logger.error("= = " * 15 +"found error in InsertHash.call()")
     } finally{
       conn.close()
     }

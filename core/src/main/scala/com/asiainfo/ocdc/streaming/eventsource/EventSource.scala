@@ -23,7 +23,6 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   var endTime = MainFrameConf.get("afternoon8time")
 
 //  val timesdf = new SimpleDateFormat("HH:mm:ss")
-
 //  val morning8Time = timesdf.parse(beginTime).getTime
 //  val afternoon8Time = timesdf.parse(endTime).getTime
 
@@ -69,9 +68,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 //      val currtime = timesdf.parse(timesdf.format(System.currentTimeMillis())).getTime
       val currtime = DateFormatUtils.dateStr2Ms(DateFormatUtils.dateMs2Str(System.currentTimeMillis(), timePattern), timePattern)
 
-//      val currtime = System.currentTimeMillis()
-//      if (currtime > morning8Time && currtime < afternoon8Time && rdd.partitions.length > 0) {
-      if (rdd.partitions.length > 0) {
+      if (currtime > morning8Time && currtime < afternoon8Time && rdd.partitions.length > 0) {
         val sourceRDD = rdd.map(transform).collect {
           case Some(source: SourceObject) => source
         }
@@ -202,7 +199,14 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           println(" partition data size = " + totalFetch)
 
           val f1 = System.currentTimeMillis()
-          val cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+          var cachemap_old: Map[String, Any] = null
+          try{
+            cachemap_old  = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+          } catch {
+            case ex: Exception =>
+              logError("= = " * 15 +" got exception in EventSource while get cache")
+              throw ex
+          }
           //          val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)
           val f2 = System.currentTimeMillis()
           println(" query label cache data cost time : " + (f2 - f1) + " millis ! ")
