@@ -62,18 +62,19 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 							logger.error("socket["+socketIp+":"+port +"] 创建失败！");
 							 continue;
 						}
+						logger.info(SendUtil.timeFormat(System.currentTimeMillis()) + ":Socket 连接成功！");
 						// 发送请求信号，并返加socket的InputStream
 						ds = socketUtil.sendHeadMsg(socket);
 						// bindReq 去除请求信息头
 						ds.readFully(new byte[11]);
 						setDataInputStream(ds);
+						// 设定socket连通状态
+						setInterrupted(false);
 					}
 					OutputStream outputStream = socket.getOutputStream();
 					outputStream.write(socketUtil.getHeartBeatInfo());
 					Thread.sleep(15000);
 					outputStream.flush();
-					// 设定socket连通状态
-					setInterrupted(false);
 				} catch (SocketException e) {
 					// 设定socket中断状态
 					setInterrupted(true);
