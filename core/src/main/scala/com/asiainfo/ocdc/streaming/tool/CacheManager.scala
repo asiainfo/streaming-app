@@ -367,6 +367,7 @@ abstract class RedisCacheManager extends CacheManager {
 
     println("hgetall start thread : " + index)
 
+    var errorFlag = false
     while (taskMap.size > 0) {
       val keys = taskMap.keys
       keys.foreach(key => {
@@ -376,6 +377,8 @@ abstract class RedisCacheManager extends CacheManager {
             cachedata += (key -> task.get())
           } catch {
             case e: Exception => {
+              logger.error("= = " * 15 + "found error in  RedisCacheManager.getMultiCacheByKeys")
+              errorFlag = true
               e.printStackTrace()
             }
           } finally {

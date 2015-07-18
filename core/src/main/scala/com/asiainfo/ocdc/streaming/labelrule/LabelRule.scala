@@ -17,5 +17,5 @@ trait LabelRule extends Serializable {
 
   def attachLabel(source: SourceObject, cache: StreamingCache, labelQryData: Map[String, Map[String, String]]): StreamingCache
 
-  def getQryKeys(source: SourceObject): String = null
+  def getQryKeys(source: SourceObject): Set[String] = null
 }

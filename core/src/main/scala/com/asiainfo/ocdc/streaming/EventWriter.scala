@@ -5,6 +5,8 @@ import com.asiainfo.ocdc.streaming.tool.KafkaSendTool
 import kafka.producer.KeyedMessage
 import org.apache.spark.rdd.RDD
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
  * Created by leo on 4/27/15.
  */
@@ -38,4 +40,24 @@ object EventWriter {
     }
   }
 
+  def writeData(data: Array[(String, String)], conf: BusinessEventConf) {
+    val outputType = conf.get("outputtype")
+    val topic = conf.get("output_topic")
+
+    if ("kafka".equals(outputType)) {
+      val messages  = ArrayBuffer[KeyedMessage[String, String]]()
+
+      for((key, out) <- data){
+        messages.append(new KeyedMessage[String, String](topic, key, out))
+      }
+
+      KafkaSendTool.sendMessage(messages.toList)
+
+    } else if ("hdfs".equals(outputType)) {
+      //      data.saveAsTextFile(conf.get("outputdir") + "/" + System.currentTimeMillis())
+      throw new Exception("EventSourceType " + outputType + " is not support !")
+    } else {
+      throw new Exception("EventSourceType " + outputType + " is not support !")
+    }
+  }
 }

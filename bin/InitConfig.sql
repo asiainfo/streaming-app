@@ -83,4 +83,7 @@ INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("serializercla
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("interval","1 * 60 * 1000",1);
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("delaytime","30 * 60 * 1000",1);
 
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) values ('batchLimit', 10000, 1); -- 设置业务在多事件订阅查询事件cache的并发
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) values ('userKeyIdx',0,1); -- 设置selectExp输出字段中用于表示事件cache的key的位置索引
+
 

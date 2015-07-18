@@ -48,6 +48,8 @@ object MainFrameConf extends BaseConf {
     initBusinessEventConf
 
     initBsEvent2EventRules
+
+    initBsEvent2EventSources
   }
 
   def update(updateTime: Long){
@@ -239,7 +241,7 @@ object MainFrameConf extends BaseConf {
    * read business event map to event sources
    */
   def initBsEvent2EventSources {
-    val sql = "select be.id as beid,es.id as esid from BusenessEvents be join BusenessEventsMapEventSources map join EventSources es on be.id = map.beid and es.id=map.esid "
+    val sql = "select be.id as beid,es.id as esid from BusenessEvents be join BusenessEventsMapEventSources map join EventSource es on be.id = map.beid and es.id=map.esid "
     val be2es = JDBCUtils.query(sql)
 
     be2es.foreach(x => {

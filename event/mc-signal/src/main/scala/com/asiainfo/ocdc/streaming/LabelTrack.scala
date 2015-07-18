@@ -32,7 +32,7 @@ class LabelTrack extends MCLabelRule {
     }
 
     /**Realtime join: 根据当前信令数据, 实时关联Codis(基站信息表), 取出当前基站经纬度*/
-    val cachedArea = labelQryData.get(getQryKeys(mcSourceObj)).get
+    val cachedArea = labelQryData.get(getQryKeys(mcSourceObj).head).get
     val geo_longitude_new = if (cachedArea.contains("geo_longitude")) cachedArea("geo_longitude")
     else "0"
     val geo_latitude_new = if (cachedArea.contains("geo_latitude")) cachedArea("geo_latitude")
@@ -90,9 +90,9 @@ class LabelTrack extends MCLabelRule {
    * @param mc:MC信令对像
    * @return codis数据库的key
    */
-  override def getQryKeys(mc: SourceObject): String = {
+  override def getQryKeys(mc: SourceObject): Set[String] = {
     val mcsource = mc.asInstanceOf[MCSourceObject]
-    "lacci2area:" + mcsource.lac + ":" + mcsource.ci
+    Set[String]("lacci2area:" + mcsource.lac + ":" + mcsource.ci)
   }
 }
 

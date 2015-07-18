@@ -21,7 +21,7 @@ class SiteRule extends MCLabelRule {
     val onSiteMap = scala.collection.mutable.Map[String, String]()
     // 根据largeCell解析出所属区域
 //    println("current lacci : " + getQryKeys(mcSourceObj))
-    val cachedArea = labelQryData.get(getQryKeys(mcSourceObj)).get
+    val cachedArea = labelQryData.get(getQryKeys(mcSourceObj).head).get
     logger.debug("= = " * 20 + " cachedArea = " + cachedArea.mkString("[", ",", "]"))
     if (cachedArea.contains("areas")) {
       val areas = cachedArea("areas").trim()
@@ -44,8 +44,8 @@ class SiteRule extends MCLabelRule {
    * @param mc:MC信令对像
    * @return codis数据库的key
    */
-  override def getQryKeys(mc: SourceObject): String = {
+  override def getQryKeys(mc: SourceObject): Set[String] = {
     val mcsource = mc.asInstanceOf[MCSourceObject]
-    "lacci2area:" + mcsource.lac + ":" + mcsource.ci
+    Set[String]("lacci2area:" + mcsource.lac + ":" + mcsource.ci)
   }
 }

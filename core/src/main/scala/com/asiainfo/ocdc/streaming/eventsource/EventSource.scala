@@ -110,6 +110,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
       while (bsEventIter.hasNext) {
         val bsEvent = bsEventIter.next
+//        println("= = " * 20 +"bsEvent.id = " + bsEvent.id +", bsEvent.sourceId = " + bsEvent.sourceId)
         bsEvent.execEvent(eventMap)
       }
 
@@ -128,6 +129,10 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     df.persist
     df.printSchema()*/
 
+//    println("* * " * 20 +" df.show")
+//    df.show()
+//    println("= = " * 20 +" df.show done")
+
     val f4 = System.currentTimeMillis()
     val eventRuleIter = eventRules.iterator
 
@@ -135,6 +140,11 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
       val eventRule = eventRuleIter.next
       // handle filter first
       val filteredData = df.filter(eventRule.filterExp)
+//      println("* * " * 20 +" filteredData.show")
+//      filteredData.show()
+//      println("= = " * 20 +" filteredData.show down")
+
+
       eventMap += (eventRule.conf.get("id") -> filteredData)
     }
     logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
@@ -182,11 +192,11 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
             labelRuleArray.foreach(labelRule => {
               val labelId = labelRule.conf.get("id")
-              val qryKey = labelRule.getQryKeys(currentLine)
-              if (qryKey != null) {
+              val qryKeys = labelRule.getQryKeys(currentLine)
+              if (qryKeys != null && qryKeys.nonEmpty) {
                 labelQryKeysMap.get(labelId) match {
-                  case Some(v) => v += (qryKey)
-                  case None => labelQryKeysMap += (labelId -> (mutable.Set[String]() += (qryKey)))
+                  case Some(v) => v ++= qryKeys
+                  case None => labelQryKeysMap += (labelId -> (mutable.Set[String]() ++= qryKeys))
                 }
               }
             })
