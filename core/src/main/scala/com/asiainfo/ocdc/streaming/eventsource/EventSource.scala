@@ -22,9 +22,9 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
   var beginTime = MainFrameConf.get("morning8time")
   var endTime = MainFrameConf.get("afternoon8time")
 
-//  val timesdf = new SimpleDateFormat("HH:mm:ss")
-//  val morning8Time = timesdf.parse(beginTime).getTime
-//  val afternoon8Time = timesdf.parse(endTime).getTime
+  //  val timesdf = new SimpleDateFormat("HH:mm:ss")
+  //  val morning8Time = timesdf.parse(beginTime).getTime
+  //  val afternoon8Time = timesdf.parse(endTime).getTime
 
   val timePattern = "HH:mm:ss"
   val morning8Time = DateFormatUtils.dateStr2Ms(beginTime, timePattern)
@@ -65,7 +65,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     val inputStream = readSource(ssc)
 
     inputStream.foreachRDD { rdd =>
-//      val currtime = timesdf.parse(timesdf.format(System.currentTimeMillis())).getTime
+      //      val currtime = timesdf.parse(timesdf.format(System.currentTimeMillis())).getTime
       val currtime = DateFormatUtils.dateStr2Ms(DateFormatUtils.dateMs2Str(System.currentTimeMillis(), timePattern), timePattern)
 
       if (currtime > morning8Time && currtime < afternoon8Time && rdd.partitions.length > 0) {
@@ -83,9 +83,9 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
             // cache data
             df.persist
 
-//            df.map(x => x).count()
+            //            df.map(x => x).count()
 
-//            df.printSchema()
+            //            df.printSchema()
 
             val eventMap = makeEvents(df)
 
@@ -110,7 +110,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
       while (bsEventIter.hasNext) {
         val bsEvent = bsEventIter.next
-//        println("= = " * 20 +"bsEvent.id = " + bsEvent.id +", bsEvent.sourceId = " + bsEvent.sourceId)
+        //        println("= = " * 20 +"bsEvent.id = " + bsEvent.id +", bsEvent.sourceId = " + bsEvent.sourceId)
         bsEvent.execEvent(eventMap)
       }
 
@@ -129,9 +129,9 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     df.persist
     df.printSchema()*/
 
-//    println("* * " * 20 +" df.show")
-//    df.show()
-//    println("= = " * 20 +" df.show done")
+    //    println("* * " * 20 +" df.show")
+    //    df.show()
+    //    println("= = " * 20 +" df.show done")
 
     val f4 = System.currentTimeMillis()
     val eventRuleIter = eventRules.iterator
@@ -140,9 +140,9 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
       val eventRule = eventRuleIter.next
       // handle filter first
       val filteredData = df.filter(eventRule.filterExp)
-//      println("* * " * 20 +" filteredData.show")
-//      filteredData.show()
-//      println("= = " * 20 +" filteredData.show down")
+      //      println("* * " * 20 +" filteredData.show")
+      //      filteredData.show()
+      //      println("= = " * 20 +" filteredData.show down")
 
 
       eventMap += (eventRule.conf.get("id") -> filteredData)
@@ -183,7 +183,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           val totaldata = mutable.MutableList[SourceObject]()
           val minimap = mutable.Map[String, SourceObject]()
 
-          val labelQryKeysMap = mutable.Map[String, mutable.Set[String]]()
+          val labelQryKeysSet = mutable.Set[String]()
 
           while (iter.hasNext && totalFetch < conf.getInt("batchsize")) {
             val currentLine = iter.next()
@@ -194,10 +194,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
               val labelId = labelRule.conf.get("id")
               val qryKeys = labelRule.getQryKeys(currentLine)
               if (qryKeys != null && qryKeys.nonEmpty) {
-                labelQryKeysMap.get(labelId) match {
-                  case Some(v) => v ++= qryKeys
-                  case None => labelQryKeysMap += (labelId -> (mutable.Set[String]() ++= qryKeys))
-                }
+                labelQryKeysSet ++= qryKeys
               }
             })
 
@@ -210,11 +207,11 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
           val f1 = System.currentTimeMillis()
           var cachemap_old: Map[String, Any] = null
-          try{
-            cachemap_old  = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+          try {
+            cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
           } catch {
             case ex: Exception =>
-              logError("= = " * 15 +" got exception in EventSource while get cache")
+              logError("= = " * 15 + " got exception in EventSource while get cache")
               throw ex
           }
           //          val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)
@@ -222,10 +219,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           println(" query label cache data cost time : " + (f2 - f1) + " millis ! ")
 
 
-          val labelQryMap = mutable.Map[String, Map[String, Map[String, String]]]()
-          labelQryKeysMap.foreach(x => {
-            labelQryMap += (x._1 -> CacheFactory.getManager.hgetall(x._2.toList))
-          })
+          val labelQryData = CacheFactory.getManager.hgetall(labelQryKeysSet.toList)
           val f3 = System.currentTimeMillis()
           println(" query label need data cost time : " + (f3 - f2) + " millis ! ")
 
@@ -263,11 +257,6 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
               val cacheOpt = rule_caches.get(labelRule.conf.get("id"))
               var old_cache: StreamingCache = null
               if (cacheOpt != None) old_cache = cacheOpt.get
-
-              val labelQryData = labelQryMap.get(labelRule.conf.get("id")) match {
-                case Some(v) => v
-                case None => null
-              }
 
               /*if("5".eq(labelRule.conf.get("id"))){
                 println(" label " + labelRule.conf.get("id") + " qry datas : ")
