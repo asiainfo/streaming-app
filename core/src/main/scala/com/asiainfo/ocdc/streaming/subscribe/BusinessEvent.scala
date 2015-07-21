@@ -201,7 +201,6 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 
             //输出
             if(outputRows.length > 0) {
-              println("")
               output(outputRows.toArray)
               outputRows.clear()
             }
