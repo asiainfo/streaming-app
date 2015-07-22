@@ -36,53 +36,56 @@ public class SocketHeartBeatTask implements Callable<String> ,Thread.UncaughtExc
 		this.port = port;
 	}
 	
+	@SuppressWarnings("static-access")
 	@Override
 	public String call() {
 		try{
-			logger.info("SocketHeartBeatTask start! "+ Thread.currentThread().getId());
-			Socket socket = getSocket();
-			// 创建socket失败,退出心跳机制
-			if (socket == null) {
-				logger.error("socket["+socketIp+":"+port +"] 创建失败！");
-				return "1";
-			}
-			// 发送SOCKET请求信号，并返加socket的InputStream
-			DataInputStream ds = socketUtil.sendHeadMsg(socket);
-			// bindReq 去除请求信息头
-			ds.readFully( new byte[11]);
-			setDataInputStream(ds);
-			setConnected(true);
-			while (true) {
-				try {
-					if (isInterrupted()) {
-						logger.warn(SendUtil.timeFormat(System.currentTimeMillis()) + ":Socket 异常重新试探...");
-						socket = getSocket();
-						// 创建socket失败,退出心跳机制
-						if (socket == null){
-							logger.error("socket["+socketIp+":"+port +"] 创建失败！");
-							 continue;
+			logger.info("SocketHeartBeatTask starting ...");
+			while(true){
+				Socket socket = getSocket();
+				// 创建socket失败,退出心跳机制
+				if (socket == null) {
+					logger.error("socket["+socketIp+":"+port +"] 启动时创建socket连接失败！");
+					Thread.currentThread().sleep(1000);
+					continue;
+				}
+				// 发送SOCKET请求信号，并返加socket的InputStream
+				DataInputStream ds = socketUtil.sendHeadMsg(socket);
+				// bindReq 去除请求信息头
+				ds.readFully( new byte[11]);
+				setDataInputStream(ds);
+				setConnected(true);
+				while (true) {
+					try {
+						if (isInterrupted()) {
+							logger.warn(SendUtil.timeFormat(System.currentTimeMillis()) + ":Socket 异常重新试探...");
+							socket = getSocket();
+							// 创建socket失败,退出心跳机制
+							if (socket == null){
+								logger.error("socket["+socketIp+":"+port +"] 创建失败！");
+								 continue;
+							}
+							logger.info(SendUtil.timeFormat(System.currentTimeMillis()) + ":Socket 连接成功！");
+							// 发送请求信号，并返加socket的InputStream
+							ds = socketUtil.sendHeadMsg(socket);
+							// bindReq 去除请求信息头
+							ds.readFully(new byte[11]);
+							setDataInputStream(ds);
+							// 设定socket连通状态
+							setInterrupted(false);
 						}
-						logger.info(SendUtil.timeFormat(System.currentTimeMillis()) + ":Socket 连接成功！");
-						// 发送请求信号，并返加socket的InputStream
-						ds = socketUtil.sendHeadMsg(socket);
-						// bindReq 去除请求信息头
-						ds.readFully(new byte[11]);
-						setDataInputStream(ds);
-						// 设定socket连通状态
-						setInterrupted(false);
+						OutputStream outputStream = socket.getOutputStream();
+						outputStream.write(socketUtil.getHeartBeatInfo());
+						Thread.sleep(15000);
+						outputStream.flush();
+					} catch (SocketException e) {
+						// 设定socket中断状态
+						setInterrupted(true);
+						socket.close();
+						e.printStackTrace();
 					}
-					OutputStream outputStream = socket.getOutputStream();
-					outputStream.write(socketUtil.getHeartBeatInfo());
-					Thread.sleep(15000);
-					outputStream.flush();
-				} catch (SocketException e) {
-					// 设定socket中断状态
-					setInterrupted(true);
-					socket.close();
-					e.printStackTrace();
 				}
 			}
-	
 		}catch(Exception e){
 			uncaughtException(Thread.currentThread(),e);
 		}
