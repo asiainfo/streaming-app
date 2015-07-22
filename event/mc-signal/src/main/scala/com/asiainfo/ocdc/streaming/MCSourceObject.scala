@@ -7,7 +7,6 @@ import scala.collection.mutable.Map
  */
 case class MCSourceObject(
                            @BeanProperty val eventID: Int,
-//                           @BeanProperty val time: Long,
                            @BeanProperty val time: String,
                            @BeanProperty val lac: String,
                            @BeanProperty val ci: String,

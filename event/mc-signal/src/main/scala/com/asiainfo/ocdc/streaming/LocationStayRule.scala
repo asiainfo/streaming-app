@@ -144,7 +144,7 @@ class LocationStayRule extends MCLabelRule {
       case Some(currentStatus) => {
         val first = getCacheStayTime(currentStatus).get("first").get
         val last = getCacheStayTime(currentStatus).get("last").get
-        println("FIRST TIME : " + first + " , LAST TIME : " + last + " , MCTIME : " + mcTime)
+//        println("FIRST TIME : " + first + " , LAST TIME : " + last + " , MCTIME : " + mcTime)
         if (first > last) {
           // 无效数据，丢弃，本条视为first
           mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
