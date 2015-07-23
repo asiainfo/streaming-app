@@ -3,6 +3,7 @@ package com.asiainfo.ocdc.streaming.subscribe
 import com.asiainfo.ocdc.streaming.MainFrameConf
 import com.asiainfo.ocdc.streaming.constant.EventConstant
 import com.asiainfo.ocdc.streaming.tool.{CacheFactory, DateFormatUtils}
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.mutable
@@ -144,9 +145,9 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 //    println("* * " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData = ")
 //    selectedData.show()
 //    println("= = " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData done")
+    val rddData = transformDF(selectedData)
 
-
-    selectedData.mapPartitions(iter=>{
+    rddData.mapPartitions(iter=>{
 
       new Iterator[Row]{
         private[this] var current: Row = _
@@ -219,4 +220,5 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 
   def output(data: Array[Row])
 
+  def transformDF(old_dataframe: DataFrame): RDD[Row] = old_dataframe.map(row => row)
 }
