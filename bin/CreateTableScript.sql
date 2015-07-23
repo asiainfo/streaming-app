@@ -83,7 +83,9 @@ DELETE CASCADE;
 DROP TABLE IF EXISTS `BusenessEvents`;
 CREATE TABLE `BusenessEvents` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(30) NOT NULL,
   `classname` varchar(200) NOT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 );
 

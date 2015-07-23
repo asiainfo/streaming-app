@@ -181,7 +181,7 @@ object MainFrameConf extends BaseConf {
    * read business event list and config
    */
   def initBusinessEventConf {
-    val sql = "select bep.name,bep.pvalue,be.classname,be.id as beid,es.esid as esid from BusenessEventsProp bep join BusenessEvents be on bep.beid=be.id join BusenessEventsMapEventSources es on be.id = es.beid"
+    val sql = "select bep.name,bep.pvalue,be.classname,be.id as beid,es.esid as esid from BusenessEventsProp bep join BusenessEvents be on bep.beid=be.id join BusenessEventsMapEventSources es on be.id = es.beid where be.enabled=1"
     val busievents = JDBCUtils.query(sql)
     val midmap2 = Map[String, Map[String, BusinessEventConf]]()
     busievents.foreach(x => {
