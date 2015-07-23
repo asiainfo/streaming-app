@@ -12,9 +12,10 @@ class ReceiveRecordNumListener extends StreamingListener {
     val baseConfUpdateInteval = MainFrameConf.getInt("BaseConfUpdateInteval")
     val currentTime = System.currentTimeMillis()
 
-    if (MainFrameConf.updateTime + baseConfUpdateInteval >= currentTime)
+    if (MainFrameConf.updateTime + baseConfUpdateInteval >= currentTime) {
       MainFrameConf.update(currentTime)
-
+//      MainFrame.initEventSource()
+    }
     System.out.println("Current batch receive record number : " + batchSubmitted.batchInfo.numRecords)
 
   }

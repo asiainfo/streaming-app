@@ -3,6 +3,7 @@ package com.asiainfo.ocdc.streaming.subscribe
 import com.asiainfo.ocdc.streaming.MainFrameConf
 import com.asiainfo.ocdc.streaming.constant.EventConstant
 import com.asiainfo.ocdc.streaming.tool.{CacheFactory, DateFormatUtils}
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 
 import scala.collection.mutable
@@ -14,7 +15,7 @@ import scala.collection.mutable.ArrayBuffer
 abstract class BusinessEvent extends Serializable with org.apache.spark.Logging {
 
   var id: String = null
-//  def id = conf.get("beid")
+  //  def id = conf.get("beid")
   var sourceId: String = null
   var conf: BusinessEventConf = null
   var eventSources: Seq[String] = null
@@ -44,9 +45,9 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
   }
 
   def filterBSEvent(row: Row,
-                    old_cache: mutable.Map[String, mutable.Map[String, String]], 
+                    old_cache: mutable.Map[String, mutable.Map[String, String]],
                     updateKeys: mutable.Set[String],
-                    outputRows: ArrayBuffer[Row]): Unit ={
+                    outputRows: ArrayBuffer[Row]): Unit = {
     val currentSystemTimeMs = System.currentTimeMillis()
     var keyCache = old_cache.getOrElse(getHashKey(row), mutable.Map[String, String]())
     val qryKey = getHashKey(row)
@@ -104,7 +105,7 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
         } else {
           // cache不为空
           val lastBSActiveTimeMs = keyCache.get(locktime).getOrElse("0").toLong
-          if(lastBSActiveTimeMs == 0){
+          if (lastBSActiveTimeMs == 0) {
             // cache中最近一次触发业务事件的事件为0，
             keyCache += (sourceId -> timeStr)
             keyCache += (locktime -> currentSystemTimeMs.toString)
@@ -128,27 +129,27 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     old_cache.update(qryKey, keyCache)
     updateKeys += qryKey
 
-//    println("= = " * 20 +" filterBSEvent.flagTriggerBSEvent = " + flagTriggerBSEvent)
-    if(flagTriggerBSEvent){
+    //    println("= = " * 20 +" filterBSEvent.flagTriggerBSEvent = " + flagTriggerBSEvent)
+    if (flagTriggerBSEvent) {
       outputRows.append(row)
     }
   }
 
   def execEvent(eventMap: mutable.Map[String, DataFrame]) {
     val filtevents = eventMap.filter(x => eventRules.contains(x._1))
-//    val currentEvent = filtevents.iterator.next()._2
+    //    val currentEvent = filtevents.iterator.next()._2
     val (currentEventRuleId, currentEvent) = filtevents.iterator.next()
 
     val selectedData = currentEvent.selectExpr(selectExp: _*)
 
-//    println("* * " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData = ")
-//    selectedData.show()
-//    println("= = " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData done")
+    //    println("* * " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData = ")
+    //    selectedData.show()
+    //    println("= = " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData done")
 
+    val rddData = transformDF(selectedData, selectExp)
+    rddData.mapPartitions(iter => {
 
-    selectedData.mapPartitions(iter=>{
-
-      new Iterator[Row]{
+      new Iterator[Row] {
         private[this] var current: Row = _
         private[this] var currentPos: Int = -1
         private[this] var batchArray: Array[Row] = _
@@ -157,11 +158,11 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
         private[this] val updateKeys = mutable.Set[String]()
         private[this] val outputRows = ArrayBuffer[Row]()
 
-        override def hasNext: Boolean ={
+        override def hasNext: Boolean = {
           iter.hasNext && batchNext()
         }
 
-        override def next(): Row ={
+        override def next(): Row = {
           batchArray.head
         }
 
@@ -169,7 +170,7 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
         var batchSize = 0
         val batchLimit = conf.getInt("batchLimit")
 
-        def batchNext(): Boolean ={
+        def batchNext(): Boolean = {
           var result = false
 
           batchArrayBuffer.clear()
@@ -182,13 +183,13 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
             currentPos += 1
           }
 
-          if(batchArrayBuffer.length > 0) {
+          if (batchArrayBuffer.length > 0) {
             batchArray = batchArrayBuffer.toArray
             result = true
 
             val qryKeys = batchArrayBuffer.map(getHashKey(_))
             val old_cache = CacheFactory.getManager.hgetall(qryKeys.toList)
-            for(row <- batchArrayBuffer){
+            for (row <- batchArrayBuffer) {
               filterBSEvent(row, old_cache, updateKeys, outputRows)
             }
 
@@ -200,7 +201,7 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
             updateKeys.clear()
 
             //输出
-            if(outputRows.length > 0) {
+            if (outputRows.length > 0) {
               println("")
               output(outputRows.toArray)
               outputRows.clear()
@@ -216,8 +217,9 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 
   }
 
-//  def output(data: RDD[Option[Row]])
+  //  def output(data: RDD[Option[Row]])
 
   def output(data: Array[Row])
 
+  def transformDF(old_dataframe: DataFrame, selectExp: Seq[String]): RDD[Row] = old_dataframe.map(row => row)
 }
