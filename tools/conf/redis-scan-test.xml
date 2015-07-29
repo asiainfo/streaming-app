@@ -1,0 +1,36 @@
+<configuration>
+    <redis>
+        <servers>codis1:7380</servers> <!-- 设置redis/codis地址, 格式为 ip:port -->
+        <database>0</database> <!-- 设置导入到redis/codis哪个db，默认有16个db，编号0-15 -->
+        <timeout>10000</timeout> <!-- 设置连接redis/codis最大超时,单位ms -->
+        <password></password> <!-- 设置连接redis/codis的密码 -->
+    </redis>
+
+    <jedisPool>
+        <maxTotal>100</maxTotal> <!-- 设置连接池最大连接数 -->
+        <maxIdle>15</maxIdle> <!-- 设置连接池最大空闲连接数 -->
+        <minIdle>0</minIdle> <!-- 设置连接池最小空闲连接数 -->
+    </jedisPool>
+
+
+    <description>
+        reids部分：
+        servers：设置 redis/codis 的服务ip地址和端口
+        database: 设置导入到redis哪个db
+        timeout: 设置连接redis的超时，单位ms
+        password: 设置访问redis的密码
+
+        jedisPool部分：
+        maxTotal: 设置连接池最大连接数
+        maxIdle: 设置连接池最大空闲连接数
+        minIdle: 设置连接池最小空闲连接数
+
+        jdbcPool部分：
+        maxActive:设置连接池最大连接数
+        initialSize:设置连接池初始化连接数
+        maxIdle:设置连接池最大空闲连接数
+        minIdle:设置连接池最小空闲连接数
+
+    </description>
+
+</configuration>
