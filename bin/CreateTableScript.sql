@@ -39,6 +39,7 @@ CREATE TABLE `LabelRules` (
   `id` int NOT NULL AUTO_INCREMENT,
   `esourceid` int NOT NULL,
   `classname` varchar(200) NOT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 );
 alter table LabelRules add foreign key (esourceid) references EventSource(id) ON
@@ -62,6 +63,7 @@ CREATE TABLE `EventRules` (
   `id` int NOT NULL AUTO_INCREMENT,
   `esourceid` int NOT NULL,
   `classname` varchar(200) NOT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 );
 alter table EventRules add foreign key (esourceid) references EventSource(id) ON

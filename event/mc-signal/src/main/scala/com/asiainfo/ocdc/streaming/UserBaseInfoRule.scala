@@ -51,7 +51,8 @@ class UserBaseInfoRule extends MCLabelRule {
         user_info_map.get(labelName) match {
           case Some(value) =>  propMap += (labelName -> value)
           case None =>
-            logger.warn("= = " * 15 +"in UserBaseInfoRule, got empty cache from labelQryData for key = userinfo:" + normal_imsi)
+            //发现：现场环境有很多 userinfo:normal_imsi 在redis中没有cache信息，也可能是外地用户，故取消executor日志打印
+//            logger.debug("= = " * 15 +"in UserBaseInfoRule, got null from labelQryData for key field  = userinfo:" + normal_imsi +" " + labelName)
         }
       })
       qryKeys.foreach(qryKey=>{

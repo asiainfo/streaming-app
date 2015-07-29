@@ -64,9 +64,9 @@ INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("timeIdx","1
 -- INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("path","hdfs://spark1:9000/user/tsingfu/streaming",1);
 
 -- init LabelRules
-INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.UserBaseInfoRule",1);
-INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.SiteRule",1);
-INSERT INTO `LabelRules` (`classname`,`esourceid`) VALUES ("com.asiainfo.ocdc.streaming.LocationStayRule",1);
+INSERT INTO `LabelRules` (`classname`,`esourceid`,`enabled`) VALUES ("com.asiainfo.ocdc.streaming.UserBaseInfoRule",1,1);
+INSERT INTO `LabelRules` (`classname`,`esourceid`,`enabled`) VALUES ("com.asiainfo.ocdc.streaming.SiteRule",1,1);
+INSERT INTO `LabelRules` (`classname`,`esourceid`,`enabled`) VALUES ("com.asiainfo.ocdc.streaming.LocationStayRule",1,1);
 
 -- init LabelRulesProp
 -- UserBaseInfoRule 标签规则，设置 codis/redis中用户资料缓存中需要作为label的属性名
@@ -78,14 +78,14 @@ INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.outputThresh
 INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.timeout","1800000",3);
 
 -- init EventRules
-INSERT INTO `EventRules` (`esourceid`,`classname`) VALUES (1,"com.asiainfo.ocdc.streaming.MCEventRule");
+INSERT INTO `EventRules` (`esourceid`,`classname`,`enabled`) VALUES (1,"com.asiainfo.ocdc.streaming.MCEventRule",1);
 
 -- init EventRulesProp
 -- 设置事件规则的过滤条件
 INSERT INTO `EventRulesProp` (`name`,`pvalue`,`erid`) VALUES ("filterExp","labels['area_onsite']['ZHUJIAYU']='true'",1);
 
 -- init BusenessEvents
-INSERT INTO `BusenessEvents` (`id`,`classname`) VALUES (1,"com.asiainfo.ocdc.streaming.MCBSEvent");
+INSERT INTO `BusenessEvents` (`id`,`classname`,`name`,`enabled`) VALUES (1,"com.asiainfo.ocdc.streaming.MCBSEvent", "业务1", 1);
 
 -- init BusenessEventsMapEventSources
 INSERT INTO `BusenessEventsMapEventSources` (`beid`,`esid`) VALUES (1,1);

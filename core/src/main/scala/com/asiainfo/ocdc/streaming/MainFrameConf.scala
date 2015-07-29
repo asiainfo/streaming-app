@@ -50,6 +50,8 @@ object MainFrameConf extends BaseConf {
     initBsEvent2EventRules
 
     initBsEvent2EventSources
+
+    updateTime = System.currentTimeMillis()
   }
 
   def update(updateTime: Long){
@@ -104,7 +106,7 @@ object MainFrameConf extends BaseConf {
    * read label rule list and config
    */
   def initLabelRuleConf {
-    val sql = "select lrp.name,lrp.pvalue,lr.classname,lr.id as lrid,es.id as esid from LabelRulesProp lrp right join LabelRules lr on lrp.lrid = lr.id join EventSource es on lr.esourceid = es.id where es.enabled=1 "
+    val sql = "select lrp.name,lrp.pvalue,lr.classname,lr.id as lrid,es.id as esid from LabelRulesProp lrp right join LabelRules lr on lrp.lrid = lr.id join EventSource es on lr.esourceid = es.id where es.enabled=1 and lr.enabled=1"
     val labrules = JDBCUtils.query(sql)
     val midmap = Map[String, Map[String, LabelRuleConf]]()
     labrules.foreach(x => {
@@ -143,7 +145,7 @@ object MainFrameConf extends BaseConf {
    * read event rule list and config
    */
   def initEventRuleConf {
-    val sql = "select erp.name,erp.pvalue,er.classname,er.id as erid,es.id as esid from EventRulesProp erp right join EventRules er on erp.erid = er.id join EventSource es on er.esourceid = es.id where es.enabled=1 "
+    val sql = "select erp.name,erp.pvalue,er.classname,er.id as erid,es.id as esid from EventRulesProp erp right join EventRules er on erp.erid = er.id join EventSource es on er.esourceid = es.id where es.enabled=1 and er.enabled=1"
     val eventrules = JDBCUtils.query(sql)
     val midmap2 = Map[String, Map[String, EventRuleConf]]()
     eventrules.foreach(x => {
@@ -220,7 +222,7 @@ object MainFrameConf extends BaseConf {
    * read business event map to event rules
    */
   def initBsEvent2EventRules {
-    val sql = "select be.id as beid,er.id as erid from BusenessEvents be join BusenessEventsMapEventRules map join EventRules er on be.id = map.beid and er.id=map.erid "
+    val sql = "select be.id as beid,er.id as erid from BusenessEvents be join BusenessEventsMapEventRules map join EventRules er on be.id = map.beid and er.id=map.erid where be.enabled=1 and er.enabled=1"
     val be2er = JDBCUtils.query(sql)
 
     be2er.foreach(x => {
@@ -241,7 +243,7 @@ object MainFrameConf extends BaseConf {
    * read business event map to event sources
    */
   def initBsEvent2EventSources {
-    val sql = "select be.id as beid,es.id as esid from BusenessEvents be join BusenessEventsMapEventSources map join EventSource es on be.id = map.beid and es.id=map.esid "
+    val sql = "select be.id as beid,es.id as esid from BusenessEvents be join BusenessEventsMapEventSources map join EventSource es on be.id = map.beid and es.id=map.esid where be.enabled=1 and es.enabled=1 "
     val be2es = JDBCUtils.query(sql)
 
     be2es.foreach(x => {

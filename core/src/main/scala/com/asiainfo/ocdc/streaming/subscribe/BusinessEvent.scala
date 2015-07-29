@@ -46,8 +46,7 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 
   def filterBSEvent(row: Row,
                     old_cache: mutable.Map[String, mutable.Map[String, String]], 
-                    updateKeys: mutable.Set[String],
-                    outputRows: ArrayBuffer[Row]): Unit ={
+                    outputRows: ArrayBuffer[Row], outputRowsKeySet: scala.collection.mutable.Set[String]): Unit ={
     val currentSystemTimeMs = System.currentTimeMillis()
     var keyCache = old_cache.getOrElse(getHashKey(row), mutable.Map[String, String]())
     val qryKey = getHashKey(row)
@@ -103,35 +102,30 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
           keyCache += (locktime -> currentSystemTimeMs.toString)
           true
         } else {
-          // cache不为空
+          // cache不为空, 说明业务事件已触发过（配置模型：约定一个业务在一个流上只有一个事件）
           val lastBSActiveTimeMs = keyCache.get(locktime).getOrElse("0").toLong
-          if(lastBSActiveTimeMs == 0){
-            // cache中最近一次触发业务事件的事件为0，
+
+          if (lastBSActiveTimeMs + interval > currentSystemTimeMs) {
+            // 当前事件生成时间（与最近一次触发事件的时间相比）在周期策略内，不触发
+            keyCache += (sourceId -> timeStr)
+            false
+          } else {
+            // 当前事件生成时间（与最近一次触发事件的时间相比）在周期策略外，可以重新触发
             keyCache += (sourceId -> timeStr)
             keyCache += (locktime -> currentSystemTimeMs.toString)
             true
-          } else {
-            // cache 中业务事件已触发过
-            if (lastBSActiveTimeMs + interval > currentSystemTimeMs) {
-              // 如果最近一次触发事件在周期策略内，不触发
-              keyCache += (sourceId -> timeStr)
-              false
-            } else {
-              // 如果最近一次触发事件在周期策略外，可以重新触发
-              keyCache += (sourceId -> timeStr)
-              keyCache += (locktime -> currentSystemTimeMs.toString)
-              true
-            }
           }
         }
       }
 
     old_cache.update(qryKey, keyCache)
-    updateKeys += qryKey
 
 //    println("= = " * 20 +" filterBSEvent.flagTriggerBSEvent = " + flagTriggerBSEvent)
     if(flagTriggerBSEvent){
       outputRows.append(row)
+      if(!outputRowsKeySet.add(row.getString(userKeyIdx))) {
+        logWarning("= = " * 5 + "in one batch found duplicatedKey " + row.getString(userKeyIdx) +", getHashKey(row) = " + getHashKey(row))
+      }
     }
   }
 
@@ -145,9 +139,9 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 //    println("* * " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData = ")
 //    selectedData.show()
 //    println("= = " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData done")
-    val rddData = transformDF(selectedData)
+    val rddRow = transformDF2RDD(selectedData, userKeyIdx)
 
-    rddData.mapPartitions(iter=>{
+    rddRow.mapPartitions(iter=>{
 
       new Iterator[Row]{
         private[this] var current: Row = _
@@ -155,8 +149,9 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
         private[this] var batchArray: Array[Row] = _
         private[this] val batchArrayBuffer = new ArrayBuffer[Row]()
 
-        private[this] val updateKeys = mutable.Set[String]()
         private[this] val outputRows = ArrayBuffer[Row]()
+        private[this] val outputRowsKeySet = scala.collection.mutable.Set[String]()
+
 
         override def hasNext: Boolean ={
           iter.hasNext && batchNext()
@@ -188,22 +183,23 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
             result = true
 
             val qryKeys = batchArrayBuffer.map(getHashKey(_))
-            val old_cache = CacheFactory.getManager.hgetall(qryKeys.toList)
+            val businessCache = CacheFactory.getManager.hgetall(qryKeys.toList)
             for(row <- batchArrayBuffer){
-              filterBSEvent(row, old_cache, updateKeys, outputRows)
+              filterBSEvent(row, businessCache, outputRows, outputRowsKeySet)
             }
 
             //更新cache
-            val updateData = old_cache.filter(x => updateKeys.contains(x._1))
+//            val updateData = old_cache.filter(x => updateKeys.contains(x._1)) //每个key都需要更新
             val t2 = System.currentTimeMillis()
-            CacheFactory.getManager.hmset(updateData)
+            CacheFactory.getManager.hmset(businessCache)
             println(" update saled user data cost time : " + (System.currentTimeMillis() - t2) + " millis ! ")
-            updateKeys.clear()
 
             //输出
             if(outputRows.length > 0) {
+              logInfo("batchSize = " + batchSize+ ", outputRows.length = " + outputRows.length +", numFiltered = " + (batchSize - outputRows.length))
               output(outputRows.toArray)
               outputRows.clear()
+              outputRowsKeySet.clear()
             }
 
             batchSize = 0
@@ -220,5 +216,6 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 
   def output(data: Array[Row])
 
-  def transformDF(old_dataframe: DataFrame): RDD[Row] = old_dataframe.map(row => row)
+  def transformDF2RDD(old_dataframe: DataFrame, partitionKeyIdx: Int): RDD[Row] = old_dataframe.rdd
+
 }

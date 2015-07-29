@@ -3,9 +3,11 @@ package tools.redis
 import java.util.ArrayList
 
 import org.slf4j.LoggerFactory
-import redis.clients.jedis.{JedisPool, Jedis, JedisPoolConfig}
+import redis.clients.jedis._
 
 import scala.collection.mutable
+import scala.collection.convert.wrapAsScala._
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Created by tsingfu on 15/4/27.
@@ -238,4 +240,226 @@ object RedisUtils {
     while(hexStr.length<4){hexStr = "0" + hexStr}
     hexStr
   }
+
+
+
+  /**
+   * 查找redis中匹配字符的key
+   * @param prefix redis的key匹配前缀
+   * @param mid redis的key匹配中间字符
+   * @param suffix redis的key匹配后缀
+   */
+  def loopupKey(jedis: Jedis,
+                prefix: String = null,
+                mid: String = null,
+                suffix: String = null,
+                flagPrint: Boolean = false): java.util.Set[String] = {
+
+    val pattern = (if(prefix != null) prefix else "") + (if (mid != null) "*" + mid +"*" else "*") + (if(suffix != null) suffix else "")
+    println("pattern = " + pattern)
+    // codis 不支持keys, 报错:
+    //    2015/07/23 14:26:22 router.go:300: [warning] close connection conn:192.168.99.1:54131, CreateAt:2015-07-23 14:26:22.764683102 +0800 CST, Ops:0, closed:true, KEYS not allowed
+    //    github.com/wandoulabs/codis/pkg/proxy/router/helper.go:211:
+    //            github.com/wandoulabs/codis/pkg/proxy/router/router.go:229:
+    //redis遍历db中key的方式1
+    val res = jedis.keys(pattern)
+    jedis.close()
+    if(flagPrint) {
+      for( key <- res) println(key)
+    }
+    res
+  }
+
+
+  /**
+   * 查找redis中匹配字符的key
+   * @param prefix redis的key匹配前缀
+   * @param mid redis的key匹配中间字符
+   * @param suffix redis的key匹配后缀
+   */
+  def scanKey(jedis: Jedis,
+              prefix: String = null,
+              mid: String = null,
+              suffix: String = null,
+              scanBatchLimit: Int = 10,
+              flagPrint: Boolean = false): List[String] = {
+
+    val pattern = (if(prefix != null) prefix else "") + (if (mid != null) "*" + mid +"*" else "*") + (if(suffix != null) suffix else "")
+    println("pattern = " + pattern)
+
+    val list = scala.collection.mutable.LinkedList[String]()
+    //redis遍历db中key的方式2
+    var numScans = 0
+    var scanCursor = "0"
+    val scanParams = new ScanParams().`match`(pattern).count(scanBatchLimit)
+
+    do{
+      numScans += 1
+      val scanResult: ScanResult[String] = jedis.scan(scanCursor, scanParams)
+      scanCursor = scanResult.getStringCursor
+      val scanResultList = scanResult.getResult
+      list ++: scanResultList
+      logger.info("= = " * 5 +" numScans = " + numScans + ", scanCursor = " + scanCursor +", scanResultList.length = " + scanResultList.length)
+      if(flagPrint) {
+        for (key <- scanResultList) println(key)
+      }
+    }while(!scanCursor.equals("0"))
+
+    list.toList
+  }
+
+  /**
+   * 查找redis指定hash 的key中匹配字符的key和value
+   * @param jedisForScan 访问扫描key所在redis时的jedis
+   * @param hashKey 要scan的目标hashkey
+   * @param prefix redis的key匹配前缀
+   * @param mid redis的key匹配中间字符
+   * @param suffix redis的key匹配后缀
+   * @param scanBatchLimit 扫描redis时的limit
+   * @param flagPrint 是否答应
+   */
+  def scanHashKey(jedisForScan: Jedis,
+                  hashKey: String,
+                  prefix: String = null,
+                  mid: String = null,
+                  suffix: String = null,
+                  scanBatchLimit: Int = 10,
+                  flagPrint: Boolean = false): mutable.Map[String, String] = {
+
+    val pattern = (if(prefix != null) prefix else "") + (if (mid != null) "*" + mid +"*" else "*") + (if(suffix != null) suffix else "")
+    println("pattern = " + pattern)
+
+    val mmap = scala.collection.mutable.HashMap[String, String]()
+    //redis遍历db中key的方式2
+    var numScans = 0
+    var scanCursor = "0"
+    var numTotalMatched = 0
+    val scanParams = new ScanParams().`match`(pattern).count(scanBatchLimit)
+
+    do{
+      numScans += 1
+      val scanResult = jedisForScan.hscan(hashKey, scanCursor, scanParams)
+      scanCursor = scanResult.getStringCursor
+      val scanResultList = scanResult.getResult
+      numTotalMatched += scanResultList.length
+      //      list ++: scanResultList
+      logger.info("= = " * 5 +" numScans = " + numScans + ", scanCursor = " + scanCursor +", scanResultList.length = " + scanResultList.length + ", numTotalMatched = " + + numTotalMatched)
+
+      for(entry <- scanResultList){
+        mmap.put(entry.getKey, entry.getValue)
+        if(flagPrint) println(entry.getKey + " => " + entry.getValue)
+      }
+    }while(!scanCursor.equals("0"))
+    mmap
+  }
+
+  /**
+   * 查找redis中匹配字符的key
+   * @param jedis 访问扫描key所在redis时的jedis
+   * @param jedisForStore 访问存储结果的redis时使用的jedis
+   * @param prefix redis的key匹配前缀
+   * @param mid redis的key匹配中间字符
+   * @param suffix redis的key匹配后缀
+   * @param storeKey 存储匹配key的list名
+   * @param scanBatchLimit 扫描redis时的limit
+   */
+  def scanKeyAndStore2List(jedis: Jedis,
+                      jedisForStore: Jedis,
+                      prefix: String = null,
+                      mid: String = null,
+                      suffix: String = null,
+                      storeKey: String,
+                      scanBatchLimit: Int = 10): Unit = {
+
+    val pattern = (if(prefix != null) prefix else "") + (if (mid != null) "*" + mid +"*" else "*") + (if(suffix != null) suffix else "")
+    println("pattern = " + pattern)
+
+//    val list = scala.collection.mutable.LinkedList[String]()
+    //redis遍历db中key的方式2
+    var numScans = 0
+    var scanCursor = "0"
+    var numTotalMatched = 0
+    val scanParams = new ScanParams().`match`(pattern).count(scanBatchLimit)
+
+    do{
+      numScans += 1
+      val scanResult: ScanResult[String] = jedis.scan(scanCursor, scanParams)
+      scanCursor = scanResult.getStringCursor
+      val scanResultList = scanResult.getResult
+      numTotalMatched += scanResultList.length
+//      list ++: scanResultList
+      logger.info("= = " * 5 +" numScans = " + numScans + ", scanCursor = " + scanCursor +", scanResultList.length = " + scanResultList.length  + ", numTotalMatched = " + + numTotalMatched)
+      val arr1 = ArrayBuffer[String]()
+      for (key <- scanResultList) {
+        arr1.append(key)
+      }
+      try{
+        jedisForStore.lpush(storeKey, arr1: _*)
+      } catch {
+        case ex: Exception =>
+          println("= = " * 5 +"values failded to add to List: " + arr1.mkString(","))
+          ex.printStackTrace()
+      }
+
+    }while(!scanCursor.equals("0"))
+
+//    list.toList
+
+  }
+
+
+  /**
+   * 查找redis中匹配字符的hashKey，并输出hashKey的内容
+   * @param jedis 访问redis的jedis
+   * @param prefix redis的key匹配前缀
+   * @param mid redis的key匹配中间字符
+   * @param suffix redis的key匹配后缀
+   * @param scanBatchLimit 扫描redis时的limit
+   */
+  def scanHashKeyAndHgetall(jedis: Jedis,
+              prefix: String = null,
+              mid: String = null,
+              suffix: String = null,
+              scanBatchLimit: Int = 10): Unit = {
+
+    val pattern = (if(prefix != null) prefix else "") + (if (mid != null) "*" + mid +"*" else "*") + (if(suffix != null) suffix else "")
+    println("pattern = " + pattern)
+
+    val list = scala.collection.mutable.LinkedList[String]()
+    //redis遍历db中key的方式2
+    var numScans = 0
+    var scanCursor = "0"
+    val scanParams = new ScanParams().`match`(pattern).count(scanBatchLimit)
+
+    var headPrinted = false
+    do{
+      numScans += 1
+      val scanResult: ScanResult[String] = jedis.scan(scanCursor, scanParams)
+      scanCursor = scanResult.getStringCursor
+      val scanResultList = scanResult.getResult
+      list ++: scanResultList
+      logger.info("= = " * 5 +" numScans = " + numScans + ", scanCursor = " + scanCursor +", scanResultList.length = " + scanResultList.length)
+
+      for (key <- scanResultList) {
+
+        val map1 = jedis.hgetAll(key)
+        val fieldNames = map1.map(_._1).toArray.sortWith(_ < _)
+
+        if(!headPrinted) {
+          println("HashKeyName"+"\t"+fieldNames.mkString("\t"))
+          println("-" * ("HashKeyName".length) + "\t" + fieldNames.map(f => {
+            "-" * f.length
+          }).mkString("\t"))
+          headPrinted = true
+        }
+        print(key +"\t")
+        for( field <- fieldNames){
+          print(map1.get(field)+"\t")
+        }
+        println()
+      }
+    }while(!scanCursor.equals("0"))
+    list.toList
+  }
+
 }

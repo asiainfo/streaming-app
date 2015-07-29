@@ -36,7 +36,10 @@ class SiteRule extends MCLabelRule {
     // 标记业务区域标签
     mcSourceObj.setLabel(LabelConstant.LABEL_ONSITE, onSiteMap)
     // 标记行政区域标签
-    mcSourceObj.setLabel(LabelConstant.LABEL_AREA, cachedArea.filter(_._1 != "areas"))
+    // 20150727 新增上下班业务标签 labels['area_info']['lac_ci']
+    mcSourceObj.setLabel(LabelConstant.LABEL_AREA, cachedArea.filter(_._1 != "areas")
+            ++ Map("lac_ci" -> (mcSourceObj.lac + mcSourceObj.ci)))
+
     cache
   }
 

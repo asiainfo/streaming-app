@@ -280,11 +280,18 @@ object Sync2RedisNew {
 
                   if(numInBatchForDelete == batchLimit){
                     logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                    /*
                     val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
                       hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
                       fieldNames,
                       jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
                       FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                    */
+                    val task = new RedisDelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                      hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
+                      jedisPools(jedisPoolId),"mdel", batchLimitForRedis,
+                      FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+
                     val futureTask = new FutureTask[FutureTaskResult](task)
 
                     threadPool.submit(futureTask)
@@ -301,11 +308,18 @@ object Sync2RedisNew {
               //遍历完数据后，提交没有达到batchLimit的batch任务
                 if(numInBatchForDelete > 0){
                   logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                  /*
                   val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
                     hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
                     fieldNames,
                     jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
                     FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                  */
+                  val task = new RedisDelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashNamePrefix, (0 until hashColumnNamesLength).toArray, hashSeperator,
+                    jedisPools(jedisPoolId),"mdel", batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+
                   val futureTask = new FutureTask[FutureTaskResult](task)
 
                   threadPool.submit(futureTask)
@@ -606,11 +620,18 @@ object Sync2RedisNew {
                 if(syncIncrementEnabled){
                   if(numInBatchForDelete == batchLimit){
                     logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                    /*
                     val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
                       hashNamePrefix, hashIdxes, hashSeperator,
                       fieldNames,
                       jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
                       FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                    */
+                    val task = new RedisDelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                      hashNamePrefix, hashIdxes, hashSeperator,
+                      jedisPools(jedisPoolId),"mdel", batchLimitForRedis,
+                      FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+
                     val futureTask = new FutureTask[FutureTaskResult](task)
 
                     threadPool.submit(futureTask)
@@ -622,18 +643,24 @@ object Sync2RedisNew {
                     batchArrayBufferForDelete = new ArrayBuffer[String]()
                   }
                 }
-
               }
 
 
               //遍历完数据后，提交没有达到batchLimit的batch任务
                 if(numInBatchForDelete > 0){
                   logger.info("submit a new thread with [numScanned = " + loadStatus.numScanned + ", numBatches = " + loadStatus.numBatches + ", numInBatch = " + numInBatch +"]" )
+                  /*
                   val task = new Sync2HashesHdelThread(batchArrayBufferForDelete.toArray, columnSeperator,
                     hashNamePrefix, hashIdxes, hashSeperator,
                     fieldNames,
                     jedisPools(jedisPoolId),loadMethod, batchLimitForRedis,
                     FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+                  */
+                  val task = new RedisDelThread(batchArrayBufferForDelete.toArray, columnSeperator,
+                    hashNamePrefix, hashIdxes, hashSeperator,
+                    jedisPools(jedisPoolId),"mdel", batchLimitForRedis,
+                    FutureTaskResult(loadStatus.numBatches, numInBatch, 0))
+
                   val futureTask = new FutureTask[FutureTaskResult](task)
 
                   threadPool.submit(futureTask)

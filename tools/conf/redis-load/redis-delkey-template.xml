@@ -1,0 +1,123 @@
+<configuration>
+    <redis>
+        <servers>codis1:29001, codis1:29002</servers> <!-- 设置redis/codis地址, 格式为 ip:port -->
+        <database>0</database> <!-- 设置导入到redis/codis哪个db，默认有16个db，编号0-15 -->
+        <timeout>10000</timeout> <!-- 设置连接redis/codis最大超时,单位ms -->
+        <password></password> <!-- 设置连接redis/codis的密码 -->
+    </redis>
+
+    <jedisPool>
+        <maxTotal>100</maxTotal> <!-- 设置连接池最大连接数 -->
+        <maxIdle>15</maxIdle> <!-- 设置连接池最大空闲连接数 -->
+        <minIdle>0</minIdle> <!-- 设置连接池最小空闲连接数 -->
+    </jedisPool>
+
+    <jdbcPool>
+        <maxActive>100</maxActive> <!-- 设置连接池最大连接数 -->
+        <initialSize>10</initialSize> <!-- 设置连接池初始化连接数 -->
+        <maxIdle>100</maxIdle> <!-- 设置连接池最大空闲连接数 -->
+        <minIdle>10</minIdle> <!-- 设置连接池最小空闲连接数 -->
+        <maxAage>0</maxAage>
+    </jdbcPool>
+
+    <load>
+        <from>db</from>
+
+        <!--for from db-->
+        <driver>com.mysql.jdbc.Driver</driver> <!-- 设置连接数据库使用的driver名-->
+        <url>jdbc:mysql://mysql1:3306/test?useCursorFetch=true</url> <!-- 设置连接数据库使用的URL -->
+        <username>root</username> <!-- 设置连接数据库使用的用户名-->
+        <password>mysql123</password> <!-- 设置连接数据库使用的密码-->
+        <table>tab_test_jdbc2hashes</table> <!-- 设置数据库中的源表-->
+        <isBigTable>true</isBigTable> <!-- 设置表是否是大表-->
+
+        <!--for from file-->
+        <filename>tools/src/test/resources/redis-delkey-test.data</filename> <!-- 设置数据文件的路径 -->
+        <fileEncode>UTF-8</fileEncode> <!-- 设置数据文件的编码格式 -->
+        <columnSeperator>,</columnSeperator> <!-- 设置数据文件字段分隔符 -->
+
+
+        <!--get key from db-->
+        <hashNamePrefix>jdbc2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
+        <hashColumnNames>id1,id2</hashColumnNames> <!-- 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔 -->
+        <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
+
+
+        <!--get key from file-->
+        <hashNamePrefix>load2hashes:</hashNamePrefix> <!-- 设置hashkey名前缀 -->
+        <hashIdxes>0,1</hashIdxes> <!-- 设置 hashkey取值字段的索引位置,可以使用多个列组合作为hashkey名，使用逗号分隔 -->
+        <hashSeperator>:</hashSeperator> <!-- 设置 hashkey名多个字段值组合的分隔符 -->
+
+
+
+        <numThreads>2</numThreads> <!-- 设置加载线程的并行运行的最大线程数-->
+        <batchLimit>30</batchLimit> <!-- 设置每个线程每批次加载的记录数量 -->
+        <method>mdel</method> <!-- 设置加载方法 del, mdel  -->
+        <batchLimit.redis>6</batchLimit.redis> <!-- 设置redis每批次加载(mdel)的记录数量 -->
+
+        <report.enabled>true</report.enabled> <!-- 设置加载过程中是否启用进度信息监控线程定期输出加载进度信息-->
+        <report.delay.seconds>5</report.delay.seconds> <!-- 设置输出加载进度信息的首次延迟时间，单位秒-->
+        <report.interval.seconds>60</report.interval.seconds> <!-- 设置输出加载进度信息的周期，单位秒-->
+
+    </load>
+
+    <description>
+        reids部分：
+        servers：设置 redis/codis 的服务ip地址和端口
+        database: 设置导入到redis哪个db
+        timeout: 设置连接redis的超时，单位ms
+        password: 设置访问redis的密码
+
+        jedisPool部分：
+        maxTotal: 设置连接池最大连接数
+        maxIdle: 设置连接池最大空闲连接数
+        minIdle: 设置连接池最小空闲连接数
+
+        jdbcPool部分：
+        maxActive:设置连接池最大连接数
+        initialSize:设置连接池初始化连接数
+        maxIdle:设置连接池最大空闲连接数
+        minIdle:设置连接池最小空闲连接数
+
+        load部分:
+        from: 标识数据源:file/db
+
+        如果是from=db，需要配置 driver,url,username,password
+        driver: jdbc驱动名
+        url: jdbc访问url
+        username: jdbc访问用户名
+        password: jdbc访问密码
+        table: jdbc访问的表名
+
+        如果是from=file，需要配置 filename, fileEncode, columnSeperator
+        filename:设置数据文件的路径
+        fileEncode:设置数据文件的编码格式
+        columnSeperator:设置数据文件字段分隔符
+
+
+        <!--get key from db-->
+        hashNamePrefix,hashIdxes, hashSeperator 用于设置hashkey名的映射
+        hashNamePrefix：设置hashkey名前缀
+        hashColumnNames: 设置 hashkey取值字段的字段名,可以使用多个字段组合作为hashkey名，使用逗号分隔
+        hashSeperator: 设置 hashkey名多个字段值组合的分隔符
+
+        <!--get key from file-->
+        hashNamePrefix:设置hashkey名前缀
+        hashIdxes:设置 hashkey取值字段的索引位置,可以使用多个列组合作为hashkey名，使用逗号分隔
+        hashSeperator:设置 hashkey名多个字段值组合的分隔符
+
+
+        numThreads 设置多线程的数量
+        batchLimit：设置每个线程一次处理的记录数
+
+        method：设置加载到redis的方法： hset,hmset,pipeline_hset
+        batchLimit.redis: 设置批量加载到redis的批量提交的记录数
+
+
+        report.enabled:设置加载过程中是否启用进度信息监控线程定期输出加载进度信息
+        report.delay.seconds:设置输出加载进度信息的首次延迟时间，单位秒
+        report.interval.seconds:设置输出加载进度信息的周期，单位秒
+
+    </description>
+
+</configuration>

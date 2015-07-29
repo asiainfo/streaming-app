@@ -11,8 +11,8 @@ import org.apache.spark.sql.Row
 class MCBSEvent extends BusinessEvent {
 
   override def getHashKey(row: Row): String = {
-    val imsi = row.getString(userKeyIdx)
-    "MC_" + id + ":" + imsi
+    val userKey = row.getString(userKeyIdx)
+    "MC_" + id + ":" + userKey
   }
 
   override def getTime(row: Row): String = row.getString(1)
