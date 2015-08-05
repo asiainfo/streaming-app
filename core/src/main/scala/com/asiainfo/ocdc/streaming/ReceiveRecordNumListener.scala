@@ -9,6 +9,8 @@ class ReceiveRecordNumListener extends StreamingListener {
 
   /** Called when a batch of jobs has been submitted for processing. */
   override def onBatchSubmitted(batchSubmitted: StreamingListenerBatchSubmitted) {
+    //TODO: update configuration periodicly
+    /*
     val baseConfUpdateInteval = MainFrameConf.getInt("BaseConfUpdateInteval")
     def currentTime = System.currentTimeMillis()
 
@@ -18,6 +20,7 @@ class ReceiveRecordNumListener extends StreamingListener {
       MainFrameConf.update(currentTime)
       println("update MainFrameConf done.")
     }
+    */
     println("Current batch receive record number : " + batchSubmitted.batchInfo.numRecords)
 
   }

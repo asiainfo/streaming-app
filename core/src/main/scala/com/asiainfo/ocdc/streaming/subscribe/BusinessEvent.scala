@@ -16,7 +16,6 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 
   var id: String = null
 //  def id = conf.get("beid")
-  var sourceId: String = null
   var conf: BusinessEventConf = null
   var eventSources: Seq[String] = null
   var eventRules: Seq[String] = null
@@ -25,6 +24,7 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
   var delayTime: Long = EventConstant.DEFAULTDELAYTIME
   val locktime: String = EventConstant.LOCKTIMEFIELD
   var userKeyIdx: Int = _
+  var timeIdx: Int = _
 
   def getDelim: String = conf.get("delim")
 
@@ -35,21 +35,28 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
   def init(sid: String, beconf: BusinessEventConf) {
     conf = beconf
     id = conf.get("beid")
-    sourceId = sid
     eventSources = MainFrameConf.getEventSourcesByBsEvent(id)
     eventRules = MainFrameConf.getEventRulesByBsEvent(id)
     selectExp = conf.get("selectExp").split(",").toSeq
-    interval = conf.getLong("interval", EventConstant.DEFAULTINTERVAL)
-    delayTime = conf.getLong("delaytime", EventConstant.DEFAULTDELAYTIME)
-    userKeyIdx = conf.getInt("userKeyIdx")
+    interval = conf.getLong("interval", EventConstant.DEFAULTINTERVAL) //营销周期
+    delayTime = conf.getLong("delaytime", EventConstant.DEFAULTDELAYTIME) //
+    userKeyIdx = conf.getInt("userKeyIdx") //selectExp中用户唯一标识字段的位置索引
+    timeIdx = conf.getInt("timeIdx") //selectExp中时间字段的位置索引
   }
 
-  def filterBSEvent(row: Row,
+  /**
+   * 业务事件排重（周期营销），更新业务缓存
+   * @param row
+   * @param old_cache
+   * @param outputRows
+   * @param outputRowsKeySet
+   */
+  def filterBSEvent(row: Row, eventSourceIdOfRow: String,
                     old_cache: mutable.Map[String, mutable.Map[String, String]], 
                     outputRows: ArrayBuffer[Row], outputRowsKeySet: scala.collection.mutable.Set[String]): Unit ={
     val currentSystemTimeMs = System.currentTimeMillis()
-    var keyCache = old_cache.getOrElse(getHashKey(row), mutable.Map[String, String]())
     val qryKey = getHashKey(row)
+    var keyCache = old_cache.getOrElse(qryKey, mutable.Map[String, String]())
     val timeStr = getTime(row)
 
     val flagTriggerBSEvent =
@@ -57,14 +64,18 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
         // muti event source
         if (keyCache.size == 0) {
           // cache为空，首次触发，更新cache
-          keyCache += (sourceId -> timeStr)
+          //TODO: sourceId 对于多个流的情况有待改进
+//          keyCache += (sourceId -> timeStr)
+          updateEventActiveTime(row, keyCache, eventSourceIdOfRow, currentSystemTimeMs)
           true
         } else {
           // cache不为空
           val lastBSActiveTimeMs = keyCache.get(locktime).getOrElse("0").toLong
           if (lastBSActiveTimeMs == 0) {
             // cache中最近一次触发业务事件的事件为0，
-            keyCache += (sourceId -> timeStr)
+
+//            keyCache += (sourceId -> timeStr)
+            updateEventActiveTime(row, keyCache, eventSourceIdOfRow, currentSystemTimeMs)
 
             val maxTime = keyCache.map(sourceId2activeTimeStr => {
               val activeTimeStr = sourceId2activeTimeStr._2
@@ -83,11 +94,13 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
             // cache 中业务事件已触发过
             if (lastBSActiveTimeMs + interval > currentSystemTimeMs) {
               // 如果最近一次触发事件在周期策略内，不触发
-              keyCache += (sourceId -> timeStr)
+//              keyCache += (sourceId -> timeStr)
+              updateEventActiveTime(row, keyCache, eventSourceIdOfRow, currentSystemTimeMs)
               false
             } else {
               // 如果最近一次触发事件在周期策略外，可以重新触发
-              keyCache += (sourceId -> timeStr)
+//              keyCache += (sourceId -> timeStr)
+              updateEventActiveTime(row, keyCache, eventSourceIdOfRow, currentSystemTimeMs)
               keyCache += (locktime -> currentSystemTimeMs.toString)
               true
             }
@@ -98,7 +111,8 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
       else {
         if (keyCache.size == 0) {
           //cache为空，首次触发，更新cache
-          keyCache += (sourceId -> timeStr)
+//          keyCache += (sourceId -> timeStr)
+          updateEventActiveTime(row, keyCache, eventSourceIdOfRow, currentSystemTimeMs)
           keyCache += (locktime -> currentSystemTimeMs.toString)
           true
         } else {
@@ -107,11 +121,13 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
 
           if (lastBSActiveTimeMs + interval > currentSystemTimeMs) {
             // 当前事件生成时间（与最近一次触发事件的时间相比）在周期策略内，不触发
-            keyCache += (sourceId -> timeStr)
+//            keyCache += (sourceId -> timeStr)
+            updateEventActiveTime(row, keyCache, eventSourceIdOfRow, currentSystemTimeMs)
             false
           } else {
             // 当前事件生成时间（与最近一次触发事件的时间相比）在周期策略外，可以重新触发
-            keyCache += (sourceId -> timeStr)
+//            keyCache += (sourceId -> timeStr)
+            updateEventActiveTime(row, keyCache, eventSourceIdOfRow, currentSystemTimeMs)
             keyCache += (locktime -> currentSystemTimeMs.toString)
             true
           }
@@ -129,16 +145,42 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     }
   }
 
+  /**
+   * 更新业务缓存中指定事件的最新满足时间，目前配置模式：一个事件流配置一个事件
+   * @param row
+   * @param keyCache
+   * @param eventSourceIdOfRow
+   * @param ActiveSystemTimeMs
+   */
+  def updateEventActiveTime(row: Row, keyCache: mutable.Map[String, String],
+                            eventSourceIdOfRow: String,
+                            ActiveSystemTimeMs: Long = System.currentTimeMillis()): Unit ={
+
+    val lastEventActiveTimeStr = keyCache.get(eventSourceIdOfRow)
+    val lastEventActiveTimeMs =  lastEventActiveTimeStr match {
+      case Some(timeStr) =>
+        DateFormatUtils.dateStr2Ms(timeStr, "yyyyMMdd HH:mm:ss.SSS")
+      case None =>
+        0L
+    }
+
+    if (lastEventActiveTimeMs < ActiveSystemTimeMs) {
+      keyCache.put(eventSourceIdOfRow, DateFormatUtils.dateMs2Str(ActiveSystemTimeMs, "yyyyMMdd HH:mm:ss.SSS"))
+    }
+  }
+
   def execEvent(eventMap: mutable.Map[String, DataFrame]) {
     val filtevents = eventMap.filter(x => eventRules.contains(x._1))
 //    val currentEvent = filtevents.iterator.next()._2
-    val (currentEventRuleId, currentEvent) = filtevents.iterator.next()
+    val (currentEventRuleId, currentEvent) = filtevents.iterator.next() //约定配置模式：1个业务在1个流上只配置一个eventRules
 
+    val currentEventSourceId = MainFrameConf.eventRule2eventSource.get(currentEventRuleId).get
+    
     val selectedData = currentEvent.selectExpr(selectExp: _*)
 
-//    println("* * " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData = ")
-//    selectedData.show()
-//    println("= = " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData done")
+    println("* * " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData = ")
+    selectedData.show()
+    println("= = " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData done")
     val rddRow = transformDF2RDD(selectedData, userKeyIdx)
 
     rddRow.mapPartitions(iter=>{
@@ -182,10 +224,10 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
             batchArray = batchArrayBuffer.toArray
             result = true
 
-            val qryKeys = batchArrayBuffer.map(getHashKey(_))
-            val businessCache = CacheFactory.getManager.hgetall(qryKeys.toList)
+            val qryKeys = batchArrayBuffer.map(getHashKey(_)) //获取1个批次(此处的批次与spark-streaming的batch不同)需要查询业务订阅缓存的keys
+            val businessCache = CacheFactory.getManager.hgetall(qryKeys.toList) //批次获取需要的业务订阅缓存
             for(row <- batchArrayBuffer){
-              filterBSEvent(row, businessCache, outputRows, outputRowsKeySet)
+              filterBSEvent(row, currentEventSourceId, businessCache, outputRows, outputRowsKeySet)
             }
 
             //更新cache

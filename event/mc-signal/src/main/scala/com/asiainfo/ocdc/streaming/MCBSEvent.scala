@@ -15,7 +15,7 @@ class MCBSEvent extends BusinessEvent {
     "MC_" + id + ":" + userKey
   }
 
-  override def getTime(row: Row): String = row.getString(1)
+  override def getTime(row: Row): String = row.getString(timeIdx)
 
 //  override def output(data: RDD[Option[Row]]) {
 //    val output_msg = transforEvent2Message(data)

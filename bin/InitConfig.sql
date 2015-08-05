@@ -38,8 +38,9 @@ INSERT INTO `MainFrameProp` (`name`,`pvalue`) VALUES ("serializerclass","kafka.s
 
 -- init EventSources
 -- INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`,`batchsize`,`enabled`) VALUES ("MC_HDFS","hdfs",",","8","com.asiainfo.ocdc.streaming.MCEventSource",100,1);
-INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`,`batchsize`,`enabled`) VALUES ("MC_Kafka","kafka_direct",",","15","com.asiainfo.ocdc.streaming.MCEventSource", 100, 1);
+INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`,`batchsize`,`enabled`,`validWindowsTimeMs`) VALUES ("MC_Kafka","kafka_direct",",","15","com.asiainfo.ocdc.streaming.MCEventSource", 100, 1, 3600000);
 -- INSERT INTO `EventSource` (`name`,`type`,`delim`,`formatlength`,`classname`,`batchsize`,`enabled`) VALUES ("MC_Kafka","kafka",",","15","com.asiainfo.ocdc.streaming.MCEventSource", 100, 1);
+-- validWindowsTimeMs: 设置数据源有效日志时间窗口，单位毫秒
 
 -- init EventSourcesDetail
 -- kafka
@@ -54,10 +55,9 @@ INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("receivernum
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("zookeeper","spark1:2181,spark2:2181,spark3:2181",1);
 -- 设置kafka数据源 repartition的 分区数
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("shufflenum","1",1);
--- 设置业务事件发送时使用的 brokers
+-- 设置kafka数据源发送时使用的 brokers
 INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("brokers","spark1:9092,spark2:9092,spark3:9092",1);
--- 设置数据源中时间字段的位置索引（暂时没有使用，在MCBSEvent getTime 定义）
-INSERT INTO `EventSourceProp` (`name`,`pvalue`,`esourceid`) VALUES ("timeIdx","1",1);
+
 
 -- hdfs
 -- 数据源是HDFS时，设置path
@@ -79,6 +79,7 @@ INSERT INTO `LabelRulesProp` (`name`,`pvalue`,`lrid`) VALUES ("stay.timeout","18
 
 -- init EventRules
 INSERT INTO `EventRules` (`esourceid`,`classname`,`enabled`) VALUES (1,"com.asiainfo.ocdc.streaming.MCEventRule",1);
+INSERT INTO `EventRules` (`esourceid`,`classname`,`enabled`, `parentEventRuleId`) VALUES (2,"com.asiainfo.ocdc.streaming.MCEventRule", 2, 1);
 
 -- init EventRulesProp
 -- 设置事件规则的过滤条件
@@ -99,10 +100,12 @@ INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("delim",",",1)
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("outputtype","kafka",1);
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("kafkakeycol","0",1);
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("output_topic","topic_out_zhujiayu",1);
-INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("brokerlist","spark1:9092,spark2:9092,spark3:9092",1);
-INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("serializerclass","kafka.serializer.StringEncoder",1);
+--INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("brokerlist","spark1:9092,spark2:9092,spark3:9092",1);
+--INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("serializerclass","kafka.serializer.StringEncoder",1);
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("interval",86400000,1);
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("delaytime",1800000,1);
 
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) values ('batchLimit', 10000, 1); -- 设置业务在多事件订阅查询事件cache的并发
 INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) values ('userKeyIdx',0,1); -- 设置selectExp输出字段中用于表示事件cache的key的位置索引
+-- 设置selectExp输出字段中用于表示日志时间的key的位置索引
+INSERT INTO `BusenessEventsProp` (`name`,`pvalue`,`beid`) VALUES ("timeIdx","1",1);

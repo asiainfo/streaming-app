@@ -18,6 +18,7 @@ CREATE TABLE `EventSource` (
   `classname` varchar(200) NOT NULL,
   `batchsize` int NOT NULL DEFAULT 10,
   `enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `validWindowsTimeMs` int NOT NULL DEFAULT -1,
   PRIMARY KEY (`id`)
 );
 
@@ -40,6 +41,7 @@ CREATE TABLE `LabelRules` (
   `esourceid` int NOT NULL,
   `classname` varchar(200) NOT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `name` varchar(50),
   PRIMARY KEY (`id`)
 );
 alter table LabelRules add foreign key (esourceid) references EventSource(id) ON
@@ -64,6 +66,8 @@ CREATE TABLE `EventRules` (
   `esourceid` int NOT NULL,
   `classname` varchar(200) NOT NULL,
   `enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `parentEventRuleId` int NOT NULL DEFAULT -1,
+  `name` varchar(50),
   PRIMARY KEY (`id`)
 );
 alter table EventRules add foreign key (esourceid) references EventSource(id) ON

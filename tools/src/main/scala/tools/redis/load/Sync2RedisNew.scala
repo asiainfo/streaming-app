@@ -1064,6 +1064,10 @@ object Sync2RedisNew {
         val fileEncode = (conf \ "load" \ "fileEncode").text.trim
         val columnSeperator = (conf \ "load" \ "columnSeperator").text.trim
 
+        assert(columnSeperator != "\t", "load.columnSeperator should not be '\t'")
+        assert(columnSeperator != "\t", "load.columnSeperator should not be '\t'")
+
+
         props.put("load.filename", filename)
         props.put("load.fileEncode", fileEncode)
         props.put("load.columnSeperator", columnSeperator)

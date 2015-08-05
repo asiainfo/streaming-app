@@ -83,10 +83,6 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
             // cache data
             df.persist
 
-            //            df.map(x => x).count()
-
-            //            df.printSchema()
-
             val eventMap = makeEvents(df)
 
             subscribeEvents(eventMap)
@@ -110,7 +106,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
       while (bsEventIter.hasNext) {
         val bsEvent = bsEventIter.next
-        //        println("= = " * 20 +"bsEvent.id = " + bsEvent.id +", bsEvent.sourceId = " + bsEvent.sourceId)
+        println("= = " * 20 +"bsEvent.id = " + bsEvent.id)
         bsEvent.execEvent(eventMap)
       }
 
@@ -122,37 +118,65 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
   def makeEvents(df: DataFrame) = {
     val eventMap: Map[String, DataFrame] = Map[String, DataFrame]()
-    //    if (labeledRDD.partitions.length > 0) {
     println(" Begin exec evets : " + System.currentTimeMillis())
-    /*val df = transformDF(sqlContext, labeledRDD)
-    // cache data
-    df.persist
-    df.printSchema()*/
 
-    //    println("* * " * 20 +" df.show")
-    //    df.show()
-    //    println("= = " * 20 +" df.show done")
+        println("* * " * 20 +" df.show")
+        df.show()
+        println("= = " * 20 +" df.show done")
 
     val f4 = System.currentTimeMillis()
     val eventRuleIter = eventRules.iterator
 
     while (eventRuleIter.hasNext) {
-      val eventRule = eventRuleIter.next
-      // handle filter first
-      val filteredData = df.filter(eventRule.filterExp)
-      //      println("* * " * 20 +" filteredData.show")
-      //      filteredData.show()
-      //      println("= = " * 20 +" filteredData.show down")
-
-
-      eventMap += (eventRule.conf.get("id") -> filteredData)
+      makeEvent(df , eventRuleIter.next(), eventMap, flagPrint = true) //forDebug
+//      makeEvent(df , eventRuleIter.next(), eventMap)
     }
     logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
 
-    //      df.unpersist()
-    //    }
     eventMap
   }
+
+  def makeEvent(df: DataFrame, eventRule: EventRule, eventResultMap: Map[String, DataFrame], flagPrint: Boolean = false): Map[String, DataFrame] ={
+    val eventRuleConf = eventRule.conf
+    val parentEventRuleId = eventRuleConf.get("parentEventRuleId")
+    if(parentEventRuleId == "-1" || parentEventRuleId.isEmpty){ //如果不存在 parentEventRule，先判断 eventResultMap 中是否已存在 eventRule 对应结果集
+
+      if(!eventResultMap.contains(eventRuleConf.get("id"))){ //如果不存在，直接过滤；如果存在，不做操作
+        val filteredData = df.filter(eventRule.filterExp)
+        eventResultMap.put(eventRuleConf.get("id"), filteredData)
+      }
+    } else { //如果存在 parentEventRule，先检查parentEventRule对应的结果集是否存在
+      if(eventResultMap.contains(parentEventRuleId)){ //如果parent的结果集已经计算出来，在parent结果集之上进行过滤
+        val parentDF = eventResultMap.get(parentEventRuleId).get
+        val filteredData = parentDF.filter(eventRule.filterExp)
+        eventResultMap.put(eventRuleConf.get("id"), filteredData)
+      } else { //如果parent结果集没有计算出来，计算parent结果集
+        val parentEventRule = eventRules.map(eventRule => {
+          (eventRule.conf.get("id"), eventRule)
+        }).toMap.get(parentEventRuleId)
+
+        parentEventRule match {
+          case Some(x) =>
+            //计算parent eventRule的结果集
+            makeEvent(df, parentEventRule.get, eventResultMap)
+            //之后计算子 eventRule的结果集
+
+            val parentDF = eventResultMap.get(parentEventRuleId).get
+            val filteredData = parentDF.filter(eventRule.filterExp)
+            eventResultMap.put(eventRuleConf.get("id"), filteredData)
+          case None =>
+            // 如果设置了 parentEventRuleId，但没有 parentEventRuleId 对应的eventRuleId, 设置其eventRule的结果集为空
+            val filteredData = df.limit(0)
+            eventResultMap.put(eventRuleConf.get("id"), filteredData)
+        }
+      }
+    }
+
+    if(flagPrint) eventResultMap.get(eventRuleConf.get("id")).get.show(10)
+
+    eventResultMap
+  }
+
 
   def execLabelRule(sourceRDD: RDD[SourceObject]) = {
     println(" Begin exec labes : " + System.currentTimeMillis())

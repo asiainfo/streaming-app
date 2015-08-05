@@ -24,6 +24,8 @@ object MainFrameConf extends BaseConf {
   val bsevent2eventrules = Map[String, Seq[String]]()
   val bsevent2eventsources = Map[String, Seq[String]]()
 
+  val eventRule2eventSource = Map[String, String]()
+
   def getEventRulesBySource(value: String) = sourceEventRules.getOrElse(value, Seq())
 
   def getLabelRulesBySource(value: String) = sourceLabelRules.getOrElse(value, Seq())
@@ -77,7 +79,7 @@ object MainFrameConf extends BaseConf {
    */
   def initEventSourceConf {
 
-    val sql = "select es.id,es.name as sourcename,es.type,es.delim,es.formatlength,es.classname,es.batchsize,es.enabled,esp.name as pname,esp.pvalue from " + TableNameConstants.EventSourceTableName + " es left join " + TableNameConstants.EventSourcePropTableName + " esp on es.id = esp.esourceid where es.enabled=1 "
+    val sql = "select es.id,es.name as sourcename,es.type,es.delim,es.formatlength,es.classname,es.batchsize,es.enabled, es.validWindowsTimeMs, esp.name as pname,esp.pvalue from " + TableNameConstants.EventSourceTableName + " es left join " + TableNameConstants.EventSourcePropTableName + " esp on es.id = esp.esourceid where es.enabled=1 "
     val events = JDBCUtils.query(sql)
     val sourcemap = Map[String, EventSourceConf]()
     events.map(x => {
@@ -94,7 +96,12 @@ object MainFrameConf extends BaseConf {
         esconf.set("classname", x.get("classname").get)
         esconf.set("batchsize", x.get("batchsize").get)
         esconf.set("enabled", x.get("enabled").get)
+        esconf.set("validWindowsTimeMs", x.get("validWindowsTimeMs").get)
         if (x.get("pname").get != null) esconf.set(x.get("pname").get, x.get("pvalue").get)
+
+        val validWindowsTimeMs = esconf.getInt("validWindowsTimeMs", -1)
+        assert(validWindowsTimeMs > -2, "validWindowsTimeMs should be equal or larger than -1, -1 means disable validWindowsTimeMs check.")
+
         sourcemap += (sourceId -> esconf)
       }
     })
@@ -145,15 +152,19 @@ object MainFrameConf extends BaseConf {
    * read event rule list and config
    */
   def initEventRuleConf {
-    val sql = "select erp.name,erp.pvalue,er.classname,er.id as erid,es.id as esid from EventRulesProp erp right join EventRules er on erp.erid = er.id join EventSource es on er.esourceid = es.id where es.enabled=1 and er.enabled=1"
+    val sql = "select erp.name,erp.pvalue,er.classname,er.id as erid,es.id as esid, er.parentEventRuleId from EventRulesProp erp right join EventRules er on erp.erid = er.id join EventSource es on er.esourceid = es.id where es.enabled=1 and er.enabled=1"
     val eventrules = JDBCUtils.query(sql)
     val midmap2 = Map[String, Map[String, EventRuleConf]]()
     eventrules.foreach(x => {
       val esid = x.get("esid").get
       val erid = x.get("erid").get
+
+      eventRule2eventSource.put(erid, esid)
+
       val name = x.get("name").get
       val pvalue = x.get("pvalue").get
       val classname = x.get("classname").get
+      val parentEventRuleId = x.get("parentEventRuleId").get
       if (midmap2.contains(esid)) {
         if (midmap2.get(esid).get.contains(erid)) {
           midmap2.get(esid).get.get(erid).get.set(name, pvalue)
@@ -162,6 +173,7 @@ object MainFrameConf extends BaseConf {
           erconf.set(name, pvalue)
           erconf.set("id", erid)
           erconf.set("classname", classname)
+          erconf.set("parentEventRuleId", parentEventRuleId)
           midmap2.get(esid).get += (erid -> erconf)
         }
       } else {
@@ -169,6 +181,7 @@ object MainFrameConf extends BaseConf {
         erconf.set(name, pvalue)
         erconf.set("id", erid)
         erconf.set("classname", classname)
+        erconf.set("parentEventRuleId", parentEventRuleId)
         midmap2 += (esid -> Map(erid -> erconf))
       }
     })
@@ -259,6 +272,5 @@ object MainFrameConf extends BaseConf {
       }
     })
   }
-
 
 }
