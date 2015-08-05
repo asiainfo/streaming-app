@@ -106,7 +106,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
 
       while (bsEventIter.hasNext) {
         val bsEvent = bsEventIter.next
-        println("= = " * 20 +"bsEvent.id = " + bsEvent.id)
+        //println("= = " * 20 +"bsEvent.id = " + bsEvent.id)
         bsEvent.execEvent(eventMap)
       }
 
@@ -120,16 +120,16 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     val eventMap: Map[String, DataFrame] = Map[String, DataFrame]()
     println(" Begin exec evets : " + System.currentTimeMillis())
 
-        println("* * " * 20 +" df.show")
-        df.show()
-        println("= = " * 20 +" df.show done")
+    // println("* * " * 20 + " df.show")
+    // df.show()
+    // println("= = " * 20 + " df.show done")
 
     val f4 = System.currentTimeMillis()
     val eventRuleIter = eventRules.iterator
 
     while (eventRuleIter.hasNext) {
-      makeEvent(df , eventRuleIter.next(), eventMap, flagPrint = true) //forDebug
-//      makeEvent(df , eventRuleIter.next(), eventMap)
+      makeEvent(df , eventRuleIter.next(), eventMap)
+      // makeEvent(df , eventRuleIter.next(), eventMap, flagPrint = true) //forDebug
     }
     logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
 
@@ -238,7 +238,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
               logError("= = " * 15 + " got exception in EventSource while get cache")
               throw ex
           }
-          //          val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)
+          //val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)
           val f2 = System.currentTimeMillis()
           println(" query label cache data cost time : " + (f2 - f1) + " millis ! ")
 

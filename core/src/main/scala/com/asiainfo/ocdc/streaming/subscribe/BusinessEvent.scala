@@ -178,9 +178,9 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     
     val selectedData = currentEvent.selectExpr(selectExp: _*)
 
-    println("* * " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData = ")
-    selectedData.show()
-    println("= = " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData done")
+    // println("* * " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData = ")
+    // selectedData.show()
+    // println("= = " * 20 +"currentEventRuleId = " + currentEventRuleId +", selectedData done")
     val rddRow = transformDF2RDD(selectedData, userKeyIdx)
 
     rddRow.mapPartitions(iter=>{
