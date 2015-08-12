@@ -1,18 +1,17 @@
 package com.asiainfo.ocdc.streaming.eventsource
 
 import com.asiainfo.ocdc.streaming._
-import com.asiainfo.ocdc.streaming.eventrule.{EventRule, StreamingCache}
+import com.asiainfo.ocdc.streaming.eventrule.{ EventRule, StreamingCache }
 import com.asiainfo.ocdc.streaming.labelrule.LabelRule
 import com.asiainfo.ocdc.streaming.subscribe.BusinessEvent
-import com.asiainfo.ocdc.streaming.tool.{CacheFactory, DateFormatUtils}
+import com.asiainfo.ocdc.streaming.tool.{ CacheFactory, DateFormatUtils }
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, SQLContext}
+import org.apache.spark.sql.{ DataFrame, SQLContext }
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
-import scala.collection.mutable.{ArrayBuffer, Map}
-import scala.collection.{immutable, mutable}
-
+import scala.collection.mutable.{ ArrayBuffer, Map }
+import scala.collection.{ immutable, mutable }
 
 abstract class EventSource() extends Serializable with org.apache.spark.Logging {
   var id: String = null
@@ -120,64 +119,92 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     val eventMap: Map[String, DataFrame] = Map[String, DataFrame]()
     println(" Begin exec evets : " + System.currentTimeMillis())
 
-    // println("* * " * 20 + " df.show")
-    // df.show()
-    // println("= = " * 20 + " df.show done")
+    // modify by surq 2015.8.12 start
 
-    val f4 = System.currentTimeMillis()
-    val eventRuleIter = eventRules.iterator
+    //    val f4 = System.currentTimeMillis()
+    //    val eventRuleIter = eventRules.iterator
+    //
+    //    while (eventRuleIter.hasNext) {
+    //      makeEvent(df, eventRuleIter.next(), eventMap)
+    //      // makeEvent(df , eventRuleIter.next(), eventMap, flagPrint = true) //forDebug
+    //    }
+    //    logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
 
-    while (eventRuleIter.hasNext) {
-      makeEvent(df , eventRuleIter.next(), eventMap)
-      // makeEvent(df , eventRuleIter.next(), eventMap, flagPrint = true) //forDebug
+    //(key-value):eventID-parentEventID 目前是只支持单一的event信赖,后续多流时再做修正
+    lazy val eIDMap = (eventRules.map(er => (er.conf.get("id"), er.conf.get("parentEventRuleId")))).toMap
+    lazy val eventIDMap = (eventRules.map(er => (er.conf.get("id"), er))).toMap
+
+    //  val DependciesEventIdList = new ArrayBuffer[String]
+    // 获取event的依赖关系 list 本身0－>父1－>爷爷2
+    def getEventDependcy(eventID: String, eventIdList: ArrayBuffer[String]): ArrayBuffer[String] = {
+      if (!(eIDMap(eventID) == "-1" || eIDMap(eventID).isEmpty))
+        getEventDependcy(eIDMap(eventID), eventIdList)
+      eventIdList += eventID
     }
-    logDebug(" Exec eventrules cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
-
+    val events = eventRules.map(eventRule => {
+      val eventId = eventRule.conf.get("id")
+      // 存放event依赖的ID list 本身0－>父1－>爷爷2
+      val dependciesList = new ArrayBuffer[String]
+      getEventDependcy(eventId, dependciesList)
+      // 如果eventId已经存在表示已经计算过,则从比结点到最终子孙结点都将忽略
+      for (index <- dependciesList.size - 1 to 0 if (!eventMap.isDefinedAt(eventId))) {
+        val id = dependciesList(index)
+        // 如果已经计算过,则忽略
+        if (!eventMap.isDefinedAt(id)) {
+          var filteredData: DataFrame = null
+          // 最基层的信赖
+          if (index == dependciesList.size - 1) filteredData = df.filter(eventRule.filterExp)
+          // 在父信赖的基础上做filter
+          else filteredData = eventMap(dependciesList(index + 1)).filter(eventRule.filterExp)
+          // 向eventMap保存每个event的结果集
+          eventMap.put(id, filteredData)
+        }
+      }
+    })
     eventMap
   }
 
-  def makeEvent(df: DataFrame, eventRule: EventRule, eventResultMap: Map[String, DataFrame], flagPrint: Boolean = false): Map[String, DataFrame] ={
-    val eventRuleConf = eventRule.conf
-    val parentEventRuleId = eventRuleConf.get("parentEventRuleId")
-    if(parentEventRuleId == "-1" || parentEventRuleId.isEmpty){ //如果不存在 parentEventRule，先判断 eventResultMap 中是否已存在 eventRule 对应结果集
-
-      if(!eventResultMap.contains(eventRuleConf.get("id"))){ //如果不存在，直接过滤；如果存在，不做操作
-        val filteredData = df.filter(eventRule.filterExp)
-        eventResultMap.put(eventRuleConf.get("id"), filteredData)
-      }
-    } else { //如果存在 parentEventRule，先检查parentEventRule对应的结果集是否存在
-      if(eventResultMap.contains(parentEventRuleId)){ //如果parent的结果集已经计算出来，在parent结果集之上进行过滤
-        val parentDF = eventResultMap.get(parentEventRuleId).get
-        val filteredData = parentDF.filter(eventRule.filterExp)
-        eventResultMap.put(eventRuleConf.get("id"), filteredData)
-      } else { //如果parent结果集没有计算出来，计算parent结果集
-        val parentEventRule = eventRules.map(eventRule => {
-          (eventRule.conf.get("id"), eventRule)
-        }).toMap.get(parentEventRuleId)
-
-        parentEventRule match {
-          case Some(x) =>
-            //计算parent eventRule的结果集
-            makeEvent(df, parentEventRule.get, eventResultMap)
-            //之后计算子 eventRule的结果集
-
-            val parentDF = eventResultMap.get(parentEventRuleId).get
-            val filteredData = parentDF.filter(eventRule.filterExp)
-            eventResultMap.put(eventRuleConf.get("id"), filteredData)
-          case None =>
-            // 如果设置了 parentEventRuleId，但没有 parentEventRuleId 对应的eventRuleId, 设置其eventRule的结果集为空
-            val filteredData = df.limit(0)
-            eventResultMap.put(eventRuleConf.get("id"), filteredData)
-        }
-      }
-    }
-
-    if(flagPrint) eventResultMap.get(eventRuleConf.get("id")).get.show(10)
-
-    eventResultMap
-  }
-
-
+//  def makeEvent(df: DataFrame, eventRule: EventRule, eventResultMap: Map[String, DataFrame], flagPrint: Boolean = false): Map[String, DataFrame] = {
+//    val eventRuleConf = eventRule.conf
+//    val parentEventRuleId = eventRuleConf.get("parentEventRuleId")
+//    if (parentEventRuleId == "-1" || parentEventRuleId.isEmpty) { //如果不存在 parentEventRule，先判断 eventResultMap 中是否已存在 eventRule 对应结果集
+//
+//      if (!eventResultMap.contains(eventRuleConf.get("id"))) { //如果不存在，直接过滤；如果存在，不做操作
+//        val filteredData = df.filter(eventRule.filterExp)
+//        eventResultMap.put(eventRuleConf.get("id"), filteredData)
+//      }
+//    } else { //如果存在 parentEventRule，先检查parentEventRule对应的结果集是否存在
+//      if (eventResultMap.contains(parentEventRuleId)) { //如果parent的结果集已经计算出来，在parent结果集之上进行过滤
+//        val parentDF = eventResultMap.get(parentEventRuleId).get
+//        val filteredData = parentDF.filter(eventRule.filterExp)
+//        eventResultMap.put(eventRuleConf.get("id"), filteredData)
+//      } else { //如果parent结果集没有计算出来，计算parent结果集
+//        val parentEventRule = eventRules.map(eventRule => {
+//          (eventRule.conf.get("id"), eventRule)
+//        }).toMap.get(parentEventRuleId)
+//
+//        parentEventRule match {
+//          case Some(x) =>
+//            //计算parent eventRule的结果集
+//            makeEvent(df, parentEventRule.get, eventResultMap)
+//            //之后计算子 eventRule的结果集
+//
+//            val parentDF = eventResultMap.get(parentEventRuleId).get
+//            val filteredData = parentDF.filter(eventRule.filterExp)
+//            eventResultMap.put(eventRuleConf.get("id"), filteredData)
+//          case None =>
+//            // 如果设置了 parentEventRuleId，但没有 parentEventRuleId 对应的eventRuleId, 设置其eventRule的结果集为空
+//            val filteredData = df.limit(0)
+//            eventResultMap.put(eventRuleConf.get("id"), filteredData)
+//        }
+//      }
+//    }
+//
+//    if (flagPrint) eventResultMap.get(eventRuleConf.get("id")).get.show(10)
+//
+//    eventResultMap
+//  }
+    // modify by surq 2015.8.12 end
   def execLabelRule(sourceRDD: RDD[SourceObject]) = {
     println(" Begin exec labes : " + System.currentTimeMillis())
 
@@ -241,7 +268,6 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
           //val cachemap_old = CacheFactory.getManager.getByteCacheString(minimap.keys.head)
           val f2 = System.currentTimeMillis()
           println(" query label cache data cost time : " + (f2 - f1) + " millis ! ")
-
 
           val labelQryData = CacheFactory.getManager.hgetall(labelQryKeysSet.toList)
           val f3 = System.currentTimeMillis()
