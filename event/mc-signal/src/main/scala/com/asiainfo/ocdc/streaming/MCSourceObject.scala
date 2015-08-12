@@ -14,6 +14,8 @@ case class MCSourceObject(
                            @BeanProperty val calledimei: String,
                            @BeanProperty val callingimsi: String,
                            @BeanProperty val calledimsi: String,
+                           @BeanProperty val callingphone: String,
+                           @BeanProperty val calledphone: String,
                            @BeanProperty val eventresult: Int = 0,
                            @BeanProperty val alertstatus: Int = 0,
                            @BeanProperty val assstatus: Int = 0,

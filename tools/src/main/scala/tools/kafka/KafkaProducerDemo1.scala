@@ -65,7 +65,7 @@ object KafkaProducerDemo1 extends App {
     (1 to numMsgInBatch).foreach(i => {
       val msg_template = msg_templates(msg_template_id)
       val msg = msg_template.replace("MSG_TIME", DateFormatUtils.dateMs2Str(System.currentTimeMillis(), "yyyyMMdd HH:mm:ss.SSS"))
-      println("batchId = " + batchId + ", msg_template_id = " + msg_template_id + ", msg = " + msg)
+      logger.debug("batchId = " + batchId + ", msg_template_id = " + msg_template_id + ", msg = " + msg)
 
       val msgArr = msg.split(",")
       val eventID = msgArr(0).toInt
@@ -93,7 +93,7 @@ object KafkaProducerDemo1 extends App {
       msgBuffer.append(new KeyedMessage[String, String](topic, key, msg))
     })
     numMsgs += msgBuffer.length
-    println("msgBuffer.length = " + msgBuffer.length +", numMsgs = " + numMsgs)
+    logger.debug("msgBuffer.length = " + msgBuffer.length +", numMsgs = " + numMsgs)
     kafkaProducer.send(msgBuffer: _*)
     msgBuffer.clear()
 
