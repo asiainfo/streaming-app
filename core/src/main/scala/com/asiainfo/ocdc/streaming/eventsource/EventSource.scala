@@ -135,7 +135,7 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
     lazy val eventIDMap = (eventRules.map(er => (er.conf.get("id"), er))).toMap
 
     //  val DependciesEventIdList = new ArrayBuffer[String]
-    // 获取event的依赖关系 list 本身0－>父1－>爷爷2
+    // 获取event的依赖关系 list 爷爷0－>父1－>本身2
     def getEventDependcy(eventID: String, eventIdList: ArrayBuffer[String]): ArrayBuffer[String] = {
       if (!(eIDMap(eventID) == "-1" || eIDMap(eventID).isEmpty))
         getEventDependcy(eIDMap(eventID), eventIdList)
@@ -147,15 +147,15 @@ abstract class EventSource() extends Serializable with org.apache.spark.Logging 
       val dependciesList = new ArrayBuffer[String]
       getEventDependcy(eventId, dependciesList)
       // 如果eventId已经存在表示已经计算过,则从比结点到最终子孙结点都将忽略
-      for (index <- dependciesList.size - 1 to 0 if (!eventMap.isDefinedAt(eventId))) {
+      for (index <- 0 until dependciesList.size if (!eventMap.isDefinedAt(eventId))) {
         val id = dependciesList(index)
         // 如果已经计算过,则忽略
         if (!eventMap.isDefinedAt(id)) {
           var filteredData: DataFrame = null
           // 最基层的信赖
-          if (index == dependciesList.size - 1) filteredData = df.filter(eventRule.filterExp)
+          if (index == 0) filteredData = df.filter(eventRule.filterExp)
           // 在父信赖的基础上做filter
-          else filteredData = eventMap(dependciesList(index + 1)).filter(eventRule.filterExp)
+          else filteredData = eventMap(dependciesList(index - 1)).filter(eventRule.filterExp)
           // 向eventMap保存每个event的结果集
           eventMap.put(id, filteredData)
         }
