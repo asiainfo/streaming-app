@@ -58,6 +58,8 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     val qryKey = getHashKey(row)
     var keyCache = old_cache.getOrElse(qryKey, mutable.Map[String, String]())
     val timeStr = getTime(row)
+    //TODO: 业务事件缓存中的事件满足时间，取日志中的时间还是分析时的系统时间？是否提供配置实现可选？
+    //      配置 eventActiveTimeMs = if (选日志时间) timeStr else currentSystemTimeMs
 
     val flagTriggerBSEvent =
       if (eventSources.size > 1) {
@@ -159,7 +161,14 @@ abstract class BusinessEvent extends Serializable with org.apache.spark.Logging 
     val lastEventActiveTimeStr = keyCache.get(eventSourceIdOfRow)
     val lastEventActiveTimeMs =  lastEventActiveTimeStr match {
       case Some(timeStr) =>
-        DateFormatUtils.dateStr2Ms(timeStr, "yyyyMMdd HH:mm:ss.SSS")
+        try{
+          DateFormatUtils.dateStr2Ms(timeStr, "yyyyMMdd HH:mm:ss.SSS")
+        } catch {
+          case ex: java.text.ParseException => //时间字段转换时出现解析异常，认为时间字段无效
+            0L
+          case ex: Exception => //时间字段转换时出现其他异常，抛出异常
+            throw ex
+        }
       case None =>
         0L
     }
