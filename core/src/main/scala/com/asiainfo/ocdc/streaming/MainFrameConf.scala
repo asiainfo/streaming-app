@@ -11,6 +11,8 @@ import com.asiainfo.ocdc.streaming.labelrule.LabelRuleConf
 import com.asiainfo.ocdc.streaming.subscribe.BusinessEventConf
 import com.asiainfo.ocdc.streaming.tool.JDBCUtils
 import scala.collection.mutable.Map
+import scala.util.Sorting
+import scala.collection.mutable.ArrayBuffer
 
 object MainFrameConf extends BaseConf {
 
@@ -56,7 +58,7 @@ object MainFrameConf extends BaseConf {
     updateTime = System.currentTimeMillis()
   }
 
-  def update(updateTime: Long){
+  def update(updateTime: Long) {
     init()
     this.updateTime = updateTime
   }
@@ -195,42 +197,82 @@ object MainFrameConf extends BaseConf {
   /**
    * read business event list and config
    */
+    // add by surq at 2015.8.13 start  
+//  def initBusinessEventConf {
+//    val sql = "select bep.name,bep.pvalue,be.classname,be.id as beid,es.esid as esid from BusenessEventsProp bep join BusenessEvents be on bep.beid=be.id join BusenessEventsMapEventSources es on be.id = es.beid where be.enabled=1"
+//    val busievents = JDBCUtils.query(sql)
+//    val midmap2 = Map[String, Map[String, BusinessEventConf]]()
+//    busievents.foreach(x => {
+//      val esid = x.get("esid").get
+//      val beid = x.get("beid").get
+//      val name = x.get("name").get
+//      val pvalue = x.get("pvalue").get
+//      val classname = x.get("classname").get
+//      if (midmap2.contains(esid)) {
+//        if (midmap2.get(esid).get.contains(beid)) {
+//          midmap2.get(esid).get.get(beid).get.set(name, pvalue)
+//        } else {
+//          val beconf = new BusinessEventConf()
+//          beconf.set(name, pvalue)
+//          beconf.set("beid", beid)
+//          beconf.set("classname", classname)
+//          midmap2.get(esid).get += (beid -> beconf)
+//        }
+//      } else {
+//        val beconf = new BusinessEventConf()
+//        beconf.set(name, pvalue)
+//        beconf.set("beid", beid)
+//        beconf.set("classname", classname)
+//        midmap2 += (esid -> Map(beid -> beconf))
+//      }
+//    })
+//    businessEvents = midmap2.map(x => {
+//      x._1 -> x._2.map(y => {
+//        y._2
+//      }).toSeq
+//    })
+//  }
+
   def initBusinessEventConf {
     val sql = "select bep.name,bep.pvalue,be.classname,be.id as beid,es.esid as esid from BusenessEventsProp bep join BusenessEvents be on bep.beid=be.id join BusenessEventsMapEventSources es on be.id = es.beid where be.enabled=1"
-    val busievents = JDBCUtils.query(sql)
-    val midmap2 = Map[String, Map[String, BusinessEventConf]]()
-    busievents.foreach(x => {
-      val esid = x.get("esid").get
-      val beid = x.get("beid").get
-      val name = x.get("name").get
-      val pvalue = x.get("pvalue").get
-      val classname = x.get("classname").get
-      if (midmap2.contains(esid)) {
-        if (midmap2.get(esid).get.contains(beid)) {
-          midmap2.get(esid).get.get(beid).get.set(name, pvalue)
-        } else {
-          val beconf = new BusinessEventConf()
-          beconf.set(name, pvalue)
-          beconf.set("beid", beid)
-          beconf.set("classname", classname)
-          midmap2.get(esid).get += (beid -> beconf)
-        }
-      } else {
-        val beconf = new BusinessEventConf()
-        beconf.set(name, pvalue)
+    val busievents = JDBCUtils.query2(sql)
+    // 按esid + beid排序
+    Sorting.quickSort(busievents)(Ordering[(String, String)].on(record => (record(4), record(3))))
+    // 依esid为key，按beid封装各属性数据集 
+    val esidConfMap = Map[String, ArrayBuffer[BusinessEventConf]]()
+    // 缓存变量
+    var esid_tmp: String = ""
+    var beid_tmp: String = ""
+    var beconf: BusinessEventConf = null
+    var emList: ArrayBuffer[BusinessEventConf] = null
+    busievents map(record =>{
+      // 所查询的每条记录，的各个字段
+      val esid = record(4)
+      val beid = record(3)
+      val classname = record(2)
+      val pvalue = record(1)
+      val name = record(0)
+      // 一级key 如果key不一致时，便创建新的队列，并把此队列放入map结果集
+      if (esid != esid_tmp) {
+        emList = ArrayBuffer[BusinessEventConf]()
+        esidConfMap += (esid -> emList)
+      }
+      // 二级key 如果key不一致时，便创建新的conf对像，并把此对像放入队列中，顺便设定公共的字段
+      if (beid != beid_tmp) {
+        beconf = new BusinessEventConf()
+        emList += beconf
         beconf.set("beid", beid)
         beconf.set("classname", classname)
-        midmap2 += (esid -> Map(beid -> beconf))
       }
+      // 设定k/v值
+      beconf.set(name, pvalue)
+      // 记录本记录的一级二级key
+      esid_tmp = esid
+      beid_tmp = beid
     })
-    businessEvents = midmap2.map(x => {
-      x._1 -> x._2.map(y => {
-        y._2
-      }).toSeq
-    })
+    businessEvents = esidConfMap.map(record =>(record._1,record._2.toSeq))
   }
-
-
+  // add by surq at 2015.8.13 end  
   /**
    * read business event map to event rules
    */
