@@ -312,6 +312,8 @@ abstract class RedisCacheManager extends CacheManager {
               e.printStackTrace()
             }
           } finally {
+            // 查询线程失败，如何处理恢复
+            cachedata += (key -> null)
             taskMap.remove(key)
           }
         }
@@ -377,11 +379,15 @@ abstract class RedisCacheManager extends CacheManager {
             cachedata += (key -> task.get())
           } catch {
             case e: Exception => {
-              logger.error("= = " * 15 + "found error in  RedisCacheManager.getMultiCacheByKeys")
+//              logger.error("= = " * 15 + "found error in  RedisCacheManager.getMultiCacheByKeys")
+              logger.error("= = " * 15 + "found error in  RedisCacheManager.hgetall")
               errorFlag = true
               e.printStackTrace()
             }
           } finally {
+            // 查询线程失败，如何处理恢复
+            val emptyList: util.List[util.Map[String, String]] = new util.ArrayList[util.Map[String, String]]()
+            cachedata += (key -> emptyList)
             taskMap.remove(key)
           }
         }

@@ -3,6 +3,7 @@ package com.asiainfo.ocdc.streaming.tool
 import java.util
 import java.util.concurrent.{Callable, ExecutorService, Executors}
 import com.asiainfo.ocdc.streaming.MainFrameConf
+import org.apache.spark.sql.Row
 import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.collection.mutable.Map
@@ -183,6 +184,7 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
       val ite = value.iterator
       while (ite.hasNext) {
         val elem = ite.next()
+//        val tmp = elem._2.asJava
         pgl.hmset(elem._1, elem._2.asJava)
         pgl.sync()
 //        conn.close()
@@ -198,3 +200,40 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
     ""
   }
 }
+
+
+/**
+ * 保存 Array[(Row_rowKey,(eventId, Row)] => Map[Row_rowKey, Map(eventId, Row)]
+ * @param value
+ */
+class InsertEventRows(value: Map[String, (String, Row)]) extends Callable[String] {
+  val logger = LoggerFactory.getLogger(this.getClass)
+
+  val tool = new KryoSerializerStreamAppTool
+
+  override def call() = {
+    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
+
+    try{
+      //    val conn = getConnection
+      val pgl = conn.pipelined()
+      val ite = value.iterator
+      while (ite.hasNext) {
+        val elem = ite.next() //结构：(Row_rowKey,(eventId, Row))
+        val rowKey = elem._1.getBytes()
+        val fieldEventId = elem._2._1.getBytes()
+        val valueRow = tool.serialize[Row](elem._2._2)
+        pgl.hset(rowKey, fieldEventId, valueRow.array())
+      }
+      pgl.sync()
+    }catch {
+      case ex: Exception =>
+        logger.error("= = " * 15 +"found error in InsertHash.call()")
+    } finally{
+      conn.close()
+    }
+
+    ""
+  }
+}
+
